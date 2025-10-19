@@ -24,14 +24,14 @@
 **目的**：完成所有故事共用的資料模型、契約與同步骨架。  
 **⚠️ 關鍵**：未完成此階段不得開始任何故事開發。
 
-- [ ] T007 [Foundation] 建立 `tsconfig.base.json`，定義 `paths`（`@app/*`, `@backend/*`, `@shared/*`）與 `moduleResolution`（`nodenext`）供前後端共用。
-- [ ] T008 [Foundation] 更新 `apps/backend/prisma/schema.prisma`，依 data-model.md 建立 `User`, `DeviceSession`, `Deck`, `DeckStatSnapshot`, `Card`, `CardState`, `ReviewLog`, `SyncEvent` 結構與索引。
-- [ ] T009 [Foundation] 建立 `apps/backend/prisma/migrations/20251019_core_schema/migration.sql`，實作版本與唯一性條件（deck 名稱 per owner、card term per deck）。
-- [ ] T010 [Foundation] 建立 `apps/backend/src/modules/prisma/prisma.module.ts` 與 `prisma.service.ts`，設定 `PrismaClient`, 中介層 Logging 與關閉 hook。
-- [ ] T011 [P] [Foundation] 建立 `packages/fsrs-core/src/index.ts`，輸出 `CardState`, `Rating`, `ReviewResult` 型別與 `createFsrsEngine` 工廠函式骨架。
-- [ ] T012 [Foundation] 更新 `packages/contracts/openapi.yaml` 共用 schema（`Deck`, `Card`, `CardState`, `ReviewLog`, `ErrorResponse`）加入 `version`, `senses[]`, `authority` 欄位。
-- [ ] T013 [Foundation] 建立 `apps/frontend/src/app/data/flashmind-db.ts` Dexie 定義，含 `decks`, `cards`, `reviewQueue`, `syncJournal` 集合與版本欄位。
-- [ ] T014 [Foundation] 建立 `apps/frontend/src/app/services/sync/sync-queue.service.ts` 骨架，封裝 LocalStorage 佇列、Dexie 操作與回放事件 emitter。
+- [X] T007 [Foundation] 建立 `tsconfig.base.json`，定義 `paths`（`@app/*`, `@backend/*`, `@shared/*`）與 `moduleResolution`（`nodenext`）供前後端共用。
+- [X] T008 [Foundation] 更新 `apps/backend/prisma/schema.prisma`，依 data-model.md 建立 `User`, `DeviceSession`, `Deck`, `DeckStatSnapshot`, `Card`, `CardState`, `ReviewLog`, `SyncEvent` 結構與索引。
+- [X] T009 [Foundation] 建立 `apps/backend/prisma/migrations/20251019_core_schema/migration.sql`，實作版本與唯一性條件（deck 名稱 per owner、card term per deck）。
+- [X] T010 [Foundation] 建立 `apps/backend/src/modules/prisma/prisma.module.ts` 與 `prisma.service.ts`，設定 `PrismaClient`, 中介層 Logging 與關閉 hook。
+- [X] T011 [P] [Foundation] 建立 `packages/fsrs-core/src/index.ts`，輸出 `CardState`, `Rating`, `ReviewResult` 型別與 `createFsrsEngine` 工廠函式骨架。
+- [X] T012 [Foundation] 更新 `packages/contracts/openapi.yaml` 共用 schema（`Deck`, `Card`, `CardState`, `ReviewLog`, `ErrorResponse`）加入 `version`, `senses[]`, `authority` 欄位。
+- [X] T013 [Foundation] 建立 `apps/frontend/src/app/data/flashmind-db.ts` Dexie 定義，含 `decks`, `cards`, `reviewQueue`, `syncJournal` 集合與版本欄位。
+- [X] T014 [Foundation] 建立 `apps/frontend/src/app/services/sync/sync-queue.service.ts` 骨架，封裝 LocalStorage 佇列、Dexie 操作與回放事件 emitter。
 
 **檢查點**：完成 schema、契約與同步基礎，可啟動各故事。
 

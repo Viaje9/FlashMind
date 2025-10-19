@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReviewRating {
+  again
+  hard
+  easy
+}
+
+enum ReviewOrder {
+  due_first
+  new_first
+  mixed
+}
+
+enum Authority {
+  local
+  server
+}
+
+enum SyncStatus {
+  pending
+  synced
+  conflicted
+}
+
+enum SyncEventType {
+  merge
+  overwrite
+  conflict_resolution
+}
+
+model User {
+  id             String          @id @default(uuid()) @db.Uuid
+  email          String?         @unique @db.Citext
+  displayName    String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  decks          Deck[]          @relation("UserDecks")
+  deviceSessions DeviceSession[]
+  cards          Card[]
+  reviewLogs     ReviewLog[]
+  syncEvents     SyncEvent[]
+}
+
+model DeviceSession {
+  id               String          @id @default(uuid()) @db.Uuid
+  deviceFingerprint String         @unique
+  userId           String?         @db.Uuid
+  lastSeenAt       DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+
+  user             User?           @relation(fields: [userId], references: [id])
+  decks            Deck[]          @relation("DeviceDecks")
+  reviewLogs       ReviewLog[]
+  syncEvents       SyncEvent[]
+
+  @@index([userId])
+}
+
+model Deck {
+  id             String              @id @default(uuid()) @db.Uuid
+  ownerUserId    String?             @db.Uuid
+  ownerDeviceId  String?             @db.Uuid
+  name           String              @db.Citext
+  slug           String
+  dailyNewLimit  Int                 @default(10)
+  reviewOrder    ReviewOrder         @default(due_first)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  version        Int                 @default(1)
+
+  ownerUser      User?               @relation("UserDecks", fields: [ownerUserId], references: [id])
+  ownerDevice    DeviceSession?      @relation("DeviceDecks", fields: [ownerDeviceId], references: [id])
+  cards          Card[]
+  stats          DeckStatSnapshot[]
+  reviewLogs     ReviewLog[]
+
+  @@index([ownerUserId])
+  @@index([ownerDeviceId])
+  @@unique([ownerUserId, name])
+  @@unique([ownerDeviceId, name])
+  @@unique([ownerUserId, slug])
+  @@unique([ownerDeviceId, slug])
+}
+
+model DeckStatSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  deckId      String   @db.Uuid
+  dueToday    Int
+  newCount    Int
+  avgRetention Float
+  generatedAt DateTime
+
+  deck        Deck     @relation(fields: [deckId], references: [id])
+
+  @@index([deckId])
+  @@index([generatedAt])
+}
+
+model Card {
+  id           String      @id @default(uuid()) @db.Uuid
+  deckId       String      @db.Uuid
+  term         String      @db.Citext
+  notes        String?     @db.Text
+  senses       Json
+  tags         String[]    @db.Text
+  createdById  String?     @db.Uuid
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  version      Int         @default(1)
+
+  deck         Deck        @relation(fields: [deckId], references: [id])
+  createdBy    User?       @relation(fields: [createdById], references: [id])
+  state        CardState?
+  reviewLogs   ReviewLog[]
+
+  @@index([deckId])
+  @@unique([deckId, term])
+}
+
+model CardState {
+  cardId         String        @id @db.Uuid
+  stability      Float
+  difficulty     Float
+  elapsedDays    Int
+  scheduledDays  Int
+  due            DateTime
+  lastReviewedAt DateTime?
+  reviewCount    Int
+  lastRating     ReviewRating?
+  authority      Authority      @default(local)
+  version        Int            @default(1)
+
+  card           Card           @relation(fields: [cardId], references: [id])
+}
+
+model ReviewLog {
+  id           String        @id @default(uuid()) @db.Uuid
+  cardId       String        @db.Uuid
+  deckId       String        @db.Uuid
+  userId       String?       @db.Uuid
+  deviceId     String        @db.Uuid
+  rating       ReviewRating
+  reviewedAt   DateTime      @default(now())
+  sessionId    String        @db.Uuid
+  sequence     Int
+  syncStatus   SyncStatus    @default(pending)
+  payloadVersion Int         @default(1)
+
+  card         Card          @relation(fields: [cardId], references: [id])
+  deck         Deck          @relation(fields: [deckId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
+  device       DeviceSession @relation(fields: [deviceId], references: [id])
+
+  @@index([cardId])
+  @@index([deckId])
+  @@index([userId])
+  @@index([deviceId])
+  @@unique([deviceId, sessionId, sequence])
+}
+
+model SyncEvent {
+  id        String        @id @default(uuid()) @db.Uuid
+  deviceId  String        @db.Uuid
+  userId    String        @db.Uuid
+  type      SyncEventType
+  details   Json
+  createdAt DateTime      @default(now())
+
+  device    DeviceSession @relation(fields: [deviceId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+
+  @@index([deviceId])
+  @@index([userId])
+  @@index([createdAt])
+}
