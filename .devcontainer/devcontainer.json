@@ -1,0 +1,27 @@
+{
+  "name": "FlashMind",
+  "dockerComposeFile": ["docker-compose.yml"],
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "node",
+  "postCreateCommand": "pnpm install && pnpm build",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Angular.ng-template",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "Prisma.prisma",
+        "ms-azuretools.vscode-docker",
+        "mhutchie.git-graph",
+        "doggy8088.angular-extension-pack",
+        "pkief.material-icon-theme",
+        "doggy8088.markdown-extension-pack"
+      ]
+    }
+  },
+  "forwardPorts": [4200, 3000, 6006, 5432],
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "zsh"
+  }
+}

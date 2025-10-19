@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    volumes:
+      - ..:/workspace:cached
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/flashmind
+      PLAYWRIGHT_BROWSERS_PATH: "0"
+    ports:
+      - "4200:4200"
+      - "3000:3000"
+      - "6006:6006"
+    depends_on:
+      - db
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flashmind
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+volumes:
+  db-data:

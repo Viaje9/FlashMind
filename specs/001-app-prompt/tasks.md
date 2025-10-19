@@ -10,12 +10,12 @@
 
 **目的**：建立工作區設定與開發容器，使前後端可在一致環境運作。
 
-- [ ] T001 [Setup] 建立工作區 `package.json`（`package.json`），設定 `private`, `packageManager`, `pnpm` workspace scripts（`contracts:gen`, `test`, `lint`, `dev:frontend`, `dev:backend`）與共用工具依賴。
-- [ ] T002 [P] [Setup] 新增 `pnpm-workspace.yaml` 定義 `apps/*`、`packages/*`、`specs/*` 工作區範圍並排除 `docs`。
-- [ ] T003 [P] [Setup] 建立 `.devcontainer/devcontainer.json`，設定 `Node 22`, `pnpm 9`, `PostgreSQL` 服務與常用 VS Code 擴充功能。
-- [ ] T004 [P] [Setup] 撰寫 `.devcontainer/docker-compose.yml` 建置 `app`（Node）與 `db`（PostgreSQL 15）服務，對應 4200/3000/6006/5432 埠號。
-- [ ] T005 [P] [Setup] 建立 `.devcontainer/Dockerfile` 安裝 `pnpm`, `playwright-deps`, `zsh`，並設定 `pnpm install && pnpm build` 為 `postCreateCommand`。
-- [ ] T006 [P] [Setup] 新增 `.env.example`，列出 `DATABASE_URL`, `GEMINI_API_KEY`, `PLAYWRIGHT_BROWSERS_PATH`, `OPENAPI_GENERATOR_OUTPUT` 等必要環境變數。
+- [X] T001 [Setup] 建立工作區 `package.json`（`package.json`），設定 `private`, `packageManager`, `pnpm` workspace scripts（`contracts:gen`, `test`, `lint`, `dev:frontend`, `dev:backend`）與共用工具依賴。
+- [X] T002 [P] [Setup] 新增 `pnpm-workspace.yaml` 定義 `apps/*`、`packages/*`、`specs/*` 工作區範圍並排除 `docs`。
+- [X] T003 [P] [Setup] 建立 `.devcontainer/devcontainer.json`，設定 `Node 22`, `pnpm 9`, `PostgreSQL` 服務與常用 VS Code 擴充功能。
+- [X] T004 [P] [Setup] 撰寫 `.devcontainer/docker-compose.yml` 建置 `app`（Node）與 `db`（PostgreSQL 15）服務，對應 4200/3000/6006/5432 埠號。
+- [X] T005 [P] [Setup] 建立 `.devcontainer/Dockerfile` 安裝 `pnpm`, `playwright-deps`, `zsh`，並設定 `pnpm install && pnpm build` 為 `postCreateCommand`。
+- [X] T006 [P] [Setup] 新增 `.env.example`，列出 `DATABASE_URL`, `GEMINI_API_KEY`, `PLAYWRIGHT_BROWSERS_PATH`, `OPENAPI_GENERATOR_OUTPUT` 等必要環境變數。
 
 ---
 
