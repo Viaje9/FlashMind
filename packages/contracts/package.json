@@ -1,0 +1,13 @@
+{
+    "name": "@pkg/contracts",
+    "version": "0.0.1",
+    "private": true,
+    "main": "src/index.ts",
+    "scripts": {
+        "generate": "openapi-generator-cli generate -i openapi.json -g typescript-angular -o src/generated"
+    },
+    "devDependencies": {
+        "@openapitools/openapi-generator-cli": "^2.13.4",
+        "typescript": "^5.5.4"
+    }
+}
