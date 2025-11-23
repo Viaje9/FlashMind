@@ -1,99 +1,50 @@
-<!--
-同步影響報告
-版本：1.0.0 → 1.0.1
-調整原則：
-- I. Cloud-Sync-First → I. 雲端同步優先
-- II. FSRS Scheduling Integrity → II. FSRS 排程一致性
-- III. Strict Data Contract → III. 嚴格資料契約
-- IV. Test-Driven Development → IV. 測試導向開發
-- V. User-Facing Diagnostics → V. 使用者面向診斷資訊
-- VI. Simplicity First → VI. 簡單性優先
-- VII. Contract-Driven Development → VII. 契約驅動開發
-- VIII. UI Consistency via Storybook → VIII. Storybook UI 一致性
-新增章節：
-- 無
-移除章節：
-- 無
-需同步之模板：
-- ✅ .specify/templates/plan-template.md
-- ✅ .specify/templates/spec-template.md
-- ✅ .specify/templates/tasks-template.md
-- ✅ .specify/templates/agent-file-template.md
-後續待辦事項：
-- 無
--->
+# [PROJECT_NAME] Constitution
+<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
 
-# FlashMind 憲法
+## Core Principles
 
-## 核心原則
+### [PRINCIPLE_1_NAME]
+<!-- Example: I. Library-First -->
+[PRINCIPLE_1_DESCRIPTION]
+<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
 
-### I. 雲端同步優先
-- 雲端同步服務為學習狀態的唯一權威來源；本機資料僅可作為暫存快取。
-- 離線互動必須寫入 LocalStorage，並在恢復連線時自動回放同步。
-- 同步衝突必須採最後寫入勝策略，且系統必須保留可稽核的事件日誌。
-理由：只有確定性的雲端協調才能維持多裝置進度一致性。
+### [PRINCIPLE_2_NAME]
+<!-- Example: II. CLI Interface -->
+[PRINCIPLE_2_DESCRIPTION]
+<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
 
-### II. FSRS 排程一致性
-- 全部間隔重複排程必須實作 FSRS 模型，並使用維護中的參數組與狀態轉移規則。
-- 任一演算法或參數調整必須附帶資料遷移腳本與舊資料回歸測試。
-- 在相同輸入下，多版本之間必須產生可重現的排程結果。
-理由：維持 FSRS 精準度可保障學習品質並建立可信的分析基礎。
+### [PRINCIPLE_3_NAME]
+<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
+[PRINCIPLE_3_DESCRIPTION]
+<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
 
-### III. 嚴格資料契約
-- 卡片、牌組與複習紀錄等資料結構必須以 JSON Schema 或 Prisma Schema 定義，且包含 `version` 欄位。
-- 破壞性 Schema 變更必須提供前後相容的遷移與自動驗證。
-- OpenAPI 規格必須是後端 API 行為與文件的單一真實來源。
-理由：強化契約有助於在高速迭代中維持前後端與遷移腳本的一致性。
+### [PRINCIPLE_4_NAME]
+<!-- Example: IV. Integration Testing -->
+[PRINCIPLE_4_DESCRIPTION]
+<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
 
-### IV. 測試導向開發
-- 新行為必須先撰寫失敗的測試，再依紅-綠-重構流程完成實作。
-- 持續整合必須在每次合併前執行單元、契約與端對端測試。
-- 任何必備測試失敗時，不得將變更合併至主分支。
-理由：測試優先可避免排程、同步與遷移機制的迴歸。
+### [PRINCIPLE_5_NAME]
+<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
+[PRINCIPLE_5_DESCRIPTION]
+<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
 
-### V. 使用者面向診斷資訊
-- 呈現給使用者的錯誤必須包含明確訊息與可追蹤的錯誤代碼，以利除錯。
-- 系統必須擷取足夠的診斷上下文，使得在缺乏完整觀測系統時仍能重現問題。
-理由：透明的診斷資訊能縮短修復時間並維持使用者信任。
+## [SECTION_2_NAME]
+<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
-### VI. 簡單性優先
-- 稽核必須拒絕與當前功能無關的推測性抽象與依賴。
-- 每個功能必須能在單一開發週期內交付，避免累積未使用的骨架。
-- 變更的意圖必須清楚紀錄，使新成員能在一天內理解調整內容。
-理由：保持最小可行解讓團隊維持速度並降低上手門檻。
+[SECTION_2_CONTENT]
+<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
 
-### VII. 契約驅動開發
-- 前端、後端與自動化測試必須共用同一份 OpenAPI 契約以溝通 API。
-- 任一 API 變更必須同步更新 OpenAPI 定義並通過契約測試。
-- 前端型別必須自 OpenAPI 來源自動產生，避免手動維護差異。
-理由：契約紀律確保分散元件在演進時仍可互通。
+## [SECTION_3_NAME]
+<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
 
-### VIII. Storybook UI 一致性
-- 可重用 UI 元件必須收錄於 Storybook，且至少具備一個範例狀態。
-- Tailwind CSS 必須作為樣式與主題的唯一依據。
-- UI 變更必須同步更新 Storybook 範例與對應的視覺／快照測試。
-理由：維護 Storybook 能確保版本間的使用者體驗一致。
+[SECTION_3_CONTENT]
+<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
 
-## 技術堆疊與架構標準
+## Governance
+<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-- **前端**：採用 Angular 與 Tailwind CSS，LocalStorage 作為離線快取，Storybook 為元件單一來源。
-- **後端**：以 NestJS 建構服務，所有 API 由 OpenAPI 定義，並透過 Prisma 管理 PostgreSQL。
-- **資料**：PostgreSQL 為最終權威；LocalStorage 僅負責佇列離線變更供雲端同步。
-- **關注點分離**：前後端必須支援獨立部署；排程邏輯不得依賴可變的伺服器工作階段狀態。
+[GOVERNANCE_RULES]
+<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
-## 開發流程
-
-1. 每項功能依 TDD 流程執行：撰寫測試、確保失敗、實作、重構。
-2. 調整資料 Schema 時同步提供遷移與驗證測試。
-3. UI 元件改動時更新 Storybook 與相關測試。
-4. 送審前必須執行靜態分析、單元、契約與端對端測試。
-
-## 治理機制
-
-- 本憲法優先於其他流程文件；所有功能開發必須符合條文方可取得核准。
-- 修憲需提交記錄 RFC，說明受影響原則、取得維護者核可，並在需要時附上遷移方案。
-- 使用語意化版本控管：重大原則調整為 MAJOR，新增或擴充原則為 MINOR，語意澄清為 PATCH。
-- 必須以 ISO-8601 格式記錄制定與最後修訂日期。
-- 稽核在程式碼審查階段執行，維護者亦須每季檢視同步、FSRS、資料契約、測試與 UI 原則的遵循情況。
-
-**版本**：1.0.1 | **制定日期**：2025-10-19 | **最後修訂日期**：2025-10-19
+**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
+<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->

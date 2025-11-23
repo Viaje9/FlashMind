@@ -1,107 +1,115 @@
-# 功能規格：[FEATURE NAME]
+# Feature Specification: [FEATURE NAME]
 
-**功能分支**：`[###-feature-name]`  
-**建立日期**：[DATE]  
-**狀態**：草稿  
-**輸入**：使用者描述：「$ARGUMENTS」
+**Feature Branch**: `[###-feature-name]`  
+**Created**: [DATE]  
+**Status**: Draft  
+**Input**: User description: "$ARGUMENTS"
 
-> 憲法防線：每份規格必須說明雲端同步影響、FSRS 排程調整、資料契約更新、必備測試、錯誤訊息與 UI／Storybook 變動。
-
-## 使用情境與測試（必填）
+## User Scenarios & Testing *(mandatory)*
 
 <!--
-  使用者故事需依重要性排序（P1、P2、P3...）。
-  每一故事必須可獨立開發、測試、部署並對使用者產生價值。
+  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
+  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
+  you should still have a viable MVP (Minimum Viable Product) that delivers value.
+  
+  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
+  Think of each story as a standalone slice of functionality that can be:
+  - Developed independently
+  - Tested independently
+  - Deployed independently
+  - Demonstrated to users independently
 -->
 
-### 使用者故事 1 - [簡短標題]（優先度：P1）
+### User Story 1 - [Brief Title] (Priority: P1)
 
-[以自然語言描述使用者旅程]
+[Describe this user journey in plain language]
 
-**優先原因**：[解釋價值與優先排序的理由]
+**Why this priority**: [Explain the value and why it has this priority level]
 
-**獨立測試方法**：[說明如何單獨驗證此故事，例如：「透過 XXX 操作即可驗證 YYY 成果」]
+**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
 
-**驗收情境**：
+**Acceptance Scenarios**:
 
-1. **給定** [初始狀態]，**當** [行為]，**則** [預期結果]
-2. **給定** [初始狀態]，**當** [行為]，**則** [預期結果]
+1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+2. **Given** [initial state], **When** [action], **Then** [expected outcome]
 
 ---
 
-### 使用者故事 2 - [簡短標題]（優先度：P2）
+### User Story 2 - [Brief Title] (Priority: P2)
 
-[以自然語言描述使用者旅程]
+[Describe this user journey in plain language]
 
-**優先原因**：[解釋價值與優先排序的理由]
+**Why this priority**: [Explain the value and why it has this priority level]
 
-**獨立測試方法**：[說明如何單獨驗證此故事]
+**Independent Test**: [Describe how this can be tested independently]
 
-**驗收情境**：
+**Acceptance Scenarios**:
 
-1. **給定** [初始狀態]，**當** [行為]，**則** [預期結果]
-
----
-
-### 使用者故事 3 - [簡短標題]（優先度：P3）
-
-[以自然語言描述使用者旅程]
-
-**優先原因**：[解釋價值與優先排序的理由]
-
-**獨立測試方法**：[說明如何單獨驗證此故事]
-
-**驗收情境**：
-
-1. **給定** [初始狀態]，**當** [行為]，**則** [預期結果]
+1. **Given** [initial state], **When** [action], **Then** [expected outcome]
 
 ---
 
-[如需求更多故事，請依序新增並標註優先度]
+### User Story 3 - [Brief Title] (Priority: P3)
 
-### 邊界案例
+[Describe this user journey in plain language]
 
-<!--
-  必須列出所有關鍵邊界情境，以下為保留欄位需替換。
--->
+**Why this priority**: [Explain the value and why it has this priority level]
 
-- 功能在離線期間與延後同步回放時如何表現？
-- 當 FSRS 排程資料跨裝置或版本產生衝突時如何處理？
-- 系統如何揭露並恢復資料契約驗證失敗的狀況？
+**Independent Test**: [Describe how this can be tested independently]
 
-## 需求（必填）
+**Acceptance Scenarios**:
 
-<!--
-  以下條目需替換為實際功能需求。
--->
+1. **Given** [initial state], **When** [action], **Then** [expected outcome]
 
-### 功能性需求
+---
 
-- **FR-001**：系統必須 [特定能力，例如「允許使用者建立帳號」]
-- **FR-002**：系統必須 [特定能力，例如「驗證電子郵件」]  
-- **FR-003**：使用者必須能 [核心互動，例如「重設密碼」]
-- **FR-004**：系統必須 [資料行為，例如「保存使用者偏好」]
-- **FR-005**：系統必須 [行為，例如「記錄所有安全性事件」]
+[Add more user stories as needed, each with an assigned priority]
 
-*不明確的需求示例：*
-
-- **FR-006**：系統必須透過 [待釐清：驗證方式（Email/SSO/OAuth?）] 驗證使用者
-- **FR-007**：系統必須保存使用者資料 [待釐清：保存期限未定]
-
-### 關鍵實體（若有資料模型）
-
-- **[實體 1]**：[描述其代表意義與主要屬性，無需實作細節]
-- **[實體 2]**：[描述其與其他實體的關係]
-
-## 成功指標（必填）
+### Edge Cases
 
 <!--
-  必須定義可量測的成功條件，且與技術實作無關。
+  ACTION REQUIRED: The content in this section represents placeholders.
+  Fill them out with the right edge cases.
 -->
 
-### 可量測成果
+- What happens when [boundary condition]?
+- How does system handle [error scenario]?
 
-- **SC-001**：[量化指標，例如「使用者可在 2 分鐘內完成帳號建立」]
-- **SC-002**：[量化指標，例如「系統可在負載 1000 並發時保持穩定」]
-- **SC-003**：[滿意度指標，例如「90% 使用者第一次操作即可完成主要任務」]
-- **SC-004**：[商業指標，例如「將與 X 相關的客服票數降低 50%」]
+## Requirements *(mandatory)*
+
+<!--
+  ACTION REQUIRED: The content in this section represents placeholders.
+  Fill them out with the right functional requirements.
+-->
+
+### Functional Requirements
+
+- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
+- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
+- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
+- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
+- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+
+*Example of marking unclear requirements:*
+
+- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
+- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+
+### Key Entities *(include if feature involves data)*
+
+- **[Entity 1]**: [What it represents, key attributes without implementation]
+- **[Entity 2]**: [What it represents, relationships to other entities]
+
+## Success Criteria *(mandatory)*
+
+<!--
+  ACTION REQUIRED: Define measurable success criteria.
+  These must be technology-agnostic and measurable.
+-->
+
+### Measurable Outcomes
+
+- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
+- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
+- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
+- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
