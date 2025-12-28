@@ -1,0 +1,36 @@
+<div
+  [class]="rowClass()"
+  [attr.role]="rowRole()"
+  [attr.tabindex]="rowTabIndex()"
+  (click)="onRowClick()"
+  (keydown)="onRowKeydown($event)"
+>
+  <div class="flex items-center gap-3 overflow-hidden">
+    <div [class]="iconContainerClass()">
+      <span class="material-symbols-outlined text-xl">{{ icon() }}</span>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-base font-medium truncate">{{ label() }}</span>
+      @if (description()) {
+        <span class="text-xs text-slate-500 dark:text-slate-400">{{ description() }}</span>
+      }
+    </div>
+  </div>
+  <div class="shrink-0 ml-4">
+    @if (variant() === 'toggle') {
+      <fm-toggle
+        [checked]="checked()"
+        [disabled]="disabled()"
+        ariaLabel="切換設定"
+        (changed)="onToggleChange($event)"
+      ></fm-toggle>
+    } @else {
+      <div class="flex items-center gap-2">
+        @if (value()) {
+          <span class="text-slate-500 dark:text-slate-400 text-sm">{{ value() }}</span>
+        }
+        <span class="material-symbols-outlined text-slate-400">chevron_right</span>
+      </div>
+    }
+  </div>
+</div>

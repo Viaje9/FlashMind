@@ -1,0 +1,9 @@
+<div class="flex items-center justify-between px-1">
+  <h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight flex items-center gap-2">
+    @if (icon()) {
+      <span class="material-symbols-outlined text-primary text-[20px]">{{ icon() }}</span>
+    }
+    {{ title() }}
+  </h3>
+  <ng-content select="[slot=action]"></ng-content>
+</div>

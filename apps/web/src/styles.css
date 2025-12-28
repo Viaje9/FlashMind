@@ -1,4 +1,7 @@
 @import "tailwindcss";
-@source "./**/*.{html,ts}";
+@import "../../../packages/ui/src/styles/index.css";
 
-/* You can add global styles to this file, and also import other style files */
+@source "./**/*.{html,ts}";
+@source "../../../packages/ui/**/*.{html,ts}";
+
+/* 可在此加入全域樣式，或引入其他樣式檔 */

@@ -1,0 +1,19 @@
+<div class="flex flex-col gap-2">
+  <div class="relative group">
+    <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-purple-600/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
+    <div class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-1">
+      <textarea
+        [class]="textAreaClass()"
+        [value]="value()"
+        [placeholder]="placeholder()"
+        [disabled]="disabled()"
+        [attr.maxlength]="maxLength()"
+        [attr.aria-label]="ariaLabelValue()"
+        (input)="onInput($event)"
+      ></textarea>
+    </div>
+  </div>
+  @if (countLabel()) {
+    <p class="text-xs text-slate-400 dark:text-slate-500 px-1 text-right">{{ countLabel() }}</p>
+  }
+</div>

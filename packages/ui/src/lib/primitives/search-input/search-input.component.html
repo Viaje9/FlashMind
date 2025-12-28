@@ -1,0 +1,14 @@
+<div class="relative">
+  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+    <span class="material-symbols-outlined text-[20px]">search</span>
+  </span>
+  <input
+    class="w-full bg-surface-light dark:bg-surface-dark border-none ring-1 ring-slate-200 dark:ring-gray-800 focus:ring-2 focus:ring-primary rounded-xl py-3 pl-10 pr-4 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all shadow-sm"
+    type="text"
+    [value]="value()"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabel()"
+    (input)="onInput($event)"
+  />
+</div>

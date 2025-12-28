@@ -1,7 +1,5 @@
 import type { Preview } from '@storybook/angular';
 
-import '../src/styles.css';
-
 const preview: Preview = {
   parameters: {
     actions: { argTypesRegex: '^on[A-Z].*' },

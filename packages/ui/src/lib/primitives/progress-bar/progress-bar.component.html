@@ -1,0 +1,14 @@
+<div class="flex items-center gap-3">
+  <div
+    class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-[#3c4d53]"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-valuenow]="clampedValue()"
+  >
+    <div class="h-full rounded-full" [class]="barClass()" [style.width.%]="clampedValue()"></div>
+  </div>
+  @if (showLabel()) {
+    <span class="text-sm font-semibold text-slate-700 dark:text-white">{{ clampedValue() }}%</span>
+  }
+</div>

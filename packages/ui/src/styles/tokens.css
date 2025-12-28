@@ -1,0 +1,14 @@
+@theme {
+  --color-primary: #19b3e6;
+  --color-primary-dark: #0ea5e9;
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #111d21;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1a262a;
+  --color-card-dark: #1e282c;
+  --color-secondary-text: #93aeb8;
+  --color-error: #ff6b6b;
+
+  --font-display: "Lexend", "Noto Sans TC", sans-serif;
+  --font-body: "Noto Sans TC", sans-serif;
+}

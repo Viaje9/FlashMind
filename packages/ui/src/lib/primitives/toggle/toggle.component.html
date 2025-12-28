@@ -1,0 +1,13 @@
+<label class="relative inline-flex items-center cursor-pointer">
+  <input
+    type="checkbox"
+    class="sr-only peer"
+    [checked]="checked()"
+    [disabled]="disabled()"
+    [attr.aria-label]="ariaLabelValue()"
+    (change)="onToggle($event)"
+  />
+  <div
+    class="w-12 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary peer-disabled:opacity-50"
+  ></div>
+</label>

@@ -1,0 +1,32 @@
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+
+export interface StudyExample {
+  label: string;
+  sentence: string;
+  translation: string;
+}
+
+@Component({
+  selector: 'fm-study-card',
+  templateUrl: './study-card.component.html',
+  styleUrl: './study-card.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class FmStudyCardComponent {
+  readonly word = input('');
+  readonly translations = input<string[]>([]);
+  readonly examples = input<StudyExample[]>([]);
+  readonly showStack = input(true);
+  readonly showActions = input(true);
+
+  readonly bookmarkClick = output<void>();
+  readonly audioClick = output<void>();
+  readonly exampleAudioClick = output<number>();
+
+  readonly hasExamples = computed(() => this.examples().length > 0);
+  readonly hasTranslations = computed(() => this.translations().length > 0);
+
+  onExampleAudioClick(index: number) {
+    this.exampleAudioClick.emit(index);
+  }
+}
