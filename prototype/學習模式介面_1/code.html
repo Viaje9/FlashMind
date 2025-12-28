@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>快閃卡背面介面</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19b3e6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                        "card-dark": "#1e282c",
+                        "secondary-text": "#93aeb8",
+                        "error": "#ff6b6b",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans TC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased overflow-hidden selection:bg-primary selection:text-white">
+<div class="relative flex h-screen w-full flex-col max-w-md mx-auto shadow-2xl overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="flex items-center justify-between p-4 pt-6 z-10 shrink-0">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white">arrow_back_ios_new</span>
+</button>
+<div class="flex flex-col items-center">
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] dark:text-white text-slate-900">基礎單字</h2>
+<span class="text-xs font-medium text-secondary-text">日常對話</span>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white">more_vert</span>
+</button>
+</header>
+<div class="px-6 py-2 shrink-0">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-secondary-text">進度</span>
+<span class="text-sm font-bold text-primary">12 / 50</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200 dark:bg-[#3c4d53] rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 24%"></div>
+</div>
+</div>
+<main class="flex-1 flex flex-col items-center justify-center p-4 w-full relative">
+<div class="relative w-full h-full max-h-[600px] flex items-center justify-center">
+<div class="absolute w-[90%] h-[95%] rounded-3xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 shadow-sm opacity-40 transform scale-90 translate-y-8 z-0"></div>
+<div class="absolute w-[95%] h-[98%] rounded-3xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 shadow-md opacity-70 transform scale-95 translate-y-4 z-10"></div>
+<div class="relative w-full h-full rounded-3xl bg-white dark:bg-card-dark border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] z-20 flex flex-col overflow-hidden cursor-grab active:cursor-grabbing transition-transform duration-200">
+<div class="flex justify-between items-start p-5 w-full shrink-0 z-10">
+<button aria-label="收藏單字" class="flex items-center justify-center size-10 rounded-full bg-slate-50 dark:bg-slate-800/80 text-secondary-text hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[24px]">bookmark</span>
+</button>
+<button aria-label="播放單字發音" class="flex items-center justify-center size-10 rounded-full bg-slate-50 dark:bg-slate-800/80 text-primary hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[24px]">volume_up</span>
+</button>
+</div>
+<div class="flex-1 flex flex-col items-center w-full px-6 overflow-y-auto no-scrollbar">
+<div class="flex flex-col items-center text-center mb-6">
+<h1 class="text-4xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">Hello</h1>
+<div class="flex flex-wrap justify-center gap-2 px-4 mt-2">
+<p class="text-2xl font-bold text-primary">你好、喂</p>
+</div>
+</div>
+<div class="w-12 h-1 bg-slate-100 dark:bg-slate-800 rounded-full mb-6 shrink-0"></div>
+<div class="w-full space-y-4 pb-4">
+<div class="flex flex-col p-4 rounded-2xl bg-slate-50 dark:bg-[#253035] border border-slate-100 dark:border-slate-800/80">
+<div class="mb-2">
+<span class="text-xs font-bold text-white bg-primary/90 px-2 py-0.5 rounded">你好</span>
+</div>
+<div class="flex justify-between items-start gap-3 mb-2">
+<p class="text-[16px] font-medium text-slate-800 dark:text-slate-200 leading-snug">
+                                    Hello, how are you today?
+                                </p>
+<button class="shrink-0 flex items-center justify-center size-8 rounded-full text-primary bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">volume_up</span>
+</button>
+</div>
+<p class="text-sm text-secondary-text leading-snug">
+                                你今天好嗎？
+                            </p>
+</div>
+<div class="flex flex-col p-4 rounded-2xl bg-slate-50 dark:bg-[#253035] border border-slate-100 dark:border-slate-800/80">
+<div class="mb-2">
+<span class="text-xs font-bold text-white bg-primary/90 px-2 py-0.5 rounded">喂</span>
+</div>
+<div class="flex justify-between items-start gap-3 mb-2">
+<p class="text-[16px] font-medium text-slate-800 dark:text-slate-200 leading-snug">
+                                    Hello? Is anyone there?
+                                </p>
+<button class="shrink-0 flex items-center justify-center size-8 rounded-full text-primary bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">volume_up</span>
+</button>
+</div>
+<p class="text-sm text-secondary-text leading-snug">
+                                喂？有人在嗎？
+                            </p>
+</div>
+</div>
+</div>
+<div class="p-6 w-full flex justify-between items-center opacity-30 select-none pointer-events-none shrink-0">
+<div class="flex items-center gap-3 group">
+<div class="size-10 rounded-full border-2 border-error flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-[20px]">close</span>
+</div>
+<span class="text-xs font-bold text-error uppercase hidden sm:block">不知道</span>
+</div>
+<div class="flex items-center gap-3 group">
+<span class="text-xs font-bold text-primary uppercase hidden sm:block">知道</span>
+<div class="size-10 rounded-full border-2 border-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]">check</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="h-6 w-full shrink-0"></div>
+</div>
+</body></html>

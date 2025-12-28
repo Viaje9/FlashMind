@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-TW"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>設定介面</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Noto+Sans+TC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19b3e6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                        "surface-dark": "#1c282d", // Slightly lighter for cards
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans TC", "sans-serif"],
+                        "body": ["Noto Sans TC", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        
+        /* Toggle Switch Animation */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #19b3e6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #19b3e6;
+        }
+        
+        /* Hide checkbox visually but keep accessible */
+        .sr-only-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white pb-10">
+<!-- Navigation Bar -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 transition-colors duration-300">
+<div class="flex items-center justify-between px-4 h-14 max-w-lg mx-auto w-full">
+<button class="flex items-center text-primary hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-2xl -ml-1">chevron_left</span>
+<span class="text-base font-medium">返回</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight absolute left-1/2 -translate-x-1/2">設定</h1>
+<button class="text-primary font-medium text-base hover:opacity-80 transition-opacity">完成</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-lg mx-auto p-4 space-y-6">
+<!-- Profile Section -->
+<section class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex items-center gap-4 transition-colors duration-300 hover:bg-slate-50 dark:hover:bg-[#233036] cursor-pointer group">
+<div class="relative shrink-0">
+<div class="w-16 h-16 rounded-full bg-cover bg-center border-2 border-slate-100 dark:border-white/10" data-alt="Portrait of a user with glasses" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCbYOzCPpw8JGpXzI07tYV1BZcE3ODMp_2KFt8_PFd7AK2Kcov8vl1Xcp_MDw1vc7W94-bJiaM8cCoZ_fETUvBKiz8s3NmikqB3-xuKeXnunc06dUJSu92uhG-OUuw8QeKWk_-LG1pO_rh_h6l6spEVhw1X0grEq9LuU_QU2NOnCRRcSeGG9CbTTONjPKBaC6tyL3oEgvB9vrz3QuAzWsE89c_7Lv_yPwgqe119SER3YJEDDiFlSyrqmCLLjwq03K4mSF2jrdD9DVs');">
+</div>
+<div class="absolute bottom-0 right-0 w-5 h-5 bg-primary rounded-full border-2 border-white dark:border-background-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-white font-bold">edit</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<h2 class="text-xl font-bold leading-tight truncate">王小明</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">xiaoming@example.com</p>
+<div class="mt-1 inline-flex items-center gap-1 text-primary text-sm font-medium">
+                    管理帳戶
+                    <span class="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Learning Preferences -->
+<section>
+<h3 class="px-4 pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">學習偏好</h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
+<!-- Daily Reminder -->
+<div class="flex items-center justify-between p-4 min-h-[56px]">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500">
+<span class="material-symbols-outlined text-xl">notifications_active</span>
+</div>
+<div class="flex flex-col">
+<span class="text-base font-medium truncate">每日學習提醒</span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Reminder Time (Conditional on Reminder) -->
+<div class="flex items-center justify-between p-4 min-h-[56px] hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors">
+<div class="flex items-center gap-3 pl-11">
+<span class="text-base font-normal text-slate-700 dark:text-slate-200">提醒時間</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-primary font-semibold bg-primary/10 px-2 py-1 rounded-md text-sm">20:00</span>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+<!-- Spaced Repetition -->
+<div class="flex items-center justify-between p-4 min-h-[56px]">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500">
+<span class="material-symbols-outlined text-xl">psychology</span>
+</div>
+<div class="flex flex-col">
+<span class="text-base font-medium truncate">間隔重複模式</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">根據記憶曲線優化複習</span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Smart Shuffle -->
+<div class="flex items-center justify-between p-4 min-h-[56px]">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/10 text-green-500">
+<span class="material-symbols-outlined text-xl">shuffle</span>
+</div>
+<span class="text-base font-medium truncate">智能洗牌</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- General Settings -->
+<section>
+<h3 class="px-4 pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">一般</h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
+<!-- Theme -->
+<div class="flex items-center justify-between p-4 min-h-[56px] hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-500/10 text-orange-500">
+<span class="material-symbols-outlined text-xl">dark_mode</span>
+</div>
+<span class="text-base font-medium">外觀主題</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-slate-500 dark:text-slate-400 text-sm">跟隨系統</span>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+<!-- Sound Effects -->
+<div class="flex items-center justify-between p-4 min-h-[56px]">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-pink-500/10 text-pink-500">
+<span class="material-symbols-outlined text-xl">volume_up</span>
+</div>
+<span class="text-base font-medium">應用程式音效</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Haptics -->
+<div class="flex items-center justify-between p-4 min-h-[56px]">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-500/10 text-slate-500">
+<span class="material-symbols-outlined text-xl">vibration</span>
+</div>
+<span class="text-base font-medium">觸覺回饋</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-12 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/40 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Data & Support -->
+<section>
+<h3 class="px-4 pb-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">支援與關於</h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
+<!-- Data Export -->
+<div class="flex items-center justify-between p-4 min-h-[56px] hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/10 text-teal-500">
+<span class="material-symbols-outlined text-xl">download</span>
+</div>
+<span class="text-base font-medium">匯出學習數據</span>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<!-- Help Center -->
+<div class="flex items-center justify-between p-4 min-h-[56px] hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500">
+<span class="material-symbols-outlined text-xl">help</span>
+</div>
+<span class="text-base font-medium">使用說明與協助</span>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section>
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm">
+<button class="w-full flex items-center justify-center p-4 min-h-[56px] hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group">
+<span class="text-red-500 dark:text-red-400 font-semibold text-base">登出帳戶</span>
+</button>
+</div>
+<p class="text-center text-xs text-slate-400 dark:text-slate-600 mt-6">
+                Flashcard App v1.0.2 (Build 20231024)<br/>
+                © 2023 Company Inc.
+            </p>
+</section>
+</main>
+<!-- Bottom Spacing for safe area on mobile -->
+<div class="h-6"></div>
+</body></html>

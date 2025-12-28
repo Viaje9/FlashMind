@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>學習模式介面</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19b3e6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                        "card-dark": "#1e282c",
+                        "secondary-text": "#93aeb8",
+                        "error": "#ff6b6b",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans TC", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+    }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased overflow-hidden selection:bg-primary selection:text-white">
+<div class="relative flex h-screen w-full flex-col max-w-md mx-auto shadow-2xl overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="flex items-center justify-between p-4 pt-6 z-10 shrink-0">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white">arrow_back_ios_new</span>
+</button>
+<div class="flex flex-col items-center">
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] dark:text-white text-slate-900">基礎單字</h2>
+<span class="text-xs font-medium text-secondary-text">日常對話</span>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white">more_vert</span>
+</button>
+</header>
+<div class="px-6 py-2 shrink-0">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-secondary-text">進度</span>
+<span class="text-sm font-bold text-primary">12 / 50</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200 dark:bg-[#3c4d53] rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 24%"></div>
+</div>
+</div>
+<main class="flex-1 flex flex-col items-center justify-center p-4 w-full relative">
+<div class="relative w-full h-full max-h-[600px] flex items-center justify-center">
+<div class="absolute w-[90%] h-[95%] rounded-3xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 shadow-sm opacity-40 transform scale-90 translate-y-8 z-0"></div>
+<div class="absolute w-[95%] h-[98%] rounded-3xl bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 shadow-md opacity-70 transform scale-95 translate-y-4 z-10"></div>
+<div class="relative w-full h-full rounded-3xl bg-white dark:bg-card-dark border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] z-20 flex flex-col overflow-hidden cursor-grab active:cursor-grabbing transition-transform duration-200">
+<div class="flex justify-between items-start p-6 w-full z-30">
+<button aria-label="收藏單字" class="flex items-center justify-center size-12 rounded-full bg-slate-50 dark:bg-slate-800/80 text-secondary-text hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[24px]">bookmark</span>
+</button>
+<button aria-label="播放發音" class="flex items-center justify-center size-12 rounded-full bg-slate-50 dark:bg-slate-800/80 text-secondary-text hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[24px]">volume_up</span>
+</button>
+</div>
+<div class="flex-1 flex flex-col items-center justify-center px-8 -mt-8 relative">
+<div class="w-full h-32 rounded-lg overflow-hidden mb-6 hidden">
+<img alt="Card Image" class="w-full h-full object-cover opacity-80" data-alt="Abstract gradient" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIsQG7u3aA4bvYaziTrxo5uRRteSef_J84PJD6fkM--FOgfn_mCdLd0rjop9CUZ1_3hH7aS85vmNwMb7YaHNf78F3wheRZesB7J9m-McNWaMz1NNIkFvPkrr5WlVc9Aa82t0R0xSQyPenpDi7pTPat5thfxzJ2mHgd730-kveDuYXRYg28aELG0ACiS6K25nj-Mdn5wEXxAdrAsO0CCtdjiFnQXNtyj3tchGaFgUQQ4Jx8fMtauZVeKZk61tJ2_SrrhsM_zd6Tes0"/>
+</div>
+<h1 class="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-white mb-4 text-center select-none">Hello</h1>
+</div>
+<div class="p-8 pb-10 w-full flex justify-between items-center opacity-90 select-none pointer-events-none">
+<div class="flex flex-col items-center gap-2 group">
+<div class="size-14 rounded-full border-2 border-error flex items-center justify-center bg-error/5">
+<span class="material-symbols-outlined text-error text-[26px]">close</span>
+</div>
+<span class="text-sm font-bold text-error tracking-wider">不知道</span>
+</div>
+<div class="flex flex-col items-center gap-2 group">
+<div class="size-14 rounded-full border-2 border-primary flex items-center justify-center bg-primary/5">
+<span class="material-symbols-outlined text-primary text-[26px]">check</span>
+</div>
+<span class="text-sm font-bold text-primary tracking-wider">知道</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="h-6 w-full shrink-0"></div>
+</div>
+
+</body></html>

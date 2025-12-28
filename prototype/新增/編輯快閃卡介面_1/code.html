@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>新增快閃卡</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19b3e6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                        "surface-dark": "#1c282c",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased transition-colors duration-200">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl">
+<header class="sticky top-0 z-10 flex items-center justify-between bg-surface-light dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+<button class="flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400">
+<span class="text-base font-medium">取消</span>
+</button>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">新增快閃卡</h2>
+<button class="flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors">
+<span class="text-primary text-base font-bold leading-normal">儲存</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col p-4 space-y-6">
+<section class="flex flex-col gap-2">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">web_stories</span>
+                    正面
+                </h3>
+</div>
+<div class="relative group">
+<div class="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-purple-600/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
+<div class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-1">
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 p-4 min-h-[140px] text-lg font-normal leading-relaxed resize-none rounded-lg" placeholder="輸入單字、片語或問題...">Hello</textarea>
+</div>
+</div>
+<p class="text-xs text-gray-400 dark:text-gray-500 px-1 text-right">5/200</p>
+</section>
+<div class="flex items-center justify-center py-1 opacity-50">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-600 text-[24px]">arrow_downward</span>
+</div>
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">flip_to_back</span>
+                    背面
+                </h3>
+</div>
+<button class="relative overflow-hidden w-full py-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 font-medium flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-all group active:scale-[0.98]">
+<div class="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">auto_awesome</span>
+<span class="text-sm font-bold relative z-10">AI 生成詞義與例句</span>
+</button>
+<div class="flex flex-col gap-4 mt-2">
+<div class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-gray-200 dark:border-gray-800 shadow-sm transition-all hover:border-primary/30 group">
+<div class="absolute top-3 right-3 flex gap-2">
+<button class="text-gray-300 hover:text-red-500 transition-colors" title="刪除">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-4">
+<div>
+<label class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block uppercase tracking-wide">中文解釋</label>
+<input class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 text-base text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 border-none focus:ring-1 focus:ring-primary/50 transition-all" placeholder="輸入中文解釋..." type="text" value="你好"/>
+</div>
+<div>
+<label class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block uppercase tracking-wide flex justify-between items-center">
+                                英文例句
+</label>
+<div class="relative">
+<textarea class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 pr-10 text-base text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 border-none focus:ring-1 focus:ring-primary/50 transition-all resize-none min-h-[72px]" placeholder="輸入英文例句...">Hello, how are you today?</textarea>
+<button class="absolute bottom-2 right-2 p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors" title="播放語音">
+<span class="material-symbols-outlined text-[20px]">volume_up</span>
+</button>
+</div>
+</div>
+<div>
+<label class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block uppercase tracking-wide">中文例句翻譯</label>
+<textarea class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 text-base text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 border-none focus:ring-1 focus:ring-primary/50 transition-all resize-none min-h-[48px]" placeholder="輸入中文翻譯...">你好，你今天好嗎？</textarea>
+</div>
+</div>
+</div>
+<div class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-gray-200 dark:border-gray-800 shadow-sm transition-all hover:border-primary/30 group">
+<div class="absolute top-3 right-3 flex gap-2">
+<button class="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100" title="刪除">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-4">
+<div>
+<label class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block uppercase tracking-wide">中文解釋</label>
+<input class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 text-base text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 border-none focus:ring-1 focus:ring-primary/50 transition-all" placeholder="輸入中文解釋..." type="text" value="（打電話時的招呼語）喂"/>
+</div>
+<div>
+<label class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block uppercase tracking-wide flex justify-between items-center">
+                                英文例句
+</label>
+<div class="relative">
+<textarea class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 pr-10 text-base text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 border-none focus:ring-1 focus:ring-primary/50 transition-all resize-none min-h-[72px]" placeholder="輸入英文例句...">Hello? Is anyone there?</textarea>
+<button class="absolute bottom-2 right-2 p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors" title="播放語音">
+<span class="material-symbols-outlined text-[20px]">volume_up</span>
+</button>
+</div>
+</div>
+<div>
+<label class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block uppercase tracking-wide">中文例句翻譯</label>
+<textarea class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 text-base text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 border-none focus:ring-1 focus:ring-primary/50 transition-all resize-none min-h-[48px]" placeholder="輸入中文翻譯...">喂？有人在嗎？</textarea>
+</div>
+</div>
+</div>
+</div>
+<button class="flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all group mt-2">
+<span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">add_circle</span>
+<span class="text-sm font-medium">新增詞義</span>
+</button>
+</section>
+</main>
+<div class="h-6 w-full bg-transparent"></div>
+</div>
+</body></html>

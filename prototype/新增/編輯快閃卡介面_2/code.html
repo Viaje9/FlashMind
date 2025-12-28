@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>卡片列表</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19b3e6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                        "surface-dark": "#1c282c",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "Noto Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>.hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased transition-colors duration-200">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl">
+<header class="sticky top-0 z-10 flex items-center justify-between bg-surface-light dark:bg-background-dark/95 backdrop-blur-md px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+<button class="flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight flex-1 text-center">托福核心單字</h2>
+<button class="flex items-center justify-center p-2 -mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</header>
+<main class="flex-1 flex flex-col p-4 space-y-4">
+<section class="bg-surface-light dark:bg-surface-dark rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 transform translate-x-4 -translate-y-4 pointer-events-none">
+<span class="material-symbols-outlined text-[120px] text-primary">style</span>
+</div>
+<div class="relative z-10">
+<div class="flex items-center gap-6 mb-2">
+<div class="flex flex-col">
+<span class="text-2xl font-bold text-blue-400">12</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">新卡片</span>
+</div>
+<div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
+<div class="flex flex-col">
+<span class="text-2xl font-bold text-green-400">30</span>
+<span class="text-xs font-medium text-gray-500 dark:text-gray-400">待複習</span>
+</div>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 mb-4">建立於 2023/10/24 • 上次複習：昨天</p>
+<div class="flex gap-3">
+<button class="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-sky-500 text-white py-2.5 rounded-xl transition-colors shadow-lg shadow-primary/30 active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+<span class="font-bold">開始學習</span>
+</button>
+</div>
+</div>
+</section>
+<div class="relative">
+<span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="w-full bg-surface-light dark:bg-surface-dark border-none ring-1 ring-gray-200 dark:ring-gray-800 focus:ring-2 focus:ring-primary rounded-xl py-3 pl-10 pr-4 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all shadow-sm" placeholder="搜尋牌組內的卡片..." type="text"/>
+</div>
+<div class="flex flex-col gap-3 pb-20">
+<div class="group relative bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex justify-between items-start gap-4">
+<div class="flex-1 min-w-0">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white truncate mb-1">Serendipity</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">意外發現珍奇事物的能力；機緣湊巧。</p>
+</div>
+<div class="flex flex-col gap-1 sm:opacity-100">
+<button class="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="編輯">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="刪除">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex justify-between items-start gap-4">
+<div class="flex-1 min-w-0">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white truncate mb-1">Ephemeral</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">短暫的；朝生暮死的；生命短促的。</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex justify-between items-start gap-4">
+<div class="flex-1 min-w-0">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white truncate mb-1">Eloquent</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">雄辯的；有口才的；動人的。</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group relative bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-primary/50 dark:hover:border-primary/50 transition-all shadow-sm">
+<div class="flex justify-between items-start gap-4">
+<div class="flex-1 min-w-0">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white truncate mb-1">Resilience</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">韌性；彈性；恢復力。</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-6 right-6 z-20">
+<button class="group flex items-center justify-center h-14 w-14 rounded-full bg-primary text-white shadow-lg shadow-primary/40 hover:scale-105 active:scale-95 transition-all duration-200">
+<span class="material-symbols-outlined text-[28px] group-hover:rotate-90 transition-transform duration-300">add</span>
+</button>
+</div>
+</div>
+</body></html>
