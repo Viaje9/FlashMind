@@ -1,0 +1,9 @@
+{
+  "name": "flashmind",
+  "private": true,
+  "packageManager": "pnpm@10.26.2",
+  "scripts": {
+    "dev:web": "pnpm --filter ./apps/web start",
+    "dev:api": "pnpm --filter ./apps/api start:dev"
+  }
+}

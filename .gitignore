@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+
+# Env
+.env
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+/dist/
+/apps/api/dist/
+/apps/web/dist/
+
+# Cache
+/.angular/
+/coverage/
+
+# Logs
+*.log
+
+# Prisma
+/apps/api/prisma/migrations/

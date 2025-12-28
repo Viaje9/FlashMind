@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - '@nestjs/core'
+  - '@parcel/watcher'
+  - esbuild
+  - lmdb
+  - msgpackr-extract
+  - unrs-resolver
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
