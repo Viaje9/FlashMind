@@ -1,6 +1,6 @@
 <div class="relative min-h-screen pb-24">
   <fm-page-header title="FlashMind">
-    <fm-icon-button slot="right" variant="ghost" ariaLabel="設定">
+    <fm-icon-button slot="right" variant="ghost" ariaLabel="設定" routerLink="/settings">
       <span class="material-symbols-outlined text-[22px]">settings</span>
     </fm-icon-button>
   </fm-page-header>
@@ -20,6 +20,7 @@
           [completed]="deck.completed"
           [showAction]="deck.showAction"
           [actionLabel]="deck.actionLabel"
+          (actionClick)="onDeckAction(deck.id)"
         ></fm-deck-card>
       }
 
@@ -34,7 +35,7 @@
   </main>
 
   <div class="fixed bottom-24 right-5 z-40">
-    <fm-fab ariaLabel="新增牌組">
+    <fm-fab ariaLabel="新增牌組" routerLink="/decks/new">
       <span class="material-symbols-outlined text-[28px]">add</span>
     </fm-fab>
   </div>

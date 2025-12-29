@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   FmIconButtonComponent,
   FmPageHeaderComponent,
@@ -15,7 +16,8 @@ import {
     FmIconButtonComponent,
     FmStudyProgressComponent,
     FmStudyCardComponent,
-    FmStudyDecisionBarComponent
+    FmStudyDecisionBarComponent,
+    RouterLink
   ],
   templateUrl: './study.component.html',
   styleUrl: './study.component.css',

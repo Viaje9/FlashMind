@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   FmButtonComponent,
   FmIconButtonComponent,
@@ -16,7 +17,8 @@ import {
     FmLabeledInputComponent,
     FmSectionHeadingComponent,
     FmNumberInputRowComponent,
-    FmButtonComponent
+    FmButtonComponent,
+    RouterLink
   ],
   templateUrl: './deck-create.component.html',
   styleUrl: './deck-create.component.css',

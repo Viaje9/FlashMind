@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   FmButtonComponent,
   FmDividerComponent,
@@ -8,7 +9,13 @@ import {
 
 @Component({
   selector: 'app-welcome-page',
-  imports: [FmWelcomeHeroComponent, FmButtonComponent, FmDividerComponent, FmSocialLoginRowComponent],
+  imports: [
+    FmWelcomeHeroComponent,
+    FmButtonComponent,
+    FmDividerComponent,
+    FmSocialLoginRowComponent,
+    RouterLink
+  ],
   templateUrl: './welcome.component.html',
   styleUrl: './welcome.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

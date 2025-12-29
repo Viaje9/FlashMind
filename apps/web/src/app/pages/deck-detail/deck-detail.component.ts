@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import {
   FmCardListItemComponent,
   FmDeckStatsCardComponent,
@@ -22,13 +23,16 @@ interface CardPreview {
     FmDeckStatsCardComponent,
     FmSearchInputComponent,
     FmCardListItemComponent,
-    FmFabComponent
+    FmFabComponent,
+    RouterLink
   ],
   templateUrl: './deck-detail.component.html',
   styleUrl: './deck-detail.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeckDetailComponent {
+  private readonly router = inject(Router);
+
   readonly cards: CardPreview[] = [
     {
       id: 'card-1',
@@ -51,4 +55,8 @@ export class DeckDetailComponent {
       description: '韌性；彈性；恢復力。'
     }
   ];
+
+  onStartStudy() {
+    void this.router.navigate(['/study']);
+  }
 }

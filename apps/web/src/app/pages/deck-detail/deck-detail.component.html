@@ -1,6 +1,6 @@
 <div class="min-h-screen pb-24">
   <fm-page-header title="托福核心單字" layout="center">
-    <fm-icon-button slot="left" variant="ghost" ariaLabel="返回">
+    <fm-icon-button slot="left" variant="ghost" ariaLabel="返回" routerLink="/decks">
       <span class="material-symbols-outlined text-[22px]">arrow_back</span>
     </fm-icon-button>
     <fm-icon-button slot="right" variant="ghost" ariaLabel="更多">
@@ -15,6 +15,7 @@
       createdAtLabel="2023/10/24"
       lastReviewLabel="昨天"
       actionLabel="開始學習"
+      (actionClick)="onStartStudy()"
     ></fm-deck-stats-card>
 
     <fm-search-input placeholder="搜尋牌組內的卡片..." ariaLabel="搜尋牌組內的卡片"></fm-search-input>
@@ -27,7 +28,7 @@
   </main>
 
   <div class="fixed bottom-6 right-6 z-20">
-    <fm-fab ariaLabel="新增卡片">
+    <fm-fab ariaLabel="新增卡片" routerLink="/cards/new">
       <span class="material-symbols-outlined text-[28px]">add</span>
     </fm-fab>
   </div>

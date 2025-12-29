@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   FmAddItemButtonComponent,
   FmButtonComponent,
@@ -23,7 +24,8 @@ interface MeaningBlock {
     FmFormSectionHeaderComponent,
     FmGlowTextareaComponent,
     FmMeaningEditorCardComponent,
-    FmAddItemButtonComponent
+    FmAddItemButtonComponent,
+    RouterLink
   ],
   templateUrl: './card-editor.component.html',
   styleUrl: './card-editor.component.css',

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import {
   FmButtonComponent,
   FmPageHeaderComponent,
@@ -14,7 +15,8 @@ import {
     FmButtonComponent,
     FmProfileCardComponent,
     FmSectionHeadingComponent,
-    FmSettingRowComponent
+    FmSettingRowComponent,
+    RouterLink
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',

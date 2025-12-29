@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import {
   FmDeckCardComponent,
   FmEmptyStateComponent,
@@ -27,13 +28,16 @@ interface DeckPreview {
     FmSearchInputComponent,
     FmDeckCardComponent,
     FmEmptyStateComponent,
-    FmFabComponent
+    FmFabComponent,
+    RouterLink
   ],
   templateUrl: './deck-list.component.html',
   styleUrl: './deck-list.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeckListComponent {
+  private readonly router = inject(Router);
+
   readonly decks: DeckPreview[] = [
     {
       id: 'deck-1',
@@ -66,4 +70,8 @@ export class DeckListComponent {
       actionLabel: '已完成'
     }
   ];
+
+  onDeckAction(deckId: string) {
+    void this.router.navigate(['/decks', deckId]);
+  }
 }
