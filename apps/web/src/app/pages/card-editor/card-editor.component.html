@@ -1,0 +1,42 @@
+<div class="min-h-screen">
+  <fm-page-header title="新增快閃卡" layout="center" [dense]="true">
+    <fm-button slot="left" variant="ghost" size="sm">取消</fm-button>
+    <fm-button slot="right" size="sm">儲存</fm-button>
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md flex flex-col gap-6 px-4 pt-4 pb-6">
+    <section class="flex flex-col gap-3">
+      <fm-form-section-header title="正面" icon="web_stories"></fm-form-section-header>
+      <fm-glow-textarea
+        [value]="frontText"
+        placeholder="輸入單字、片語或問題..."
+        [maxLength]="200"
+      ></fm-glow-textarea>
+    </section>
+
+    <div class="flex items-center justify-center py-1 opacity-60">
+      <span class="material-symbols-outlined text-[22px]">arrow_downward</span>
+    </div>
+
+    <section class="flex flex-col gap-4">
+      <fm-form-section-header title="背面" icon="flip_to_back"></fm-form-section-header>
+
+      <button
+        type="button"
+        class="relative overflow-hidden w-full py-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 font-medium flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-all group active:scale-[0.98]"
+      >
+        <div class="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">auto_awesome</span>
+        <span class="text-sm font-bold relative z-10">AI 生成詞義與例句</span>
+      </button>
+
+      <div class="flex flex-col gap-4">
+        @for (block of meaningBlocks; track block.id) {
+          <fm-meaning-editor-card [meaning]="block.data" [tagLabel]="block.label"></fm-meaning-editor-card>
+        }
+      </div>
+
+      <fm-add-item-button label="新增詞義"></fm-add-item-button>
+    </section>
+  </main>
+</div>

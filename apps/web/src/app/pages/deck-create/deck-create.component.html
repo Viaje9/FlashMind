@@ -1,0 +1,59 @@
+<div class="min-h-screen pb-6">
+  <fm-page-header title="新增牌組">
+    <fm-icon-button slot="left" variant="ghost" ariaLabel="返回">
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md px-4 pt-4">
+    <form class="flex flex-col gap-6">
+      <fm-labeled-input
+        label="牌組名稱"
+        icon="style"
+        placeholder="例如：日文 N5 單字"
+        ariaLabel="牌組名稱"
+      ></fm-labeled-input>
+
+      <div class="flex flex-col gap-4">
+        <fm-section-heading text="學習計畫設定"></fm-section-heading>
+
+        <fm-number-input-row
+          label="每日新卡數"
+          title="新學習"
+          description="建議初學者設定 20 張"
+          icon="library_add"
+          iconClass="bg-blue-500/10 text-blue-500"
+          [value]="20"
+          [min]="0"
+          [step]="5"
+          unit="張"
+          ariaLabel="每日新卡數"
+        ></fm-number-input-row>
+
+        <fm-number-input-row
+          label="每日複習數"
+          title="複習上限"
+          description="包含舊卡片複習"
+          icon="history"
+          iconClass="bg-amber-500/10 text-amber-500"
+          [value]="100"
+          [min]="0"
+          [step]="10"
+          unit="張"
+          ariaLabel="每日複習數"
+        ></fm-number-input-row>
+      </div>
+
+      <p class="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+        提示：您可以隨時在牌組設定中更改這些數值。較高的每日新卡數可能會導致未來的複習量大幅增加。
+      </p>
+    </form>
+  </main>
+
+  <div class="mt-auto p-4 pt-2">
+    <div class="flex flex-col gap-3">
+      <fm-button [fullWidth]="true">儲存設定</fm-button>
+      <fm-button variant="ghost" [fullWidth]="true">取消</fm-button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,22 @@
+<div class="min-h-screen flex flex-col">
+  <fm-page-header title="基礎單字" subtitle="日常對話" layout="center" [sticky]="false">
+    <fm-icon-button slot="left" variant="ghost" ariaLabel="返回">
+      <span class="material-symbols-outlined text-[22px]">arrow_back_ios_new</span>
+    </fm-icon-button>
+    <fm-icon-button slot="right" variant="ghost" ariaLabel="更多">
+      <span class="material-symbols-outlined text-[22px]">more_vert</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <div class="mx-auto w-full max-w-md">
+    <fm-study-progress [current]="12" [total]="50"></fm-study-progress>
+  </div>
+
+  <main class="mx-auto w-full max-w-md flex-1 flex items-center justify-center px-4 pb-6">
+    <fm-study-card [word]="word" [translations]="translations" [examples]="examples"></fm-study-card>
+  </main>
+
+  <div class="mx-auto w-full max-w-md px-6 pb-6">
+    <fm-study-decision-bar layout="inline"></fm-study-decision-bar>
+  </div>
+</div>

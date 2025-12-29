@@ -1,0 +1,41 @@
+<div class="relative min-h-screen pb-24">
+  <fm-page-header title="FlashMind">
+    <fm-icon-button slot="right" variant="ghost" ariaLabel="設定">
+      <span class="material-symbols-outlined text-[22px]">settings</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md px-4 pt-4">
+    <div class="mb-6">
+      <fm-search-input placeholder="搜尋牌組..." ariaLabel="搜尋牌組"></fm-search-input>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      @for (deck of decks; track deck.id) {
+        <fm-deck-card
+          [title]="deck.title"
+          [newCount]="deck.newCount"
+          [reviewCount]="deck.reviewCount"
+          [progress]="deck.progress"
+          [completed]="deck.completed"
+          [showAction]="deck.showAction"
+          [actionLabel]="deck.actionLabel"
+        ></fm-deck-card>
+      }
+
+      <fm-empty-state
+        icon="library_add"
+        title="點擊 + 按鈕建立新牌組"
+        description="建立第一個學習計畫，開始每天複習。"
+      ></fm-empty-state>
+    </div>
+
+    <div class="h-24"></div>
+  </main>
+
+  <div class="fixed bottom-24 right-5 z-40">
+    <fm-fab ariaLabel="新增牌組">
+      <span class="material-symbols-outlined text-[28px]">add</span>
+    </fm-fab>
+  </div>
+</div>
