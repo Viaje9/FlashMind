@@ -39,7 +39,7 @@ jobs:
       - name: Build docs-viewer
         run: pnpm --filter ./apps/docs-viewer build
         env:
-          DOCS_BASE: /FlashMind/docs
+          DOCS_BASE: /FlashMind/docs/
 
       - name: Deploy to gh-pages/docs
         uses: peaceiris/actions-gh-pages@v3
