@@ -24,10 +24,10 @@ const meta: Meta<FmPageHeaderComponent> = {
     template:
       '<div class="bg-background-light dark:bg-background-dark p-4">'
       + '<fm-page-header [title]="title" [subtitle]="subtitle" [layout]="layout" [sticky]="sticky" [dense]="dense">'
-      + '<fm-icon-button slot="left" variant="ghost" ariaLabel="返回">'
+      + '<fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回">'
       + '<span class="material-symbols-outlined">arrow_back</span>'
       + '</fm-icon-button>'
-      + '<fm-icon-button slot="right" variant="ghost" ariaLabel="設定">'
+      + '<fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="設定">'
       + '<span class="material-symbols-outlined">settings</span>'
       + '</fm-icon-button>'
       + '</fm-page-header>'

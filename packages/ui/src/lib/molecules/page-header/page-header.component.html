@@ -1,33 +1,18 @@
 <header [class]="containerClass()">
-  @if (layout() === 'center') {
-    <div class="flex items-center gap-3">
-      <ng-content select="[slot=left]"></ng-content>
-    </div>
-    <div class="flex flex-col items-center text-center flex-1">
-      <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-        {{ title() }}
-      </h1>
-      @if (subtitle()) {
-        <span class="text-xs font-medium text-secondary-text">{{ subtitle() }}</span>
-      }
-    </div>
-    <div class="flex items-center gap-2">
-      <ng-content select="[slot=right]"></ng-content>
-    </div>
-  } @else {
-    <div class="flex items-center gap-3">
-      <ng-content select="[slot=left]"></ng-content>
-      <div class="flex flex-col">
-        <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-          {{ title() }}
-        </h1>
-        @if (subtitle()) {
-          <span class="text-xs font-medium text-secondary-text">{{ subtitle() }}</span>
-        }
-      </div>
-    </div>
-    <div class="flex items-center gap-2">
-      <ng-content select="[slot=right]"></ng-content>
-    </div>
-  }
+  <div class="flex items-center gap-3">
+    <ng-content select=".fm-header-left"></ng-content>
+    <ng-content select="[slot=left]"></ng-content>
+  </div>
+  <div [class]="titleClass()">
+    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+      {{ title() }}
+    </h1>
+    @if (subtitle()) {
+      <span class="text-xs font-medium text-secondary-text">{{ subtitle() }}</span>
+    }
+  </div>
+  <div class="flex items-center gap-2 justify-end">
+    <ng-content select=".fm-header-right"></ng-content>
+    <ng-content select="[slot=right]"></ng-content>
+  </div>
 </header>

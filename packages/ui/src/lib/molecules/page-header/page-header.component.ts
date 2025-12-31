@@ -17,10 +17,17 @@ export class FmPageHeaderComponent {
 
   readonly containerClass = computed(() => {
     const base =
-      'flex items-center justify-between bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200';
+      'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200';
     const spacing = this.dense() ? 'px-4 py-2' : 'px-4 py-3';
     const sticky = this.sticky() ? 'sticky top-0 z-30' : '';
 
     return [base, spacing, sticky].filter(Boolean).join(' ');
+  });
+
+  readonly titleClass = computed(() => {
+    const base = 'flex flex-col';
+    const align = this.layout() === 'center' ? 'items-center text-center' : 'items-start text-left';
+
+    return [base, align].join(' ');
   });
 }
