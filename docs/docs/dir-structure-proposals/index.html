@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="zh-Hant-TW"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="比較多種專案結構方案與命名切片，作為 monorepo 佈局參考。"><meta name="generator" content="Astro v5.16.6"><title>目錄結構規劃提案（依據 PRD + Prototype）｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docsfavicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.6t4uTcVY.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>目錄結構規劃提案（依據 PRD + Prototype）</h1> <p class="doc-summary">比較多種專案結構方案與命名切片，作為 monorepo 佈局參考。</p> </header> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#prdprototype-對應切片命名建議">PRD/Prototype 對應切片（命名建議）</a> </li><li class="toc-item depth-2"> <a href="#版本-c專案套件型app-centric--packages">版本 C：專案＋套件型（App-Centric + Packages）</a> </li> </ul> </details> <div class="doc-content"> <h1 id="目錄結構規劃提案依據-prd--prototype">目錄結構規劃提案（依據 PRD + Prototype）</h1>
+<h2 id="prdprototype-對應切片命名建議">PRD/Prototype 對應切片（命名建議）</h2>
+<ul>
+<li>auth：歡迎/登入、第三方登入、條款</li>
+<li>deck：牌組列表、牌組新增、牌組概況</li>
+<li>card：牌組內卡片列表、卡片新增/編輯、AI 生成、例句/翻譯</li>
+<li>study：學習模式、進度、知道/不知道、收藏</li>
+<li>settings：偏好、提醒、主題、音效、匯出、登出</li>
+<li>support：使用說明與協助（設定介面）</li>
+<li>integrations：AI、TTS、通知、匯出（後端）</li>
+</ul>
+<h2 id="版本-c專案套件型app-centric--packages">版本 C：專案＋套件型（App-Centric + Packages）</h2>
+<ul>
+<li>核心理念：保持 apps 內部完整閉環，跨專案共用集中在 packages。</li>
+<li>適用情境：前後端節奏不同、共用較少、快速交付優先。</li>
+<li>優點：apps 自足、變更範圍可控、共用套件集中管理。</li>
+<li>風險／缺點：跨 app 重複結構多、共用抽象容易被低估。</li>
+<li>OpenAPI 產物：<code>apps/api/openapi/</code> 產出 <code>openapi.json</code>，前端 client 生成至 <code>packages/api-client/src/generated/</code>，<code>apps/web</code> 直接使用生成 client。</li>
+<li>目錄示意：
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>flashmind/</span></span>
+<span class="line"><span>├── apps/</span></span>
+<span class="line"><span>│   ├── web/</span></span>
+<span class="line"><span>│   │   └── src/</span></span>
+<span class="line"><span>│   │       ├── app/</span></span>
+<span class="line"><span>│   │       │   ├── routes/</span></span>
+<span class="line"><span>│   │       │   │   ├── auth.routes.ts</span></span>
+<span class="line"><span>│   │       │   │   ├── deck.routes.ts</span></span>
+<span class="line"><span>│   │       │   │   ├── study.routes.ts</span></span>
+<span class="line"><span>│   │       │   │   └── settings.routes.ts</span></span>
+<span class="line"><span>│   │       │   ├── pages/</span></span>
+<span class="line"><span>│   │       │   │   ├── welcome/</span></span>
+<span class="line"><span>│   │       │   │   ├── login/</span></span>
+<span class="line"><span>│   │       │   │   ├── deck-list/</span></span>
+<span class="line"><span>│   │       │   │   ├── deck-create/</span></span>
+<span class="line"><span>│   │       │   │   ├── deck-detail/</span></span>
+<span class="line"><span>│   │       │   │   ├── card-list/</span></span>
+<span class="line"><span>│   │       │   │   ├── card-editor/</span></span>
+<span class="line"><span>│   │       │   │   ├── study-session/</span></span>
+<span class="line"><span>│   │       │   │   └── settings/</span></span>
+<span class="line"><span>│   │       │   ├── components/</span></span>
+<span class="line"><span>│   │       │   │   ├── deck/</span></span>
+<span class="line"><span>│   │       │   │   ├── card/</span></span>
+<span class="line"><span>│   │       │   │   ├── study/</span></span>
+<span class="line"><span>│   │       │   │   └── settings/</span></span>
+<span class="line"><span>│   │       │   ├── state/</span></span>
+<span class="line"><span>│   │       │   │   ├── auth.store.ts</span></span>
+<span class="line"><span>│   │       │   │   ├── deck.store.ts</span></span>
+<span class="line"><span>│   │       │   │   ├── card.store.ts</span></span>
+<span class="line"><span>│   │       │   │   └── study.store.ts</span></span>
+<span class="line"><span>│   │       │   └── shared/</span></span>
+<span class="line"><span>│   │       │       ├── layouts/</span></span>
+<span class="line"><span>│   │       │       ├── guards/</span></span>
+<span class="line"><span>│   │       │       ├── utils/</span></span>
+<span class="line"><span>│   │       │       └── types/</span></span>
+<span class="line"><span>│   │       └── styles/</span></span>
+<span class="line"><span>│   ├── api/</span></span>
+<span class="line"><span>│       ├── openapi/</span></span>
+<span class="line"><span>│       │   └── openapi.json</span></span>
+<span class="line"><span>│       ├── src/</span></span>
+<span class="line"><span>│       │   ├── modules/</span></span>
+<span class="line"><span>│       │   │   ├── auth/</span></span>
+<span class="line"><span>│       │   │   │   ├── controllers/</span></span>
+<span class="line"><span>│       │   │   │   ├── services/</span></span>
+<span class="line"><span>│       │   │   │   ├── dto/</span></span>
+<span class="line"><span>│       │   │   │   └── strategies/</span></span>
+<span class="line"><span>│       │   │   ├── users/</span></span>
+<span class="line"><span>│       │   │   │   ├── controllers/</span></span>
+<span class="line"><span>│       │   │   │   ├── services/</span></span>
+<span class="line"><span>│       │   │   │   └── dto/</span></span>
+<span class="line"><span>│       │   │   ├── deck/</span></span>
+<span class="line"><span>│       │   │   │   ├── controllers/</span></span>
+<span class="line"><span>│       │   │   │   ├── services/</span></span>
+<span class="line"><span>│       │   │   │   ├── dto/</span></span>
+<span class="line"><span>│       │   │   │   └── entities/</span></span>
+<span class="line"><span>│       │   │   ├── card/</span></span>
+<span class="line"><span>│       │   │   │   ├── controllers/</span></span>
+<span class="line"><span>│       │   │   │   ├── services/</span></span>
+<span class="line"><span>│       │   │   │   ├── dto/</span></span>
+<span class="line"><span>│       │   │   │   └── entities/</span></span>
+<span class="line"><span>│       │   │   ├── study/</span></span>
+<span class="line"><span>│       │   │   │   ├── controllers/</span></span>
+<span class="line"><span>│       │   │   │   ├── services/</span></span>
+<span class="line"><span>│       │   │   │   ├── scheduler/</span></span>
+<span class="line"><span>│       │   │   │   └── dto/</span></span>
+<span class="line"><span>│       │   │   ├── settings/</span></span>
+<span class="line"><span>│       │   │   │   ├── controllers/</span></span>
+<span class="line"><span>│       │   │   │   ├── services/</span></span>
+<span class="line"><span>│       │   │   │   └── dto/</span></span>
+<span class="line"><span>│       │   │   ├── notifications/</span></span>
+<span class="line"><span>│       │   │   │   └── services/</span></span>
+<span class="line"><span>│       │   │   ├── ai/</span></span>
+<span class="line"><span>│       │   │   │   └── services/</span></span>
+<span class="line"><span>│       │   │   ├── tts/</span></span>
+<span class="line"><span>│       │   │   │   └── services/</span></span>
+<span class="line"><span>│       │   │   └── export/</span></span>
+<span class="line"><span>│       │   │       └── services/</span></span>
+<span class="line"><span>│       │   ├── common/</span></span>
+<span class="line"><span>│       │   │   ├── guards/</span></span>
+<span class="line"><span>│       │   │   ├── interceptors/</span></span>
+<span class="line"><span>│       │   │   ├── filters/</span></span>
+<span class="line"><span>│       │   │   └── pipes/</span></span>
+<span class="line"><span>│       │   └── prisma/</span></span>
+<span class="line"><span>│       │       ├── prisma.service.ts</span></span>
+<span class="line"><span>│       │       └── prisma.module.ts</span></span>
+<span class="line"><span>│       └── prisma/</span></span>
+<span class="line"><span>│           ├── schema.prisma</span></span>
+<span class="line"><span>│           └── migrations/</span></span>
+<span class="line"><span>│   └── docs-viewer/</span></span>
+<span class="line"><span>│       └── src/</span></span>
+<span class="line"><span>│           └── content/</span></span>
+<span class="line"><span>│               └── docs/</span></span>
+<span class="line"><span>├── packages/</span></span>
+<span class="line"><span>│   ├── api-client/</span></span>
+<span class="line"><span>│   │   ├── src/</span></span>
+<span class="line"><span>│   │   │   ├── generated/</span></span>
+<span class="line"><span>│   │   │   └── index.ts</span></span>
+<span class="line"><span>│   │   └── README.md</span></span>
+<span class="line"><span>│   ├── shared/</span></span>
+<span class="line"><span>│   │   └── src/</span></span>
+<span class="line"><span>│   │       ├── types/</span></span>
+<span class="line"><span>│   │       ├── dto/</span></span>
+<span class="line"><span>│   │       ├── validators/</span></span>
+<span class="line"><span>│   │       └── constants/</span></span>
+<span class="line"><span>│   ├── ui/</span></span>
+<span class="line"><span>│   │   └── src/</span></span>
+<span class="line"><span>│   │       ├── primitives/</span></span>
+<span class="line"><span>│   │       ├── molecules/</span></span>
+<span class="line"><span>│   │       ├── organisms/</span></span>
+<span class="line"><span>│   │       ├── forms/</span></span>
+<span class="line"><span>│   │       └── styles/</span></span>
+<span class="line"><span>│   └── config/</span></span>
+<span class="line"><span>└── prototype/</span></span></code></pre>
+</li>
+</ul> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html>
