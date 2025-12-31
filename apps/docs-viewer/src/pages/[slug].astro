@@ -24,7 +24,7 @@ if (!doc) {
 const { Content, headings } = await doc.render();
 const tocItems = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
 const baseUrl = import.meta.env.BASE_URL;
-const repoBase = 'https://github.com/viaje9/FlashMind/blob/main/';
+const repoBase = 'https://raw.githubusercontent.com/viaje9/FlashMind/main/';
 const mdRelativePath = `apps/docs-viewer/src/content/docs/${doc.id}`;
 const mdGitHubUrl = encodeURI(`${repoBase}${mdRelativePath}`);
 ---
@@ -47,14 +47,6 @@ const mdGitHubUrl = encodeURI(`${repoBase}${mdRelativePath}`);
         <p>需要貼到 issue 或 PR 時可直接複製。</p>
       </div>
       <div class="doc-source__actions">
-        <a
-          class="button button-ghost"
-          href={mdGitHubUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          在 GitHub 開啟
-        </a>
         <button class="button button-primary" type="button" data-copy-url={mdGitHubUrl}>
           複製路徑
         </button>
