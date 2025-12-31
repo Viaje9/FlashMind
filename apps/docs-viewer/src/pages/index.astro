@@ -37,7 +37,7 @@ const baseUrl = import.meta.env.BASE_URL;
     <div class="doc-grid">
       {
         sortedDocs.map((doc) => (
-          <a class="doc-card" href={`${baseUrl}docs/${doc.slug}/`}>
+          <a class="doc-card" href={`${baseUrl}${doc.slug}/`}>
             <span class="doc-card-label">文件</span>
             <h3 class="doc-card-title">{doc.data.title}</h3>
             <p class="doc-card-summary">{doc.data.summary}</p>
