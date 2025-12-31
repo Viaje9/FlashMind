@@ -1,0 +1,49 @@
+name: Deploy docs-viewer to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/docs-viewer/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/docs-viewer-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build docs-viewer
+        run: pnpm --filter ./apps/docs-viewer build
+        env:
+          DOCS_BASE: /FlashMind/docs
+
+      - name: Deploy to gh-pages/docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./apps/docs-viewer/dist
+          destination_dir: docs

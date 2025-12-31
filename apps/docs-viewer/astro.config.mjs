@@ -1,4 +1,8 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 
-export default defineConfig({});
+const base = process.env.DOCS_BASE ?? '/';
+
+export default defineConfig({
+  base,
+});

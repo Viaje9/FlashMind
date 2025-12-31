@@ -23,12 +23,13 @@ if (!doc) {
 
 const { Content, headings } = await doc.render();
 const tocItems = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
+const baseUrl = import.meta.env.BASE_URL;
 ---
 
 <BaseLayout title={doc.data.title} description={doc.data.summary}>
   <article class="doc-page">
     <div class="doc-top">
-      <a class="back-link" href="/">← 回到文件列表</a>
+      <a class="back-link" href={baseUrl}>← 回到文件列表</a>
       <span class="doc-id">文件</span>
     </div>
 
@@ -57,7 +58,7 @@ const tocItems = headings.filter((heading) => heading.depth >= 2 && heading.dept
     </div>
 
     <footer class="doc-footer">
-      <a class="button button-ghost" href="/">回到列表</a>
+      <a class="button button-ghost" href={baseUrl}>回到列表</a>
     </footer>
   </article>
 </BaseLayout>
