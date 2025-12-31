@@ -1,3 +1,8 @@
+---
+title: "目錄結構規劃提案（依據 PRD + Prototype）"
+summary: "比較多種專案結構方案與命名切片，作為 monorepo 佈局參考。"
+---
+
 # 目錄結構規劃提案（依據 PRD + Prototype）
 
 ## PRD/Prototype 對應切片（命名建議）
@@ -53,7 +58,7 @@
   │   │       │       ├── utils/
   │   │       │       └── types/
   │   │       └── styles/
-  │   └── api/
+  │   ├── api/
   │       ├── openapi/
   │       │   └── openapi.json
   │       ├── src/
@@ -105,6 +110,10 @@
   │       └── prisma/
   │           ├── schema.prisma
   │           └── migrations/
+  │   └── docs-viewer/
+  │       └── src/
+  │           └── content/
+  │               └── docs/
   ├── packages/
   │   ├── api-client/
   │   │   ├── src/
@@ -125,6 +134,5 @@
   │   │       ├── forms/
   │   │       └── styles/
   │   └── config/
-  ├── docs/
   └── prototype/
   ```

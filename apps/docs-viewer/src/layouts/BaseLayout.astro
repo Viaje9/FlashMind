@@ -1,0 +1,62 @@
+---
+import '../styles/global.css';
+
+const { title, description } = Astro.props;
+const siteTitle = 'FlashMind 文件速覽';
+const pageTitle = title ? `${title}｜${siteTitle}` : siteTitle;
+const pageDescription =
+  description ??
+  '行動優先的文件閱讀入口，適合手機快速瀏覽與整理專案資訊。';
+---
+
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={pageDescription} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要內容</a>
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-mark">FM</span>
+        <div class="brand-text">
+          <span class="brand-title">FlashMind 文件速覽</span>
+          <span class="brand-subtitle">手機優先 · 快速查閱</span>
+        </div>
+      </div>
+      <nav class="header-actions">
+        <a class="ghost-link" href="/">文件首頁</a>
+      </nav>
+    </header>
+    <main id="main" class="site-main">
+      <slot />
+    </main>
+    <button class="to-top" type="button" aria-label="回到頁首">
+      <span aria-hidden="true">↑</span>
+      回到頁首
+    </button>
+    <footer class="site-footer">
+      <span>FlashMind 文件工具 · 輕量版</span>
+      <span>以行動閱讀為核心設計</span>
+    </footer>
+    <script>
+      const toTopButton = document.querySelector('.to-top');
+      if (toTopButton) {
+        const toggle = () => {
+          const shouldShow = window.scrollY > 240;
+          toTopButton.classList.toggle('is-visible', shouldShow);
+        };
+        toggle();
+        window.addEventListener('scroll', toggle, { passive: true });
+        toTopButton.addEventListener('click', () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
+    </script>
+  </body>
+</html>

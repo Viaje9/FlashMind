@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const docs = await getCollection('docs');
+const sortedDocs = docs.sort((a, b) =>
+  a.data.title.localeCompare(b.data.title, 'zh-Hant'),
+);
+const totalDocs = docs.length;
+---
+
+<BaseLayout
+  title="文件速覽"
+  description="行動優先的文件閱讀入口，快速瀏覽 FlashMind 的核心規格與進度。"
+>
+  <section class="hero">
+    <div class="hero-tags">
+      <span class="tag">行動優先</span>
+      <span class="tag tag-alt">LLM 友善</span>
+    </div>
+    <h1 class="hero-title">FlashMind 文件速覽</h1>
+    <p class="hero-lead">
+      把專案規格、進度與問題記錄整理成單手也好讀的格式，讓手機瀏覽和快速複製更順。
+    </p>
+    <div class="hero-actions">
+      <a class="button button-primary" href="#docs">開始閱讀</a>
+      <span class="hero-meta">目前共有 {totalDocs} 篇文件</span>
+    </div>
+  </section>
+
+  <section id="docs" class="section">
+    <div class="section-head">
+      <h2>文件列表</h2>
+      <p>依主題快速進入，閱讀完可返回這裡接續下一篇。</p>
+    </div>
+    <div class="doc-grid">
+      {
+        sortedDocs.map((doc) => (
+          <a class="doc-card" href={`/docs/${doc.slug}/`}>
+            <span class="doc-card-label">文件</span>
+            <h3 class="doc-card-title">{doc.data.title}</h3>
+            <p class="doc-card-summary">{doc.data.summary}</p>
+            <span class="doc-card-action">進入閱讀 →</span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section tips">
+    <div class="section-head">
+      <h2>手機閱讀小技巧</h2>
+      <p>這個版型針對手機閱讀優化，滑動與跳段都更順手。</p>
+    </div>
+    <div class="tips-grid">
+      <div class="tip-card">
+        <h3>一手跳段</h3>
+        <p>文件頁有折疊式目錄，點一下就能快速跳到段落。</p>
+      </div>
+      <div class="tip-card">
+        <h3>長文不疲勞</h3>
+        <p>行距與字寬已優化，長時間閱讀也不容易累。</p>
+      </div>
+      <div class="tip-card">
+        <h3>快速複製</h3>
+        <p>後續可以加上純文字模式，讓 LLM 取用更方便。</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

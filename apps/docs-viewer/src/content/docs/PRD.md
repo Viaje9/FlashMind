@@ -1,3 +1,8 @@
+---
+title: "FlashMind PRD（依據 prototype）"
+summary: "整理產品背景、目標與功能範圍，作為下一階段規格依據。"
+---
+
 # FlashMind PRD（依據 prototype）
 
 ## 產品背景

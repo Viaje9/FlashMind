@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, getEntryBySlug } from 'astro:content';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  return docs.map((doc) => ({
+    params: { slug: doc.slug },
+  }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error('缺少文件代號');
+}
+
+const doc = await getEntryBySlug('docs', slug);
+
+if (!doc) {
+  throw new Error(`找不到文件：${slug}`);
+}
+
+const { Content, headings } = await doc.render();
+const tocItems = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
+---
+
+<BaseLayout title={doc.data.title} description={doc.data.summary}>
+  <article class="doc-page">
+    <div class="doc-top">
+      <a class="back-link" href="/">← 回到文件列表</a>
+      <span class="doc-id">文件</span>
+    </div>
+
+    <header class="doc-header">
+      <h1>{doc.data.title}</h1>
+      <p class="doc-summary">{doc.data.summary}</p>
+    </header>
+
+    {
+      tocItems.length > 0 && (
+        <details class="toc" open>
+          <summary>目錄</summary>
+          <ul>
+            {tocItems.map((item) => (
+              <li class={`toc-item depth-${item.depth}`}>
+                <a href={`#${item.slug}`}>{item.text}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )
+    }
+
+    <div class="doc-content">
+      <Content />
+    </div>
+
+    <footer class="doc-footer">
+      <a class="button button-ghost" href="/">回到列表</a>
+    </footer>
+  </article>
+</BaseLayout>

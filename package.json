@@ -5,6 +5,7 @@
   "scripts": {
     "dev:web": "pnpm --filter ./apps/web start",
     "dev:api": "pnpm --filter ./apps/api start:dev",
+    "dev:docs": "pnpm --filter ./apps/docs-viewer dev",
     "storybook:web": "pnpm --filter ./apps/web storybook",
     "build-storybook:web": "pnpm --filter ./apps/web build-storybook"
   },
