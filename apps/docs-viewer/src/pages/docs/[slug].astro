@@ -24,6 +24,9 @@ if (!doc) {
 const { Content, headings } = await doc.render();
 const tocItems = headings.filter((heading) => heading.depth >= 2 && heading.depth <= 3);
 const baseUrl = import.meta.env.BASE_URL;
+const repoBase = 'https://github.com/viaje9/FlashMind/blob/main/';
+const mdRelativePath = `apps/docs-viewer/src/content/docs/${doc.id}`;
+const mdGitHubUrl = encodeURI(`${repoBase}${mdRelativePath}`);
 ---
 
 <BaseLayout title={doc.data.title} description={doc.data.summary}>
@@ -37,6 +40,30 @@ const baseUrl = import.meta.env.BASE_URL;
       <h1>{doc.data.title}</h1>
       <p class="doc-summary">{doc.data.summary}</p>
     </header>
+
+    <section class="doc-source" aria-label="GitHub 路徑">
+      <div class="doc-source__meta">
+        <h2>GitHub 檔案路徑</h2>
+        <p>需要貼到 issue 或 PR 時可直接複製。</p>
+      </div>
+      <div class="doc-source__actions">
+        <a
+          class="button button-ghost"
+          href={mdGitHubUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          在 GitHub 開啟
+        </a>
+        <button class="button button-primary" type="button" data-copy-url={mdGitHubUrl}>
+          複製路徑
+        </button>
+        <span class="doc-source__status" data-copy-status aria-live="polite"></span>
+      </div>
+      <div class="doc-source__url">
+        <code>{mdGitHubUrl}</code>
+      </div>
+    </section>
 
     {
       tocItems.length > 0 && (
@@ -62,3 +89,42 @@ const baseUrl = import.meta.env.BASE_URL;
     </footer>
   </article>
 </BaseLayout>
+
+<script>
+  const copyButton = document.querySelector('[data-copy-url]');
+  const status = document.querySelector('[data-copy-status]');
+
+  if (copyButton) {
+    const resetText = copyButton.textContent?.trim() ?? '複製路徑';
+    const copyUrl = copyButton.dataset.copyUrl ?? '';
+
+    copyButton.addEventListener('click', async () => {
+      let success = false;
+      try {
+        await navigator.clipboard.writeText(copyUrl);
+        success = true;
+      } catch (error) {
+        const textarea = document.createElement('textarea');
+        textarea.value = copyUrl;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        success = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      copyButton.textContent = success ? '已複製' : '複製失敗';
+      if (status) {
+        status.textContent = success ? '已複製到剪貼簿' : '複製失敗，請手動複製';
+      }
+      window.setTimeout(() => {
+        copyButton.textContent = resetText;
+        if (status) {
+          status.textContent = '';
+        }
+      }, 1600);
+    });
+  }
+</script>
