@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] 文件內容使用繁體中文（zh-tw），無簡體中文為主要內容
+- [ ] 前端/後端技術棧符合 Angular + Tailwind v4、NestJS、Prisma、PostgreSQL
+- [ ] Prisma CLI 僅在 `apps/api` 使用，schema 路徑正確
+- [ ] `.env` 位於專案根目錄且包含 `DATABASE_URL`
+- [ ] 指令與套件管理使用 pnpm
 
 ## Project Structure
 

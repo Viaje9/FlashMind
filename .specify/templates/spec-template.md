@@ -4,6 +4,7 @@
 **Created**: [DATE]  
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
+**語言要求**: 本文件所有內容必須使用繁體中文（zh-tw）
 
 ## User Scenarios & Testing *(mandatory)*
 

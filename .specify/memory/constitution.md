@@ -1,50 +1,66 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: N/A -> 0.1.0
+- Modified principles: 無
+- Added sections: Core Principles 具體化、專案約束、開發流程與品質、治理規則
+- Removed sections: 無
+- Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md
+  - ✅ .specify/templates/spec-template.md
+  - ✅ .specify/templates/tasks-template.md
+- Follow-up TODOs:
+  - TODO(RATIFICATION_DATE): 未提供原始制定日期
+-->
+# FlashMind Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 繁體中文為唯一溝通語言
+所有文件、規格、任務、回覆與提交訊息內容必須使用繁體中文（zh-tw）。
+不得混用簡體中文或其他語言作為主要內容。
+理由：確保協作一致性與可讀性，避免跨語系誤解。
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. 技術棧一致性
+前端必須使用 Angular（最新版）與 Tailwind CSS v4；後端必須使用 NestJS，
+ORM 使用 Prisma，資料庫使用 PostgreSQL，專案為 pnpm workspace Monorepo。
+理由：統一技術決策以降低維運成本與學習成本。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Prisma 使用範圍與路徑固定
+僅能在 `apps/api` 使用 Prisma CLI，schema 路徑固定為
+`apps/api/prisma/schema.prisma`。
+理由：避免多處 schema 造成不一致與遷移混亂。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. 環境設定集中管理
+`.env` 必須放在專案根目錄，且需包含 `DATABASE_URL`。
+理由：確保本機、CI 與部署環境設定一致且可追蹤。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. 套件管理一致
+所有安裝、指令與流程必須使用 pnpm，不得使用 npm 或 yarn。
+理由：避免 lockfile 與工作區行為不一致。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## 專案約束
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- 目錄結構需遵循：
+  - `apps/web/`：前端
+  - `apps/api/`：後端
+  - `apps/api/prisma/`：Prisma schema 與 migrations
+  - `apps/docs-viewer/src/content/docs/`：文件內容
+  - `packages/shared/`：前後端共用型別/DTO
+  - `packages/config/`：共用設定（eslint/tsconfig 等）
+- 文件或回覆若需提供指令範例，必須使用 pnpm 指令格式。
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## 開發流程與品質
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- Git 提交需遵循 Conventional Commits，格式為
+  `<type>(<scope>): <subject>`，且需包含 body 說明為何變更與影響範圍。
+- subject 必須使用繁體中文、動詞開頭、簡短描述。
+- scope 以模組/套件為主（例如 `web`、`api`、`ui`、`shared`）。
 
 ## Governance
 <!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+本憲法高於所有開發規範與模板，任何衝突以本憲法為準。
+每次調整需更新版本號、修訂日期與變更摘要。
+所有規格、計畫、任務文件必須檢查並符合核心原則。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 0.1.0 | **Ratified**: TODO(RATIFICATION_DATE): 未提供原始制定日期 | **Last Amended**: 2026-01-11
