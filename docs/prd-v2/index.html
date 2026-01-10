@@ -1,0 +1,909 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="完整產品需求文件，涵蓋願景、用戶故事、功能規格與驗收標準。"><meta name="generator" content="Astro v5.16.6"><title>FlashMind PRD v2｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>FlashMind PRD v2</h1> <p class="doc-summary">完整產品需求文件，涵蓋願景、用戶故事、功能規格與驗收標準。</p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/PRD-v2.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/PRD-v2.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#1-產品願景">1. 產品願景</a> </li><li class="toc-item depth-2"> <a href="#2-問題陳述">2. 問題陳述</a> </li><li class="toc-item depth-2"> <a href="#3-目標用戶-personas">3. 目標用戶 (Personas)</a> </li><li class="toc-item depth-3"> <a href="#persona-1語言學習者--小美">Persona 1：語言學習者 — 小美</a> </li><li class="toc-item depth-3"> <a href="#persona-2專業考試準備者--阿凱">Persona 2：專業考試準備者 — 阿凱</a> </li><li class="toc-item depth-2"> <a href="#4-競品分析與差異化">4. 競品分析與差異化</a> </li><li class="toc-item depth-2"> <a href="#5-產品形態">5. 產品形態</a> </li><li class="toc-item depth-2"> <a href="#6-用戶故事與驗收標準">6. 用戶故事與驗收標準</a> </li><li class="toc-item depth-3"> <a href="#61-帳號與登入">6.1 帳號與登入</a> </li><li class="toc-item depth-3"> <a href="#62-牌組管理">6.2 牌組管理</a> </li><li class="toc-item depth-3"> <a href="#63-卡片管理">6.3 卡片管理</a> </li><li class="toc-item depth-3"> <a href="#64-學習模式">6.4 學習模式</a> </li><li class="toc-item depth-3"> <a href="#65-設定">6.5 設定</a> </li><li class="toc-item depth-2"> <a href="#7-功能優先級">7. 功能優先級</a> </li><li class="toc-item depth-2"> <a href="#8-核心流程">8. 核心流程</a> </li><li class="toc-item depth-2"> <a href="#9-非功能需求-nfr">9. 非功能需求 (NFR)</a> </li><li class="toc-item depth-3"> <a href="#91-效能">9.1 效能</a> </li><li class="toc-item depth-3"> <a href="#92-可用性">9.2 可用性</a> </li><li class="toc-item depth-3"> <a href="#93-無障礙">9.3 無障礙</a> </li><li class="toc-item depth-3"> <a href="#94-安全性">9.4 安全性</a> </li><li class="toc-item depth-2"> <a href="#10-成功指標-kpi">10. 成功指標 (KPI)</a> </li><li class="toc-item depth-2"> <a href="#11-假設與限制">11. 假設與限制</a> </li><li class="toc-item depth-3"> <a href="#假設">假設</a> </li><li class="toc-item depth-3"> <a href="#限制">限制</a> </li><li class="toc-item depth-3"> <a href="#技術依賴">技術依賴</a> </li><li class="toc-item depth-2"> <a href="#12-風險評估">12. 風險評估</a> </li><li class="toc-item depth-2"> <a href="#13-里程碑">13. 里程碑</a> </li><li class="toc-item depth-3"> <a href="#m1核心功能">M1：核心功能</a> </li><li class="toc-item depth-3"> <a href="#m2學習功能">M2：學習功能</a> </li><li class="toc-item depth-3"> <a href="#m3智慧功能">M3：智慧功能</a> </li><li class="toc-item depth-3"> <a href="#m4優化與擴展">M4：優化與擴展</a> </li><li class="toc-item depth-2"> <a href="#14-開放問題">14. 開放問題</a> </li><li class="toc-item depth-2"> <a href="#附錄-a名詞定義">附錄 A：名詞定義</a> </li><li class="toc-item depth-2"> <a href="#附錄-b參考資料">附錄 B：參考資料</a> </li> </ul> </details> <div class="doc-content"> <h1 id="flashmind-prd-v2">FlashMind PRD v2</h1>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>版本</th><th>日期</th><th>作者</th><th>變更說明</th></tr></thead><tbody><tr><td>2.0</td><td>2026-01-11</td><td>—</td><td>依據 prototype 重構為傳統 PRD 格式</td></tr></tbody></table>
+<hr>
+<h2 id="1-產品願景">1. 產品願景</h2>
+<p>讓每個人都能用最少的時間，建立有效的長期記憶。</p>
+<hr>
+<h2 id="2-問題陳述">2. 問題陳述</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>痛點</th><th>現有解決方案的問題</th></tr></thead><tbody><tr><td>建卡成本高</td><td>Anki 需手動輸入所有內容，耗時且容易放棄</td></tr><tr><td>學習曲線陡</td><td>Anki 介面複雜、設定繁多，新手難以上手</td></tr><tr><td>行動體驗差</td><td>許多工具以桌面為主，手機體驗不佳</td></tr><tr><td>演算法過時</td><td>SM-2 演算法已有 30 年歷史，排程效率不如新方法</td></tr></tbody></table>
+<p>FlashMind 透過 <strong>AI 自動生成內容</strong>、<strong>簡潔的行動優先介面</strong>、以及 <strong>FSRS 演算法</strong>，解決上述痛點。</p>
+<hr>
+<h2 id="3-目標用戶-personas">3. 目標用戶 (Personas)</h2>
+<h3 id="persona-1語言學習者--小美">Persona 1：語言學習者 — 小美</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>屬性</th><th>描述</th></tr></thead><tbody><tr><td>背景</td><td>25 歲，上班族，每天通勤 40 分鐘</td></tr><tr><td>目標</td><td>準備多益考試，需要背誦大量單字</td></tr><tr><td>痛點</td><td>沒時間手動製作卡片；在擁擠的捷運上無法使用筆電</td></tr><tr><td>使用情境</td><td>通勤時用手機學習 15-20 分鐘</td></tr><tr><td>期望</td><td>輸入單字後自動產生例句，手機操作流暢</td></tr></tbody></table>
+<h3 id="persona-2專業考試準備者--阿凱">Persona 2：專業考試準備者 — 阿凱</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>屬性</th><th>描述</th></tr></thead><tbody><tr><td>背景</td><td>30 歲，準備專業證照考試</td></tr><tr><td>目標</td><td>記憶大量專業術語與定義</td></tr><tr><td>痛點</td><td>資料量大，需要有效率的複習排程</td></tr><tr><td>使用情境</td><td>週末集中學習 1-2 小時</td></tr><tr><td>期望</td><td>系統自動安排複習順序，專注在快忘記的卡片</td></tr></tbody></table>
+<hr>
+<h2 id="4-競品分析與差異化">4. 競品分析與差異化</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>特性</th><th>Anki</th><th>Quizlet</th><th>FlashMind</th></tr></thead><tbody><tr><td>AI 生成內容</td><td>❌ 需手動</td><td>⚠️ 有限支援</td><td>✅ 一鍵生成詞義/例句</td></tr><tr><td>學習曲線</td><td>❌ 陡峭</td><td>✅ 簡單</td><td>✅ 簡單</td></tr><tr><td>行動體驗</td><td>⚠️ 可用但非最佳化</td><td>✅ 良好</td><td>✅ 行動優先設計</td></tr><tr><td>間隔重複演算法</td><td>SM-2</td><td>無/簡易</td><td>FSRS (更高效率)</td></tr><tr><td>離線支援</td><td>✅</td><td>⚠️ 付費</td><td>✅ (PWA)</td></tr><tr><td>價格</td><td>免費</td><td>免費增值</td><td>TBD</td></tr></tbody></table>
+<p><strong>核心差異化定位</strong>：FlashMind = Anki 的效率 + Quizlet 的易用性 + AI 的便利性</p>
+<hr>
+<h2 id="5-產品形態">5. 產品形態</h2>
+<ul>
+<li><strong>類型</strong>：Progressive Web App (PWA)</li>
+<li><strong>支援平台</strong>：iOS Safari、Android Chrome、桌面瀏覽器</li>
+<li><strong>最小螢幕寬度</strong>：360px</li>
+<li><strong>離線支援</strong>：透過 Service Worker 快取核心功能</li>
+</ul>
+<hr>
+<h2 id="6-用戶故事與驗收標準">6. 用戶故事與驗收標準</h2>
+<h3 id="61-帳號與登入">6.1 帳號與登入</h3>
+<h4 id="us-001新用戶註冊">US-001：新用戶註冊</h4>
+<blockquote>
+<p><strong>As a</strong> 新用戶
+<strong>I want to</strong> 快速註冊帳號
+<strong>So that</strong> 我可以開始使用 FlashMind</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 支援 Email 註冊</li>
+<li class="task-list-item"><input type="checkbox" disabled> 支援第三方登入（Google）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 註冊成功後自動登入並導向主介面</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示服務條款與隱私權政策連結</li>
+</ul>
+<h4 id="us-002現有用戶登入">US-002：現有用戶登入</h4>
+<blockquote>
+<p><strong>As a</strong> 現有用戶
+<strong>I want to</strong> 登入我的帳號
+<strong>So that</strong> 存取我的牌組與學習紀錄</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 支援 Email + 密碼登入</li>
+<li class="task-list-item"><input type="checkbox" disabled> 支援第三方登入（Google）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 登入成功後導向主介面</li>
+<li class="task-list-item"><input type="checkbox" disabled> 登入失敗顯示錯誤訊息</li>
+</ul>
+<h4 id="us-003登出帳號">US-003：登出帳號</h4>
+<blockquote>
+<p><strong>As a</strong> 已登入用戶
+<strong>I want to</strong> 登出帳號
+<strong>So that</strong> 保護我的資料安全</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 在設定頁提供登出選項</li>
+<li class="task-list-item"><input type="checkbox" disabled> 登出後清除本地登入狀態</li>
+<li class="task-list-item"><input type="checkbox" disabled> 登出後導向歡迎頁</li>
+</ul>
+<hr>
+<h3 id="62-牌組管理">6.2 牌組管理</h3>
+<h4 id="us-010檢視牌組列表">US-010：檢視牌組列表</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 檢視我所有的牌組
+<strong>So that</strong> 選擇要學習或管理的牌組</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 顯示所有牌組的列表</li>
+<li class="task-list-item"><input type="checkbox" disabled> 每個牌組顯示：名稱、新卡數、待複習數、完成數</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示學習進度條與百分比</li>
+<li class="task-list-item"><input type="checkbox" disabled> 提供「開始學習」快捷入口</li>
+<li class="task-list-item"><input type="checkbox" disabled> 空狀態顯示引導建立牌組</li>
+</ul>
+<h4 id="us-011搜尋牌組">US-011：搜尋牌組</h4>
+<blockquote>
+<p><strong>As a</strong> 擁有多個牌組的用戶
+<strong>I want to</strong> 搜尋牌組
+<strong>So that</strong> 快速找到目標牌組</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 提供搜尋輸入框</li>
+<li class="task-list-item"><input type="checkbox" disabled> 即時過濾牌組列表（輸入時即過濾）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 無結果時顯示「找不到符合的牌組」</li>
+</ul>
+<h4 id="us-012建立新牌組">US-012：建立新牌組</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 建立新牌組
+<strong>So that</strong> 組織我的學習內容</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 點擊右下角 + 按鈕開啟建立表單</li>
+<li class="task-list-item"><input type="checkbox" disabled> 必填：牌組名稱</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可設定每日新卡數（預設 20，步進 5，範圍 5-100）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可設定每日複習數（預設 100，步進 10，範圍 10-500）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示提示：「可於牌組設定調整」</li>
+<li class="task-list-item"><input type="checkbox" disabled> 儲存成功後導向牌組卡片列表</li>
+<li class="task-list-item"><input type="checkbox" disabled> 取消時返回主介面，不儲存任何資料</li>
+</ul>
+<h4 id="us-013編輯牌組設定">US-013：編輯牌組設定</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 修改牌組的學習設定
+<strong>So that</strong> 調整學習計畫</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 可修改牌組名稱</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可修改每日新卡數與複習數</li>
+<li class="task-list-item"><input type="checkbox" disabled> 儲存後立即生效於下次學習</li>
+</ul>
+<h4 id="us-014刪除牌組">US-014：刪除牌組</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 刪除不需要的牌組
+<strong>So that</strong> 保持牌組列表整潔</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 刪除前顯示確認對話框</li>
+<li class="task-list-item"><input type="checkbox" disabled> 確認對話框說明將刪除所有卡片與學習紀錄</li>
+<li class="task-list-item"><input type="checkbox" disabled> 刪除後返回主介面</li>
+</ul>
+<hr>
+<h3 id="63-卡片管理">6.3 卡片管理</h3>
+<h4 id="us-020檢視牌組內卡片">US-020：檢視牌組內卡片</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 檢視牌組內所有卡片
+<strong>So that</strong> 管理學習內容</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 顯示牌組摘要：新卡、待複習、建立時間、上次複習</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示卡片列表，每張卡片顯示正面文字與解釋摘要</li>
+<li class="task-list-item"><input type="checkbox" disabled> 提供「開始學習」按鈕</li>
+<li class="task-list-item"><input type="checkbox" disabled> 空狀態顯示引導新增卡片</li>
+</ul>
+<h4 id="us-021搜尋卡片">US-021：搜尋卡片</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 搜尋牌組內的卡片
+<strong>So that</strong> 快速找到特定卡片</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 提供搜尋輸入框</li>
+<li class="task-list-item"><input type="checkbox" disabled> 搜尋範圍包含正面文字與背面解釋</li>
+<li class="task-list-item"><input type="checkbox" disabled> 即時過濾卡片列表</li>
+</ul>
+<h4 id="us-022新增卡片">US-022：新增卡片</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 新增快閃卡
+<strong>So that</strong> 增加學習內容</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 點擊右下角 + 按鈕開啟新增表單</li>
+<li class="task-list-item"><input type="checkbox" disabled> 正面：輸入單字/片語/問題</li>
+<li class="task-list-item"><input type="checkbox" disabled> 背面：支援多筆詞義區塊</li>
+<li class="task-list-item"><input type="checkbox" disabled> 每筆詞義包含：中文解釋、英文例句、中文例句翻譯</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可新增/刪除詞義區塊</li>
+<li class="task-list-item"><input type="checkbox" disabled> 英文例句提供播放語音按鈕</li>
+<li class="task-list-item"><input type="checkbox" disabled> 頁首提供「取消」「儲存」</li>
+<li class="task-list-item"><input type="checkbox" disabled> 儲存成功後返回卡片列表</li>
+</ul>
+<h4 id="us-023ai-生成卡片內容">US-023：AI 生成卡片內容</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 一鍵生成詞義與例句
+<strong>So that</strong> 快速建立完整卡片</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 提供「AI 生成」按鈕</li>
+<li class="task-list-item"><input type="checkbox" disabled> 輸入正面文字後可觸發生成</li>
+<li class="task-list-item"><input type="checkbox" disabled> 生成過程顯示載入狀態</li>
+<li class="task-list-item"><input type="checkbox" disabled> 生成結果自動填入背面欄位</li>
+<li class="task-list-item"><input type="checkbox" disabled> 用戶可編輯/刪除生成內容</li>
+<li class="task-list-item"><input type="checkbox" disabled> 生成失敗顯示錯誤訊息與重試選項</li>
+</ul>
+<h4 id="us-024編輯卡片">US-024：編輯卡片</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 編輯現有卡片
+<strong>So that</strong> 修正或補充內容</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 點擊卡片列表項目的編輯按鈕進入編輯</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可修改正面與所有背面欄位</li>
+<li class="task-list-item"><input type="checkbox" disabled> 儲存成功後返回卡片列表</li>
+</ul>
+<h4 id="us-025刪除卡片">US-025：刪除卡片</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 刪除不需要的卡片
+<strong>So that</strong> 移除錯誤或重複內容</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 點擊卡片列表項目的刪除按鈕</li>
+<li class="task-list-item"><input type="checkbox" disabled> 刪除前顯示確認對話框</li>
+<li class="task-list-item"><input type="checkbox" disabled> 刪除後更新牌組統計</li>
+</ul>
+<hr>
+<h3 id="64-學習模式">6.4 學習模式</h3>
+<h4 id="us-030開始學習">US-030：開始學習</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 開始學習牌組
+<strong>So that</strong> 記憶卡片內容</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 顯示牌組名稱</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示學習進度（例：12/50）與進度條</li>
+<li class="task-list-item"><input type="checkbox" disabled> 依 FSRS 演算法排序卡片（新卡 + 待複習）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 優先顯示待複習卡片，再顯示新卡</li>
+<li class="task-list-item"><input type="checkbox" disabled> 每日學習數量不超過設定上限</li>
+</ul>
+<h4 id="us-031翻卡學習">US-031：翻卡學習</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 查看卡片正面後翻到背面
+<strong>So that</strong> 測試自己是否記得</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 初始顯示卡片正面（單字/問題）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 點擊/滑動可翻到背面</li>
+<li class="task-list-item"><input type="checkbox" disabled> 背面顯示：中文解釋、例句、例句翻譯</li>
+<li class="task-list-item"><input type="checkbox" disabled> 翻卡動畫流暢（60fps）</li>
+</ul>
+<h4 id="us-032回答評分">US-032：回答評分</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 透過滑動手勢評分卡片
+<strong>So that</strong> 快速記錄學習狀態並更新複習排程</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 翻到背面後支援三種滑動手勢：
+<ul>
+<li>右滑 = 知道</li>
+<li>上滑 = 不熟</li>
+<li>左滑 = 不知道</li>
+</ul>
+</li>
+<li class="task-list-item"><input type="checkbox" disabled> 滑動後記錄結果並進入下一張卡片</li>
+<li class="task-list-item"><input type="checkbox" disabled> 根據回答更新 FSRS 排程（知道的間隔最長，不知道的間隔最短）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 「不知道」的卡片會在本次學習中再次出現</li>
+<li class="task-list-item"><input type="checkbox" disabled> 滑動時顯示視覺回饋（卡片移動、背景色變化）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 支援返回按鈕，讓用戶修改評分</li>
+</ul>
+<h4 id="us-033卡片操作">US-033：卡片操作</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 在學習中收藏卡片或播放發音
+<strong>So that</strong> 標記重要內容並加強聽力</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 提供收藏按鈕，點擊後標記為收藏</li>
+<li class="task-list-item"><input type="checkbox" disabled> 提供播放發音按鈕，點擊後播放正面文字的語音</li>
+<li class="task-list-item"><input type="checkbox" disabled> 收藏狀態在卡片列表中可見</li>
+</ul>
+<h4 id="us-034完成學習">US-034：完成學習</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 完成今日學習
+<strong>So that</strong> 知道學習成果</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 所有卡片完成後顯示結束畫面</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示本次學習統計：學習張數、各評分分布（知道/不熟/不知道）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 提供「返回牌組」按鈕</li>
+</ul>
+<hr>
+<h3 id="65-設定">6.5 設定</h3>
+<h4 id="us-040學習提醒">US-040：學習提醒</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 設定每日學習提醒
+<strong>So that</strong> 不會忘記學習</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 可開啟/關閉提醒</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可設定提醒時間</li>
+<li class="task-list-item"><input type="checkbox" disabled> 透過瀏覽器通知推送</li>
+</ul>
+<h4 id="us-041管理帳戶">US-041：管理帳戶</h4>
+<blockquote>
+<p><strong>As a</strong> 用戶
+<strong>I want to</strong> 管理我的帳戶資訊
+<strong>So that</strong> 更新個人資料</p>
+</blockquote>
+<p><strong>驗收標準：</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 可檢視帳戶 Email</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可修改密碼（Email 用戶）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可刪除帳戶（顯示確認警告）</li>
+</ul>
+<hr>
+<h2 id="7-功能優先級">7. 功能優先級</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>優先級</th><th>功能</th><th>說明</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>帳號登入/註冊</td><td>無此功能無法使用產品</td></tr><tr><td><strong>P0</strong></td><td>牌組 CRUD</td><td>核心功能</td></tr><tr><td><strong>P0</strong></td><td>卡片 CRUD</td><td>核心功能</td></tr><tr><td><strong>P0</strong></td><td>學習模式（翻卡、評分）</td><td>核心功能</td></tr><tr><td><strong>P0</strong></td><td>FSRS 排程</td><td>核心差異化</td></tr><tr><td><strong>P1</strong></td><td>AI 生成內容</td><td>重要差異化，但可手動替代</td></tr><tr><td><strong>P1</strong></td><td>搜尋（牌組/卡片）</td><td>改善體驗，少量資料時可省略</td></tr><tr><td><strong>P1</strong></td><td>語音播放</td><td>提升學習效果</td></tr><tr><td><strong>P2</strong></td><td>收藏卡片</td><td>增值功能</td></tr><tr><td><strong>P2</strong></td><td>學習提醒</td><td>增值功能</td></tr><tr><td><strong>P2</strong></td><td>學習統計匯出</td><td>增值功能</td></tr></tbody></table>
+<hr>
+<h2 id="8-核心流程">8. 核心流程</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────┐</span></span>
+<span class="line"><span>│  歡迎頁     │</span></span>
+<span class="line"><span>│  (未登入)   │</span></span>
+<span class="line"><span>└──────┬──────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌─────────────┐</span></span>
+<span class="line"><span>│  登入/註冊  │</span></span>
+<span class="line"><span>└──────┬──────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ▼</span></span>
+<span class="line"><span>┌─────────────┐     ┌─────────────┐</span></span>
+<span class="line"><span>│  主介面     │────▶│  設定       │</span></span>
+<span class="line"><span>│  (牌組列表) │     └─────────────┘</span></span>
+<span class="line"><span>└──────┬──────┘</span></span>
+<span class="line"><span>       │</span></span>
+<span class="line"><span>       ├──────────────────┐</span></span>
+<span class="line"><span>       ▼                  ▼</span></span>
+<span class="line"><span>┌─────────────┐    ┌─────────────┐</span></span>
+<span class="line"><span>│  新增牌組   │    │  牌組詳情   │</span></span>
+<span class="line"><span>└─────────────┘    │  (卡片列表) │</span></span>
+<span class="line"><span>                   └──────┬──────┘</span></span>
+<span class="line"><span>                          │</span></span>
+<span class="line"><span>          ┌───────────────┼───────────────┐</span></span>
+<span class="line"><span>          ▼               ▼               ▼</span></span>
+<span class="line"><span>   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐</span></span>
+<span class="line"><span>   │  新增卡片   │ │  編輯卡片   │ │  學習模式   │</span></span>
+<span class="line"><span>   │  (AI 生成)  │ └─────────────┘ └──────┬──────┘</span></span>
+<span class="line"><span>   └─────────────┘                        │</span></span>
+<span class="line"><span>                                          ▼</span></span>
+<span class="line"><span>                                   ┌─────────────┐</span></span>
+<span class="line"><span>                                   │  學習完成   │</span></span>
+<span class="line"><span>                                   └─────────────┘</span></span></code></pre>
+<hr>
+<h2 id="9-非功能需求-nfr">9. 非功能需求 (NFR)</h2>
+<h3 id="91-效能">9.1 效能</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>指標</th><th>目標</th></tr></thead><tbody><tr><td>首次載入 (LCP)</td><td>&#x3C; 2.5 秒</td></tr><tr><td>互動延遲 (INP)</td><td>&#x3C; 200 毫秒</td></tr><tr><td>翻卡動畫</td><td>60fps</td></tr><tr><td>AI 生成回應</td><td>&#x3C; 5 秒</td></tr></tbody></table>
+<h3 id="92-可用性">9.2 可用性</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>指標</th><th>目標</th></tr></thead><tbody><tr><td>服務可用性</td><td>99.5%</td></tr><tr><td>離線支援</td><td>可檢視牌組與卡片，學習紀錄於上線後同步</td></tr></tbody></table>
+<h3 id="93-無障礙">9.3 無障礙</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>指標</th><th>目標</th></tr></thead><tbody><tr><td>文字對比度</td><td>WCAG AA (4.5:1)</td></tr><tr><td>可點擊區域</td><td>最小 44x44px</td></tr><tr><td>螢幕閱讀器</td><td>支援 VoiceOver/TalkBack</td></tr></tbody></table>
+<h3 id="94-安全性">9.4 安全性</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>指標</th><th>目標</th></tr></thead><tbody><tr><td>資料傳輸</td><td>HTTPS</td></tr><tr><td>密碼儲存</td><td>bcrypt 雜湊</td></tr><tr><td>第三方登入</td><td>OAuth 2.0</td></tr></tbody></table>
+<hr>
+<h2 id="10-成功指標-kpi">10. 成功指標 (KPI)</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>指標</th><th>定義</th><th>目標</th></tr></thead><tbody><tr><td>新增牌組轉換率</td><td>進入新增牌組 → 完成儲存</td><td>> 70%</td></tr><tr><td>卡片新增完成率</td><td>進入新增卡片 → 完成儲存</td><td>> 80%</td></tr><tr><td>AI 生成使用率</td><td>使用 AI 生成的卡片比例</td><td>> 50%</td></tr><tr><td>每日學習啟動率</td><td>當日有開始學習的 DAU 比例</td><td>> 40%</td></tr><tr><td>7 日留存率</td><td>註冊後第 7 天仍活躍</td><td>> 30%</td></tr><tr><td>30 日留存率</td><td>註冊後第 30 天仍活躍</td><td>> 15%</td></tr></tbody></table>
+<hr>
+<h2 id="11-假設與限制">11. 假設與限制</h2>
+<h3 id="假設">假設</h3>
+<ul>
+<li>用戶主要使用繁體中文</li>
+<li>用戶有穩定的網路連線（離線為次要場景）</li>
+<li>AI 生成服務有足夠配額支援用量</li>
+</ul>
+<h3 id="限制">限制</h3>
+<ul>
+<li>AI 生成詞義/例句需有可用模型與 API 配額</li>
+<li>語音播放依賴外部 TTS 服務</li>
+<li>首版僅支援繁體中文介面</li>
+<li>PWA 推播通知需用戶授權</li>
+</ul>
+<h3 id="技術依賴">技術依賴</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>功能</th><th>依賴服務</th></tr></thead><tbody><tr><td>AI 生成</td><td>OpenAI API / Claude API</td></tr><tr><td>語音播放</td><td>Web Speech API / 外部 TTS</td></tr><tr><td>第三方登入</td><td>Google OAuth</td></tr><tr><td>推播通知</td><td>Web Push API</td></tr></tbody></table>
+<hr>
+<h2 id="12-風險評估">12. 風險評估</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>風險</th><th>可能性</th><th>影響</th><th>緩解措施</th></tr></thead><tbody><tr><td>AI 生成品質不佳</td><td>中</td><td>高</td><td>用戶可編輯生成內容；持續優化 prompt</td></tr><tr><td>AI API 成本過高</td><td>中</td><td>中</td><td>設定每日生成上限；考慮本地模型</td></tr><tr><td>FSRS 實作複雜度</td><td>低</td><td>高</td><td>使用現有開源實作 (ts-fsrs)</td></tr><tr><td>離線同步衝突</td><td>中</td><td>中</td><td>採用 last-write-wins 策略；顯示衝突提示</td></tr><tr><td>瀏覽器相容性</td><td>低</td><td>中</td><td>限定支援 Safari 15+、Chrome 90+</td></tr></tbody></table>
+<hr>
+<h2 id="13-里程碑">13. 里程碑</h2>
+<h3 id="m1核心功能">M1：核心功能</h3>
+<ul>
+<li>帳號登入/註冊（含第三方登入）</li>
+<li>牌組 CRUD</li>
+<li>卡片 CRUD</li>
+<li>基礎 UI 完成</li>
+</ul>
+<h3 id="m2學習功能">M2：學習功能</h3>
+<ul>
+<li>學習模式（翻卡、評分）</li>
+<li>FSRS 演算法整合</li>
+<li>學習進度追蹤</li>
+<li>語音播放</li>
+</ul>
+<h3 id="m3智慧功能">M3：智慧功能</h3>
+<ul>
+<li>AI 生成詞義/例句</li>
+<li>學習提醒通知</li>
+<li>設定頁完善</li>
+<li>PWA 離線支援</li>
+</ul>
+<h3 id="m4優化與擴展">M4：優化與擴展</h3>
+<ul>
+<li>學習數據匯出</li>
+<li>效能優化</li>
+<li>無障礙改善</li>
+<li>使用者回饋迭代</li>
+</ul>
+<hr>
+<h2 id="14-開放問題">14. 開放問題</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#</th><th>問題</th><th>狀態</th><th>決議</th></tr></thead><tbody><tr><td>1</td><td>牌組「子標題」來源為標籤還是描述？</td><td>待決議</td><td>—</td></tr><tr><td>2</td><td>AI 生成是否支援批次套用多張卡？</td><td>待決議</td><td>—</td></tr><tr><td>3</td><td>匯出學習數據格式為 CSV 或 JSON？</td><td>待決議</td><td>—</td></tr><tr><td>4</td><td>是否支援牌組分享/公開？</td><td>待決議</td><td>—</td></tr><tr><td>5</td><td>免費/付費功能如何劃分？</td><td>待決議</td><td>—</td></tr></tbody></table>
+<hr>
+<h2 id="附錄-a名詞定義">附錄 A：名詞定義</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>名詞</th><th>定義</th></tr></thead><tbody><tr><td>牌組 (Deck)</td><td>一組相關快閃卡的集合</td></tr><tr><td>快閃卡 (Flashcard)</td><td>包含正面（問題）與背面（答案）的學習卡片</td></tr><tr><td>新卡</td><td>從未學習過的卡片</td></tr><tr><td>待複習</td><td>根據 FSRS 排程需要複習的卡片</td></tr><tr><td>FSRS</td><td>Free Spaced Repetition Scheduler，開源間隔重複演算法</td></tr></tbody></table>
+<hr>
+<h2 id="附錄-b參考資料">附錄 B：參考資料</h2>
+<ul>
+<li><a href="https://github.com/open-spaced-repetition/fsrs4anki">FSRS 演算法說明</a></li>
+<li><a href="https://web.dev/progressive-web-apps/">PWA 技術指南</a></li>
+<li><a href="https://www.w3.org/WAI/WCAG21/quickref/">WCAG 2.1 無障礙指南</a></li>
+</ul> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>
