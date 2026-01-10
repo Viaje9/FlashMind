@@ -15,6 +15,7 @@
 - `apps/web/`：前端（Angular）
 - `apps/api/`：後端（NestJS）
 - `apps/api/prisma/`：Prisma schema 與 migrations
+- `apps/docs-viewer/src/content/docs/`：文件內容
 - `packages/shared/`：前後端共用型別/DTO
 - `packages/config/`：共用設定（eslint/tsconfig 等）
 
