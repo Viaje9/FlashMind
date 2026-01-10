@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="行動優先的文件閱讀入口，適合手機快速瀏覽與整理專案資訊。"><meta name="generator" content="Astro v5.16.6"><title>AI 生成內容｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>AI 生成內容</h1> <p class="doc-summary"></p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/features/P1-ai-generation.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/features/P1-ai-generation.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#概述">概述</a> </li><li class="toc-item depth-2"> <a href="#相關-user-stories">相關 User Stories</a> </li><li class="toc-item depth-2"> <a href="#技術依賴">技術依賴</a> </li><li class="toc-item depth-2"> <a href="#驗收標準">驗收標準</a> </li><li class="toc-item depth-3"> <a href="#us-023ai-生成卡片內容">US-023：AI 生成卡片內容</a> </li><li class="toc-item depth-2"> <a href="#風險">風險</a> </li> </ul> </details> <div class="doc-content"> <h1 id="ai-生成內容">AI 生成內容</h1>
+<h2 id="概述">概述</h2>
+<p>一鍵生成詞義與例句，大幅降低建卡成本。這是 FlashMind 的重要差異化功能。</p>
+<h2 id="相關-user-stories">相關 User Stories</h2>
+<ul>
+<li>US-023：AI 生成卡片內容</li>
+</ul>
+<h2 id="技術依賴">技術依賴</h2>
+<ul>
+<li>OpenAI API 或 Claude API</li>
+</ul>
+<h2 id="驗收標準">驗收標準</h2>
+<h3 id="us-023ai-生成卡片內容">US-023：AI 生成卡片內容</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 提供「AI 生成」按鈕</li>
+<li class="task-list-item"><input type="checkbox" disabled> 輸入正面文字後可觸發生成</li>
+<li class="task-list-item"><input type="checkbox" disabled> 生成過程顯示載入狀態</li>
+<li class="task-list-item"><input type="checkbox" disabled> 生成結果自動填入背面欄位</li>
+<li class="task-list-item"><input type="checkbox" disabled> 用戶可編輯/刪除生成內容</li>
+<li class="task-list-item"><input type="checkbox" disabled> 生成失敗顯示錯誤訊息與重試選項</li>
+</ul>
+<h2 id="風險">風險</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>風險</th><th>緩解措施</th></tr></thead><tbody><tr><td>AI 生成品質不佳</td><td>用戶可編輯生成內容；持續優化 prompt</td></tr><tr><td>AI API 成本過高</td><td>設定每日生成上限；考慮本地模型</td></tr></tbody></table> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>

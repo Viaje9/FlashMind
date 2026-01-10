@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="行動優先的文件閱讀入口，適合手機快速瀏覽與整理專案資訊。"><meta name="generator" content="Astro v5.16.6"><title>FSRS 排程｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>FSRS 排程</h1> <p class="doc-summary"></p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/features/P0-fsrs-scheduling.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/features/P0-fsrs-scheduling.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#概述">概述</a> </li><li class="toc-item depth-2"> <a href="#技術依賴">技術依賴</a> </li><li class="toc-item depth-2"> <a href="#功能要點">功能要點</a> </li><li class="toc-item depth-2"> <a href="#參考資料">參考資料</a> </li> </ul> </details> <div class="doc-content"> <h1 id="fsrs-排程">FSRS 排程</h1>
+<h2 id="概述">概述</h2>
+<p>採用 FSRS（Free Spaced Repetition Scheduler）演算法，比傳統 SM-2 更高效的間隔重複排程。這是 FlashMind 的核心差異化功能。</p>
+<h2 id="技術依賴">技術依賴</h2>
+<ul>
+<li>使用開源實作 <a href="https://github.com/open-spaced-repetition/ts-fsrs">ts-fsrs</a></li>
+</ul>
+<h2 id="功能要點">功能要點</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 根據用戶評分（知道/不熟/不知道）計算下次複習時間</li>
+<li class="task-list-item"><input type="checkbox" disabled> 「知道」的卡片間隔最長</li>
+<li class="task-list-item"><input type="checkbox" disabled> 「不知道」的卡片間隔最短，且在本次學習中再次出現</li>
+<li class="task-list-item"><input type="checkbox" disabled> 優先顯示待複習卡片，再顯示新卡</li>
+<li class="task-list-item"><input type="checkbox" disabled> 每日學習數量依用戶設定上限</li>
+</ul>
+<h2 id="參考資料">參考資料</h2>
+<ul>
+<li><a href="https://github.com/open-spaced-repetition/fsrs4anki">FSRS 演算法說明</a></li>
+</ul> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>

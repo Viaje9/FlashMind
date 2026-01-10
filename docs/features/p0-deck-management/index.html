@@ -1,0 +1,45 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="行動優先的文件閱讀入口，適合手機快速瀏覽與整理專案資訊。"><meta name="generator" content="Astro v5.16.6"><title>牌組管理｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>牌組管理</h1> <p class="doc-summary"></p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/features/P0-deck-management.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/features/P0-deck-management.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#概述">概述</a> </li><li class="toc-item depth-2"> <a href="#相關-user-stories">相關 User Stories</a> </li><li class="toc-item depth-2"> <a href="#驗收標準">驗收標準</a> </li><li class="toc-item depth-3"> <a href="#us-010檢視牌組列表">US-010：檢視牌組列表</a> </li><li class="toc-item depth-3"> <a href="#us-012建立新牌組">US-012：建立新牌組</a> </li><li class="toc-item depth-3"> <a href="#us-013編輯牌組設定">US-013：編輯牌組設定</a> </li><li class="toc-item depth-3"> <a href="#us-014刪除牌組">US-014：刪除牌組</a> </li> </ul> </details> <div class="doc-content"> <h1 id="牌組管理">牌組管理</h1>
+<h2 id="概述">概述</h2>
+<p>牌組 CRUD 功能，讓用戶建立、檢視、編輯、刪除牌組。</p>
+<h2 id="相關-user-stories">相關 User Stories</h2>
+<ul>
+<li>US-010：檢視牌組列表</li>
+<li>US-012：建立新牌組</li>
+<li>US-013：編輯牌組設定</li>
+<li>US-014：刪除牌組</li>
+</ul>
+<h2 id="驗收標準">驗收標準</h2>
+<h3 id="us-010檢視牌組列表">US-010：檢視牌組列表</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 顯示所有牌組的列表</li>
+<li class="task-list-item"><input type="checkbox" disabled> 每個牌組顯示：名稱、新卡數、待複習數、完成數</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示學習進度條與百分比</li>
+<li class="task-list-item"><input type="checkbox" disabled> 提供「開始學習」快捷入口</li>
+<li class="task-list-item"><input type="checkbox" disabled> 空狀態顯示引導建立牌組</li>
+</ul>
+<h3 id="us-012建立新牌組">US-012：建立新牌組</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 點擊右下角 + 按鈕開啟建立表單</li>
+<li class="task-list-item"><input type="checkbox" disabled> 必填：牌組名稱</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可設定每日新卡數（預設 20，步進 5，範圍 5-100）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可設定每日複習數（預設 100，步進 10，範圍 10-500）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 顯示提示：「可於牌組設定調整」</li>
+<li class="task-list-item"><input type="checkbox" disabled> 儲存成功後導向牌組卡片列表</li>
+<li class="task-list-item"><input type="checkbox" disabled> 取消時返回主介面，不儲存任何資料</li>
+</ul>
+<h3 id="us-013編輯牌組設定">US-013：編輯牌組設定</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 可修改牌組名稱</li>
+<li class="task-list-item"><input type="checkbox" disabled> 可修改每日新卡數與複習數</li>
+<li class="task-list-item"><input type="checkbox" disabled> 儲存後立即生效於下次學習</li>
+</ul>
+<h3 id="us-014刪除牌組">US-014：刪除牌組</h3>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 刪除前顯示確認對話框</li>
+<li class="task-list-item"><input type="checkbox" disabled> 確認對話框說明將刪除所有卡片與學習紀錄</li>
+<li class="task-list-item"><input type="checkbox" disabled> 刪除後返回主介面</li>
+</ul> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>
