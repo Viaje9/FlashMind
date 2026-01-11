@@ -1,0 +1,223 @@
+openapi: 3.0.3
+info:
+  title: FlashMind Auth API
+  version: 0.1.0
+  description: 帳號與登入相關 API 契約
+servers:
+  - url: https://api.flashmind.local
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: 註冊帳號
+      description: 支援 Email 或 Google 註冊，成功後回傳使用者與工作階段資訊。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: 註冊成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email 已被使用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 登入帳號
+      description: 支援 Email + 密碼或 Google 登入，成功後回傳使用者與工作階段資訊。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登入成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 帳密錯誤或授權失敗
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 登出帳號
+      description: 撤銷目前工作階段並清除登入狀態。
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: 登出成功
+        "401":
+          description: 未授權或工作階段無效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+
+  schemas:
+    RegisterRequest:
+      description: Email 或 Google 註冊的請求資料。兩種格式擇一。
+      oneOf:
+        - $ref: "#/components/schemas/RegisterWithEmail"
+        - $ref: "#/components/schemas/RegisterWithGoogle"
+    RegisterWithEmail:
+      type: object
+      required:
+        - provider
+        - email
+        - password
+      properties:
+        provider:
+          type: string
+          enum: [email]
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    RegisterWithGoogle:
+      type: object
+      required:
+        - provider
+        - credential
+      properties:
+        provider:
+          type: string
+          enum: [google]
+        credential:
+          type: string
+          description: Google 授權憑證（不限定格式，視實作而定）
+
+    LoginRequest:
+      description: Email 或 Google 登入的請求資料。兩種格式擇一。
+      oneOf:
+        - $ref: "#/components/schemas/LoginWithEmail"
+        - $ref: "#/components/schemas/LoginWithGoogle"
+    LoginWithEmail:
+      type: object
+      required:
+        - provider
+        - email
+        - password
+      properties:
+        provider:
+          type: string
+          enum: [email]
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    LoginWithGoogle:
+      type: object
+      required:
+        - provider
+        - credential
+      properties:
+        provider:
+          type: string
+          enum: [google]
+        credential:
+          type: string
+          description: Google 授權憑證（不限定格式，視實作而定）
+
+    AuthResponse:
+      type: object
+      required:
+        - user
+        - session
+      properties:
+        user:
+          $ref: "#/components/schemas/UserSummary"
+        session:
+          $ref: "#/components/schemas/SessionInfo"
+
+    UserSummary:
+      type: object
+      required:
+        - id
+        - email
+        - primaryProvider
+        - createdAt
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        primaryProvider:
+          type: string
+          enum: [email, google]
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    SessionInfo:
+      type: object
+      required:
+        - token
+        - expiresAt
+      properties:
+        token:
+          type: string
+          description: 工作階段憑證
+        expiresAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+          description: 對使用者可理解的錯誤訊息
