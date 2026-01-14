@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  flex: 1;
+}
+
+.fm-dialog-content {
+  padding: 0 24px 24px;
+  overflow-y: auto;
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.6;
+
+  @media (prefers-color-scheme: dark) {
+    color: var(--color-secondary-text);
+  }
+}

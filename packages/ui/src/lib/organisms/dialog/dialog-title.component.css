@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+
+.fm-dialog-title {
+  margin: 0;
+  padding: 24px 24px 16px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+
+  @media (prefers-color-scheme: dark) {
+    color: #ffffff;
+  }
+}

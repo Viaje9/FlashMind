@@ -28,3 +28,7 @@ export * from './lib/organisms/welcome-hero/welcome-hero.component';
 export * from './lib/organisms/empty-state/empty-state.component';
 export * from './lib/organisms/study-progress/study-progress.component';
 export * from './lib/organisms/study-decision-bar/study-decision-bar.component';
+export * from './lib/organisms/dialog/dialog.component';
+export * from './lib/organisms/dialog/dialog-title.component';
+export * from './lib/organisms/dialog/dialog-content.component';
+export * from './lib/organisms/dialog/dialog-actions.component';

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   FmButtonComponent,
@@ -6,6 +6,8 @@ import {
   FmSocialLoginRowComponent,
   FmWelcomeHeroComponent
 } from '../../../../../../packages/ui/src/index';
+import { DialogService } from '../../services/dialog/dialog.service';
+import { ConfirmDialogComponent } from '../../components/dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-welcome-page',
@@ -21,7 +23,23 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WelcomeComponent {
+  private dialogService = inject(DialogService);
+
   readonly heroTitle = 'FlashMind';
   readonly heroDescription = '建立、學習、記憶。\n讓知識累積變得前所未有的簡單。';
   readonly heroBadge = '每日學習';
+
+  testDialog() {
+    const dialogRef = this.dialogService.open(ConfirmDialogComponent, {
+      data: {
+        title: '測試對話框',
+        message: '這是一個測試對話框。點擊確認或取消來關閉它。'
+      },
+      maxWidth: '480px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('對話框關閉，結果:', result);
+    });
+  }
 }

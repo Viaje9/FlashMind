@@ -1,0 +1,19 @@
+:host {
+  display: block;
+}
+
+.fm-dialog-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.fm-dialog-actions--align-start {
+  justify-content: flex-start;
+}
+
+.fm-dialog-actions--align-center {
+  justify-content: center;
+}
