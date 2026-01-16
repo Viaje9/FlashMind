@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "baseUrl": ".",
+    "paths": {}
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

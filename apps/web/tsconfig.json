@@ -13,7 +13,12 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@flashmind/api-client": ["../../packages/api-client/src/generated/index.ts"],
+      "@flashmind/api-client/*": ["../../packages/api-client/src/generated/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

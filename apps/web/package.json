@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "storybook": "ng run web:storybook",
-    "build-storybook": "ng run web:build-storybook"
+    "build-storybook": "ng run web:build-storybook",
+    "generate:api": "openapi-generator-cli generate -i ../../specs/001-account-auth/contracts/openapi.yaml -g typescript-angular -o ../../packages/api-client/src/generated"
   },
   "prettier": {
     "printWidth": 100,
@@ -25,6 +26,7 @@
   "private": true,
   "packageManager": "pnpm@10.26.2",
   "dependencies": {
+    "@flashmind/api-client": "workspace:*",
     "@angular/cdk": "^21.0.6",
     "@angular/common": "^21.0.0",
     "@angular/compiler": "^21.0.0",
@@ -39,6 +41,7 @@
     "@angular/build": "^21.0.4",
     "@angular/cli": "^21.0.4",
     "@angular/compiler-cli": "^21.0.0",
+    "@openapitools/openapi-generator-cli": "^2.27.0",
     "@storybook/addon-a11y": "^10.1.10",
     "@storybook/addon-docs": "^10.1.10",
     "@storybook/angular": "^10.1.10",

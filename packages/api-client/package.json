@@ -1,0 +1,17 @@
+{
+  "name": "@flashmind/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/generated/index.ts",
+  "types": "./src/generated/index.ts",
+  "exports": {
+    ".": {
+      "default": "./src/generated/index.ts"
+    }
+  },
+  "peerDependencies": {
+    "@angular/common": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "rxjs": "^7.8.0"
+  }
+}
