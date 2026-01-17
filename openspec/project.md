@@ -214,14 +214,50 @@ FlashMind/
 **服務** (`apps/web/src/app/services/`):
 - `dialog/`: DialogService, DialogRef, DialogConfig
 
+## API Design (ADR-016)
+
+**Response 格式**：統一 Wrapper
+```json
+{
+  "data": { ... },
+  "meta": { "nextCursor": "...", "hasMore": true }
+}
+```
+
+**Error 格式**：
+```json
+{
+  "error": {
+    "code": "AUTH_INVALID_CREDENTIALS",
+    "message": "Email 或密碼錯誤"
+  }
+}
+```
+
+**分頁**：cursor-based
+- `nextCursor`: 下一頁的 cursor
+- `hasMore`: 是否還有更多資料
+
+**認證方式**：HttpOnly Cookie
+```
+Set-Cookie: session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/
+```
+
+**命名慣例**：
+- URL: kebab-case (`/auth/google/callback`)
+- Request/Response body: camelCase (`rememberMe`)
+- Error code: SCREAMING_SNAKE_CASE (`AUTH_INVALID_CREDENTIALS`)
+- operationId: camelCase (`getCurrentUser`)，必填，決定 API client 方法名
+
 ## API Contracts
 
 **已定義的 API** (`openapi/api.yaml`):
-- `POST /auth/register`: 註冊帳號 (Email/Google)
-- `POST /auth/login`: 登入帳號 (Email/Google)
-- `POST /auth/logout`: 登出帳號
-
-**認證方式**: Bearer Token
+- `POST /auth/register`: Email 註冊
+- `POST /auth/login`: Email 登入
+- `POST /auth/logout`: 登出
+- `GET /auth/google`: 發起 Google OAuth
+- `GET /auth/google/callback`: Google OAuth callback
+- `GET /auth/me`: 取得目前使用者資訊
 
 ## Data Models
 
@@ -234,6 +270,11 @@ model User {
   updatedAt DateTime @updatedAt
 }
 ```
+
+**規劃中模型** (見 `add-account-auth` 提案):
+- User: 新增 `passwordHash`, `primaryProvider`, `lastLoginAt`
+- Session: 工作階段管理
+- OAuthAccount: Google OAuth 帳號關聯
 
 **未來規劃模型**:
 - Deck: 牌組
