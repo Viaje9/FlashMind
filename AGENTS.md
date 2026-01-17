@@ -23,26 +23,103 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## 專案技術
 
-- 前端：Angular（最新版）+ Tailwind CSS v4
+- 前端：Angular 21 + Tailwind CSS v4
+- 前端狀態管理：Angular Signal Stores
+- 元件開發：Storybook
 - 後端：NestJS
 - ORM：Prisma
 - DB：PostgreSQL
+- API 契約：OpenAPI 3.0（Contract-First）
+- 間隔重複演算法：FSRS (ts-fsrs)
+- AI 服務：OpenAI / Claude API
+- 應用形態：PWA
 - Monorepo：pnpm workspace
 
 ## 目錄結構
 
-- `apps/web/`：前端（Angular）
-- `apps/api/`：後端（NestJS）
-- `apps/api/prisma/`：Prisma schema 與 migrations
-- `apps/docs-viewer/src/content/docs/`：文件內容
-- `packages/shared/`：前後端共用型別/DTO
-- `packages/config/`：共用設定（eslint/tsconfig 等）
+```text
+flashmind/
+├── apps/
+│   ├── web/                    # Angular PWA 前端
+│   │   └── src/app/
+│   │       ├── pages/          # 路由頁面元件
+│   │       ├── components/     # 按領域分組（含 domain、store、form）
+│   │       ├── guards/         # 路由守衛
+│   │       └── services/       # 跨領域共用服務
+│   ├── api/                    # NestJS 後端
+│   │   └── src/
+│   │       ├── modules/        # 按領域分組的模組
+│   │       ├── common/         # 共用 guards、interceptors、pipes
+│   │       └── prisma/         # Prisma 服務
+│   └── docs-viewer/            # Astro 文件站台
+├── packages/
+│   ├── api-client/             # 自動生成的 API Client
+│   ├── shared/                 # 前後端共用型別與驗證
+│   ├── ui/                     # 共用 UI 元件庫
+│   └── config/                 # 共用設定（eslint/tsconfig 等）
+├── specs/                      # OpenAPI 契約定義
+├── openspec/                   # 變更提案管理
+├── prototype/                  # Figma 匯出的設計稿
+└── docs/                       # 專案層級文件
+```
 
 ## 開發規範
 
 - 只在 `apps/api` 使用 Prisma CLI，schema 路徑：`apps/api/prisma/schema.prisma`
 - `.env` 放在專案根目錄，需包含 `DATABASE_URL`
 - 使用 pnpm 指令（避免 npm/yarn）
+
+## 前端開發規範
+
+### 元件組織（共置原則）
+
+按業務領域組織元件，Domain、Store、Form 放在對應的領域目錄中：
+
+```text
+apps/web/src/app/components/
+├── auth/                       # 登入/註冊領域
+│   ├── auth.domain.ts          # 商業邏輯
+│   ├── auth.store.ts           # 狀態管理
+│   ├── auth.form.ts            # 表單定義
+│   ├── login/
+│   └── register/
+├── deck/                       # 牌組領域
+├── card/                       # 卡片領域
+├── study/                      # 學習領域
+└── shared/                     # 跨領域共用 UI 元件
+```
+
+### 分層架構
+
+| 層級 | 檔案 | 職責 | 特性 |
+|------|------|------|------|
+| Domain | `*.domain.ts` | 商業邏輯、規則判斷 | Pure function、無框架依賴 |
+| Store | `*.store.ts` | 狀態管理、API 呼叫 | 使用 Angular Signals |
+| Form | `*.form.ts` | 表單結構、欄位驗證 | 使用 Reactive Forms |
+| Component | `*.component.ts` | UI 渲染、使用者互動 | 使用 Store 與 Form |
+
+### 業務元件放置規則
+
+| 元件類型 | 放置位置 | 說明 |
+|----------|----------|------|
+| 通用 UI 元件 | `packages/ui/` | 無業務邏輯，純 UI |
+| 共用業務元件 | `components/{domain}/` | 多個頁面會用到 |
+| 頁面專屬元件 | `pages/{page}/components/` | 只有該頁面用到 |
+
+### UI 元件庫結構（packages/ui）
+
+```text
+packages/ui/src/lib/
+├── primitives/       # 最基礎元件（button, badge, toggle）
+├── layouts/          # 版面配置（row, column, stack）
+├── forms/            # 表單輸入（labeled-input, textarea）
+├── navigation/       # 導航相關（navbar, tabs）
+├── feedback/         # 使用者回饋（toast, loading-spinner）
+├── data-display/     # 資料展示（card, list-item, avatar）
+└── overlays/         # 浮層元件（dialog, drawer, popover）
+```
+
+浮層元件透過 Service 呼叫，而非直接在 template 中使用。
 
 ## Git 提交規範
 
