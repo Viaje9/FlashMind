@@ -155,3 +155,87 @@ FlashMind/
 - `@prisma/client`: 資料庫 ORM
 - `rxjs`: 響應式程式設計
 - `@nestjs/*`: 後端框架生態系
+
+## Design System
+
+**色彩 Tokens** (定義於 `packages/ui/src/styles/tokens.css`):
+- `--color-primary`: #19b3e6 (主色調)
+- `--color-primary-dark`: #0ea5e9
+- `--color-background-light`: #f6f7f8
+- `--color-background-dark`: #111d21
+- `--color-surface-light`: #ffffff
+- `--color-surface-dark`: #1a262a
+- `--color-card-dark`: #1e282c
+- `--color-secondary-text`: #93aeb8
+- `--color-error`: #ff6b6b
+
+**字體**:
+- Display: Lexend, Noto Sans TC, sans-serif
+- Body: Noto Sans TC, sans-serif
+
+**UI 元件庫結構** (`packages/ui/src/lib/`):
+- `primitives/`: 基礎元件 (Button, IconButton, Badge, ProgressBar, Toggle, SearchInput, Fab, Divider)
+- `navigation/`: 導覽元件 (PageHeader)
+- `data-display/`: 資料顯示 (SettingRow, ProfileCard, SectionHeading)
+- `forms/`: 表單元件 (LabeledInput, NumberInputRow, FormSectionHeader, GlowTextarea, AddItemButton, SocialLoginRow)
+- `feedback/`: 回饋元件 (EmptyState)
+- `overlays/`: 覆蓋層元件 (Dialog)
+
+## Current Routes
+
+```
+/welcome          # 歡迎頁面（預設）
+/decks            # 牌組列表
+/decks/new        # 建立牌組
+/decks/:id        # 牌組詳情
+/cards/new        # 新增卡片
+/study            # 學習模式
+/settings         # 設定頁面
+```
+
+## Application Components
+
+**頁面元件** (`apps/web/src/app/pages/`):
+- WelcomeComponent: 歡迎/登入頁面
+- DeckListComponent: 牌組列表
+- DeckCreateComponent: 建立牌組
+- DeckDetailComponent: 牌組詳情
+- CardEditorComponent: 卡片編輯器
+- StudyComponent: 學習模式
+- SettingsComponent: 設定
+
+**功能元件** (`apps/web/src/app/components/`):
+- `auth/`: WelcomeHero
+- `card/`: CardListItem, MeaningEditorCard
+- `deck/`: DeckCard, DeckStatsCard
+- `study/`: StudyCard, StudyProgress, StudyDecisionBar
+- `dialog/`: ConfirmDialog
+
+**服務** (`apps/web/src/app/services/`):
+- `dialog/`: DialogService, DialogRef, DialogConfig
+
+## API Contracts
+
+**已定義的 API** (`specs/001-account-auth/contracts/openapi.yaml`):
+- `POST /auth/register`: 註冊帳號 (Email/Google)
+- `POST /auth/login`: 登入帳號 (Email/Google)
+- `POST /auth/logout`: 登出帳號
+
+**認證方式**: Bearer Token
+
+## Data Models
+
+**目前 Prisma Schema** (`apps/api/prisma/schema.prisma`):
+```prisma
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+**未來規劃模型**:
+- Deck: 牌組
+- Card: 卡片（含 FSRS 排程資料）
+- StudySession: 學習記錄
