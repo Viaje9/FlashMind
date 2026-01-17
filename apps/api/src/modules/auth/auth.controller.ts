@@ -35,13 +35,20 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response, @Req() req: Request) {
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+  ) {
     const userResponse = await this.authService.register(dto);
 
-    const session = await this.sessionService.createSession(userResponse.data.id, {
-      userAgent: req.headers['user-agent'],
-      ipAddress: req.ip,
-    });
+    const session = await this.sessionService.createSession(
+      userResponse.data.id,
+      {
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip,
+      },
+    );
 
     res.cookie('session', session.token, {
       ...COOKIE_OPTIONS,
@@ -53,14 +60,21 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response, @Req() req: Request) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+  ) {
     const userResponse = await this.authService.login(dto);
 
-    const session = await this.sessionService.createSession(userResponse.data.id, {
-      rememberMe: dto.rememberMe,
-      userAgent: req.headers['user-agent'],
-      ipAddress: req.ip,
-    });
+    const session = await this.sessionService.createSession(
+      userResponse.data.id,
+      {
+        rememberMe: dto.rememberMe,
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip,
+      },
+    );
 
     const maxAge = dto.rememberMe
       ? 30 * 24 * 60 * 60 * 1000 // 30 days
@@ -77,7 +91,10 @@ export class AuthController {
   @Post('logout')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     await this.sessionService.revokeSession(req.sessionToken);
 
     res.cookie('session', '', {
@@ -104,7 +121,10 @@ export class AuthController {
     @Res() res: Response,
     @Req() req: Request,
   ) {
-    const { user, rememberMe } = await this.authService.handleGoogleCallback(code, state);
+    const { user, rememberMe } = await this.authService.handleGoogleCallback(
+      code,
+      state,
+    );
 
     const session = await this.sessionService.createSession(user.id, {
       rememberMe,
@@ -121,7 +141,8 @@ export class AuthController {
       maxAge,
     });
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4280';
     res.redirect(frontendUrl);
   }
 

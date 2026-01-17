@@ -1,59 +1,69 @@
-# Web
+# FlashMind Web
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.4.
+FlashMind 前端應用程式，使用 Angular 21 建構的智慧閃卡學習平台。
 
-## Development server
+## 技術棧
 
-To start a local development server, run:
+- **Angular 21** - Standalone Components、Signals
+- **TailwindCSS 4** - 樣式框架
+- **Vitest** - 單元測試
+- **Storybook** - 元件開發與文件
 
-```bash
-ng serve
-```
+## 開發指令
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+從專案根目錄執行：
 
 ```bash
-ng generate component component-name
+# 啟動開發伺服器
+pnpm dev:web
+
+# 或使用 filter
+pnpm --filter ./apps/web start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+開發伺服器啟動後，開啟瀏覽器至 `http://localhost:4280/`。
+
+### 其他指令
 
 ```bash
-ng generate --help
+# 建構生產版本
+pnpm --filter ./apps/web build
+
+# 執行單元測試
+pnpm --filter ./apps/web test
+
+# 啟動 Storybook
+pnpm --filter ./apps/web storybook
+
+# 從 OpenAPI 規格產生 API 客戶端
+pnpm --filter ./apps/web generate:api
 ```
 
-## Building
+## 專案結構
 
-To build the project run:
-
-```bash
-ng build
+```text
+src/
+├── app/
+│   ├── components/     # 共用元件（按功能分類）
+│   │   ├── auth/       # 認證相關元件
+│   │   ├── card/       # 閃卡元件
+│   │   ├── deck/       # 牌組元件
+│   │   ├── study/      # 學習元件
+│   │   └── dialog/     # 對話框元件
+│   ├── pages/          # 頁面路由元件（lazy loading）
+│   └── services/       # Angular 服務
+├── assets/             # 靜態資源
+└── styles/             # 全域樣式
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## 開發慣例
 
-## Running unit tests
+- **Standalone Components**：所有元件皆為 standalone，無 NgModule
+- **Signal-based State**：使用 Angular Signals 進行狀態管理
+- **API-First**：API 客戶端由 OpenAPI 規格自動產生至 `@flashmind/api-client`
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## 相關資源
 
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- [Angular CLI 文件](https://angular.dev/tools/cli)
+- [TailwindCSS 文件](https://tailwindcss.com/docs)
+- [Vitest 文件](https://vitest.dev/)

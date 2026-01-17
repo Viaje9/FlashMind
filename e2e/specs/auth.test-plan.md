@@ -5,7 +5,7 @@
 FlashMind 是一個智慧閃卡學習應用程式，使用 FSRS 演算法進行間隔重複學習排程。此測試計畫涵蓋完整的使用者認證功能，包括 Email 註冊登入、Google OAuth 登入、登出、以及「記住我」功能。所有測試均採用 HttpOnly Cookie 作為認證機制，符合 ADR-016 API 設計規範。
 
 ## 測試環境
-- 前端：Angular 21, http://localhost:4200
+- 前端：Angular 21, http://localhost:4280
 - 後端：NestJS 11, Prisma 6, PostgreSQL
 - 測試工具：Playwright
 - API 認證：HttpOnly Cookie (session)
