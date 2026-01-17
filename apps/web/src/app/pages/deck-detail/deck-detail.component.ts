@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { FmFabComponent, FmIconButtonComponent, FmPageHeaderComponent, FmSearchInputComponent } from '@flashmind/ui';
 import { FmCardListItemComponent } from './components/card-list-item/card-list-item.component';
 import { FmDeckStatsCardComponent } from './components/deck-stats-card/deck-stats-card.component';
@@ -19,7 +20,8 @@ interface CardPreview {
     FmSearchInputComponent,
     FmCardListItemComponent,
     FmFabComponent,
-    RouterLink
+    RouterLink,
+    ReactiveFormsModule
   ],
   templateUrl: './deck-detail.component.html',
   styleUrl: './deck-detail.component.css',
@@ -27,6 +29,8 @@ interface CardPreview {
 })
 export class DeckDetailComponent {
   private readonly router = inject(Router);
+
+  readonly searchControl = new FormControl('');
 
   readonly cards: CardPreview[] = [
     {

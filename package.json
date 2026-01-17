@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.26.2",
   "scripts": {
+    "dev": "pnpm --filter web start & pnpm --filter api start:dev",
     "dev:web": "pnpm --filter ./apps/web start",
     "dev:api": "pnpm --filter ./apps/api start:dev",
     "dev:docs": "pnpm --filter ./apps/docs-viewer dev",

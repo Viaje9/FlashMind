@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
   FmAddItemButtonComponent,
   FmButtonComponent,
@@ -24,14 +25,15 @@ interface MeaningBlock {
     FmGlowTextareaComponent,
     FmMeaningEditorCardComponent,
     FmAddItemButtonComponent,
-    RouterLink
+    RouterLink,
+    ReactiveFormsModule
   ],
   templateUrl: './card-editor.component.html',
   styleUrl: './card-editor.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CardEditorComponent {
-  readonly frontText = 'Hello';
+  readonly frontTextControl = new FormControl('Hello');
 
   readonly meaningBlocks: MeaningBlock[] = [
     {

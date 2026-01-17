@@ -8,7 +8,11 @@ type ButtonType = 'button' | 'submit' | 'reset';
   selector: 'fm-button',
   templateUrl: './button.component.html',
   styleUrl: './button.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.display]': 'fullWidth() ? "block" : "inline-block"',
+    '[style.width]': 'fullWidth() ? "100%" : null',
+  },
 })
 export class FmButtonComponent {
   readonly variant = input<ButtonVariant>('primary');

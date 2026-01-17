@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { FmSettingRowComponent } from './setting-row.component';
 
 const meta: Meta<FmSettingRowComponent> = {
@@ -10,16 +11,25 @@ const meta: Meta<FmSettingRowComponent> = {
     label: '每日學習提醒',
     description: '',
     value: '',
-    variant: 'toggle',
-    checked: true,
-    disabled: false
+    variant: 'toggle'
   },
   argTypes: {
     variant: {
       control: 'select',
       options: ['toggle', 'link', 'action']
     }
-  }
+  },
+  render: (args) => ({
+    props: {
+      ...args,
+      control: new FormControl(true)
+    },
+    moduleMetadata: {
+      imports: [ReactiveFormsModule]
+    },
+    template:
+      '<fm-setting-row [formControl]="control" [icon]="icon" [iconClass]="iconClass" [label]="label" [description]="description" [value]="value" [variant]="variant"></fm-setting-row>'
+  })
 };
 
 export default meta;

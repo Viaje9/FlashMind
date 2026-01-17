@@ -1,5 +1,5 @@
 /**
- * FlashMind Auth API
+ * FlashMind API
  *
  * 
  *
@@ -7,17 +7,16 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
-import { RegisterWithEmail } from './registerWithEmail';
-import { RegisterWithGoogle } from './registerWithGoogle';
 
 
 /**
- * Email 或 Google 註冊的請求資料。兩種格式擇一。
+ * Email 註冊請求
  */
-/**
- * @type RegisterRequest
- * Email 或 Google 註冊的請求資料。兩種格式擇一。
- * @export
- */
-export type RegisterRequest = RegisterWithEmail | RegisterWithGoogle;
+export interface RegisterRequest { 
+    email: string;
+    /**
+     * 密碼（至少 8 字元）
+     */
+    password: string;
+}
 

@@ -18,12 +18,7 @@
   </div>
   <div class="shrink-0 ml-4">
     @if (variant() === 'toggle') {
-      <fm-toggle
-        [checked]="checked()"
-        [disabled]="disabled()"
-        ariaLabel="切換設定"
-        (changed)="onToggleChange($event)"
-      ></fm-toggle>
+      <fm-toggle [formControl]="toggleControl" ariaLabel="切換設定"></fm-toggle>
     } @else {
       <div class="flex items-center gap-2">
         @if (value()) {

@@ -26,6 +26,11 @@ export * from './lib/forms/social-login-row/social-login-row.component';
 
 // feedback
 export * from './lib/feedback/empty-state/empty-state.component';
+export * from './lib/feedback/alert/alert.component';
+
+// layout
+export * from './lib/layout/auth-page-layout/auth-page-layout.component';
+export * from './lib/layout/auth-header/auth-header.component';
 
 // overlays
 export * from './lib/overlays/dialog/dialog.component';

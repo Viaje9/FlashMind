@@ -10,6 +10,7 @@
         [attr.maxlength]="maxLength()"
         [attr.aria-label]="ariaLabelValue()"
         (input)="onInput($event)"
+        (blur)="onBlur()"
       ></textarea>
     </div>
   </div>

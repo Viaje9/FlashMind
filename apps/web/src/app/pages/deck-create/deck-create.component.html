@@ -8,6 +8,7 @@
   <main class="mx-auto w-full max-w-md px-4 pt-4">
     <form class="flex flex-col gap-6">
       <fm-labeled-input
+        [formControl]="deckNameControl"
         label="牌組名稱"
         icon="style"
         placeholder="例如：日文 N5 單字"
@@ -18,12 +19,12 @@
         <fm-section-heading text="學習計畫設定"></fm-section-heading>
 
         <fm-number-input-row
+          [formControl]="dailyNewCardsControl"
           label="每日新卡數"
           title="新學習"
           description="建議初學者設定 20 張"
           icon="library_add"
           iconClass="bg-blue-500/10 text-blue-500"
-          [value]="20"
           [min]="0"
           [step]="5"
           unit="張"
@@ -31,12 +32,12 @@
         ></fm-number-input-row>
 
         <fm-number-input-row
+          [formControl]="dailyReviewCardsControl"
           label="每日複習數"
           title="複習上限"
           description="包含舊卡片複習"
           icon="history"
           iconClass="bg-amber-500/10 text-amber-500"
-          [value]="100"
           [min]="0"
           [step]="10"
           unit="張"

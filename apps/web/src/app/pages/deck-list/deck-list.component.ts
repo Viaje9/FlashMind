@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { FmEmptyStateComponent, FmFabComponent, FmIconButtonComponent, FmPageHeaderComponent, FmSearchInputComponent } from '@flashmind/ui';
 import { FmDeckCardComponent } from '../../components/deck/deck-card/deck-card.component';
 
@@ -23,7 +24,8 @@ interface DeckPreview {
     FmDeckCardComponent,
     FmEmptyStateComponent,
     FmFabComponent,
-    RouterLink
+    RouterLink,
+    ReactiveFormsModule
   ],
   templateUrl: './deck-list.component.html',
   styleUrl: './deck-list.component.css',
@@ -31,6 +33,8 @@ interface DeckPreview {
 })
 export class DeckListComponent {
   private readonly router = inject(Router);
+
+  readonly searchControl = new FormControl('');
 
   readonly decks: DeckPreview[] = [
     {

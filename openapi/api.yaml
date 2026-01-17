@@ -1,17 +1,30 @@
 openapi: 3.0.3
 info:
-  title: FlashMind Auth API
+  title: FlashMind API
   version: 0.1.0
-  description: 帳號與登入相關 API 契約
+  description: |
+    FlashMind API 契約
+
+    ## 設計規範
+    - Response 格式：統一 Wrapper `{ data, meta? }`
+    - Error 格式：`{ error: { code, message } }`
+    - 認證方式：HttpOnly Cookie
+    - 詳見 ADR-016
+
 servers:
   - url: https://api.flashmind.local
+
 paths:
+  # ============================================================
+  # Auth
+  # ============================================================
   /auth/register:
     post:
+      operationId: register
       tags:
         - Auth
       summary: 註冊帳號
-      description: 支援 Email 或 Google 註冊，成功後回傳使用者與工作階段資訊。
+      description: 使用 Email 註冊新帳號，成功後設定 session cookie。
       requestBody:
         required: true
         content:
@@ -21,28 +34,44 @@ paths:
       responses:
         "201":
           description: 註冊成功
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+                example: session=abc123; HttpOnly; Secure; SameSite=Strict; Path=/
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/UserResponse"
         "400":
           description: 輸入資料不完整或格式錯誤
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 密碼至少需要 8 個字元
         "409":
           description: Email 已被使用
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: AUTH_EMAIL_ALREADY_EXISTS
+                  message: 此 Email 已被註冊
+
   /auth/login:
     post:
+      operationId: login
       tags:
         - Auth
       summary: 登入帳號
-      description: 支援 Email + 密碼或 Google 登入，成功後回傳使用者與工作階段資訊。
+      description: 使用 Email + 密碼登入，成功後設定 session cookie。
       requestBody:
         required: true
         content:
@@ -52,10 +81,15 @@ paths:
       responses:
         "200":
           description: 登入成功
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/UserResponse"
         "400":
           description: 輸入資料不完整或格式錯誤
           content:
@@ -63,118 +97,225 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
-          description: 帳密錯誤或授權失敗
+          description: 帳密錯誤
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: AUTH_INVALID_CREDENTIALS
+                  message: Email 或密碼錯誤
+
   /auth/logout:
     post:
+      operationId: logout
       tags:
         - Auth
       summary: 登出帳號
-      description: 撤銷目前工作階段並清除登入狀態。
+      description: 撤銷目前 session 並清除 cookie。
       security:
-        - bearerAuth: []
+        - cookieAuth: []
       responses:
         "204":
           description: 登出成功
+          headers:
+            Set-Cookie:
+              description: 清除 session cookie
+              schema:
+                type: string
+                example: session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0
         "401":
-          description: 未授權或工作階段無效
+          description: 未授權
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
+
+  /auth/google:
+    get:
+      operationId: initiateGoogleOAuth
+      tags:
+        - Auth
+      summary: 發起 Google OAuth
+      description: 重新導向至 Google 授權頁面。
+      parameters:
+        - name: rememberMe
+          in: query
+          description: 是否記住登入狀態
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "302":
+          description: 重新導向至 Google 授權頁面
+          headers:
+            Location:
+              description: Google OAuth 授權 URL
+              schema:
+                type: string
+
+  /auth/google/callback:
+    get:
+      operationId: handleGoogleOAuthCallback
+      tags:
+        - Auth
+      summary: Google OAuth Callback
+      description: Google 授權完成後的回呼端點，驗證後設定 session cookie 並導向前端。
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: Google 授權碼
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: 狀態參數（含 rememberMe 等資訊）
+          schema:
+            type: string
+      responses:
+        "302":
+          description: 登入成功，導向前端主頁
+          headers:
+            Location:
+              description: 前端主頁 URL
+              schema:
+                type: string
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+        "401":
+          description: Google 授權失敗
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: AUTH_GOOGLE_FAILED
+                  message: Google 登入失敗，請重試
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags:
+        - Auth
+      summary: 取得目前使用者資訊
+      description: 取得目前登入使用者的資訊。
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: token
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: HttpOnly session cookie
 
   schemas:
-    RegisterRequest:
-      description: Email 或 Google 註冊的請求資料。兩種格式擇一。
-      oneOf:
-        - $ref: "#/components/schemas/RegisterWithEmail"
-        - $ref: "#/components/schemas/RegisterWithGoogle"
-    RegisterWithEmail:
+    # ============================================================
+    # Common
+    # ============================================================
+    ErrorResponse:
       type: object
+      description: 錯誤回應（符合 ADR-016）
       required:
-        - provider
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: 機器可讀的錯誤碼（SCREAMING_SNAKE_CASE）
+              example: AUTH_INVALID_CREDENTIALS
+            message:
+              type: string
+              description: 使用者可讀的錯誤訊息
+              example: Email 或密碼錯誤
+
+    PaginationMeta:
+      type: object
+      description: 分頁資訊（cursor-based）
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+          description: 下一頁的 cursor，若無更多資料則為 null
+        hasMore:
+          type: boolean
+          description: 是否還有更多資料
+
+    # ============================================================
+    # Auth
+    # ============================================================
+    RegisterRequest:
+      type: object
+      description: Email 註冊請求
+      required:
         - email
         - password
       properties:
-        provider:
-          type: string
-          enum: [email]
         email:
           type: string
           format: email
+          example: user@example.com
         password:
           type: string
           minLength: 8
-    RegisterWithGoogle:
-      type: object
-      required:
-        - provider
-        - credential
-      properties:
-        provider:
-          type: string
-          enum: [google]
-        credential:
-          type: string
-          description: Google 授權憑證（不限定格式，視實作而定）
+          description: 密碼（至少 8 字元）
+          example: securepassword123
 
     LoginRequest:
-      description: Email 或 Google 登入的請求資料。兩種格式擇一。
-      oneOf:
-        - $ref: "#/components/schemas/LoginWithEmail"
-        - $ref: "#/components/schemas/LoginWithGoogle"
-    LoginWithEmail:
       type: object
+      description: Email 登入請求
       required:
-        - provider
         - email
         - password
       properties:
-        provider:
-          type: string
-          enum: [email]
         email:
           type: string
           format: email
+          example: user@example.com
         password:
           type: string
           minLength: 8
-    LoginWithGoogle:
-      type: object
-      required:
-        - provider
-        - credential
-      properties:
-        provider:
-          type: string
-          enum: [google]
-        credential:
-          type: string
-          description: Google 授權憑證（不限定格式，視實作而定）
+          example: securepassword123
+        rememberMe:
+          type: boolean
+          default: false
+          description: 記住我（延長 session 效期至 30 天）
 
-    AuthResponse:
+    User:
       type: object
-      required:
-        - user
-        - session
-      properties:
-        user:
-          $ref: "#/components/schemas/UserSummary"
-        session:
-          $ref: "#/components/schemas/SessionInfo"
-
-    UserSummary:
-      type: object
+      description: 使用者資料
       required:
         - id
         - email
@@ -183,41 +324,33 @@ components:
       properties:
         id:
           type: string
+          description: 使用者 ID（cuid）
+          example: clh1234567890abcdef
         email:
           type: string
           format: email
+          example: user@example.com
         primaryProvider:
           type: string
           enum: [email, google]
+          description: 主要登入方式
         createdAt:
           type: string
           format: date-time
+          description: 建立時間（ISO 8601 UTC）
+          example: "2026-01-17T10:30:00Z"
         lastLoginAt:
           type: string
           format: date-time
           nullable: true
+          description: 最後登入時間
+          example: "2026-01-17T14:45:30Z"
 
-    SessionInfo:
+    UserResponse:
       type: object
+      description: 使用者回應（符合 ADR-016 統一 Wrapper）
       required:
-        - token
-        - expiresAt
+        - data
       properties:
-        token:
-          type: string
-          description: 工作階段憑證
-        expiresAt:
-          type: string
-          format: date-time
-
-    ErrorResponse:
-      type: object
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: string
-        message:
-          type: string
-          description: 對使用者可理解的錯誤訊息
+        data:
+          $ref: "#/components/schemas/User"

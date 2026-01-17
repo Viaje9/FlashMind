@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
   FmButtonComponent,
   FmIconButtonComponent,
@@ -18,10 +19,15 @@ import {
     FmSectionHeadingComponent,
     FmNumberInputRowComponent,
     FmButtonComponent,
-    RouterLink
+    RouterLink,
+    ReactiveFormsModule
   ],
   templateUrl: './deck-create.component.html',
   styleUrl: './deck-create.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DeckCreateComponent {}
+export class DeckCreateComponent {
+  readonly deckNameControl = new FormControl('');
+  readonly dailyNewCardsControl = new FormControl(20);
+  readonly dailyReviewCardsControl = new FormControl(100);
+}

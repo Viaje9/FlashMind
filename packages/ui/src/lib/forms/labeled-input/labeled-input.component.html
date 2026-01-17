@@ -3,10 +3,22 @@
     <span class="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">{{ label() }}</span>
   }
   <div
-    class="group relative flex w-full items-center rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/5 px-4 py-4 shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all"
+    class="group relative flex w-full items-center rounded-2xl bg-white dark:bg-surface-dark border px-4 py-4 shadow-sm transition-all"
+    [class.border-slate-200]="!showError()"
+    [class.dark:border-white/5]="!showError()"
+    [class.focus-within:border-primary/50]="!showError()"
+    [class.focus-within:ring-2]="!showError()"
+    [class.focus-within:ring-primary/20]="!showError()"
+    [class.border-red-500]="showError()"
+    [class.ring-2]="showError()"
+    [class.ring-red-500/20]="showError()"
   >
     @if (icon()) {
-      <span class="material-symbols-outlined text-slate-400 mr-3">{{ icon() }}</span>
+      <span
+        class="material-symbols-outlined mr-3"
+        [class.text-slate-400]="!showError()"
+        [class.text-red-400]="showError()"
+      >{{ icon() }}</span>
     }
     <input
       class="flex-1 bg-transparent px-0 text-base font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-0 border-none"
@@ -15,7 +27,12 @@
       [placeholder]="placeholder()"
       [disabled]="disabled()"
       [attr.aria-label]="ariaLabelValue()"
+      [attr.aria-invalid]="showError()"
       (input)="onInput($event)"
+      (blur)="onBlur()"
     />
   </div>
+  @if (showError()) {
+    <span class="text-sm text-red-400 ml-1">{{ firstErrorMessage() }}</span>
+  }
 </label>

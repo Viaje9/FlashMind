@@ -1,5 +1,5 @@
 /**
- * FlashMind Auth API
+ * FlashMind API
  *
  * 
  *
@@ -7,17 +7,17 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
-import { LoginWithEmail } from './loginWithEmail';
-import { LoginWithGoogle } from './loginWithGoogle';
 
 
 /**
- * Email 或 Google 登入的請求資料。兩種格式擇一。
+ * Email 登入請求
  */
-/**
- * @type LoginRequest
- * Email 或 Google 登入的請求資料。兩種格式擇一。
- * @export
- */
-export type LoginRequest = LoginWithEmail | LoginWithGoogle;
+export interface LoginRequest { 
+    email: string;
+    password: string;
+    /**
+     * 記住我（延長 session 效期至 30 天）
+     */
+    rememberMe?: boolean;
+}
 

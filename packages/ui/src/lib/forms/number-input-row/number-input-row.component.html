@@ -27,6 +27,7 @@
         [disabled]="disabled()"
         [attr.aria-label]="ariaLabelValue()"
         (input)="onInput($event)"
+        (blur)="onBlur()"
       />
       <span class="text-xs font-bold text-slate-500 dark:text-slate-400">{{ unit() }}</span>
     </div>

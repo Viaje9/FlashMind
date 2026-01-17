@@ -1,27 +1,44 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  forwardRef,
+  input,
+  output,
+  signal
+} from '@angular/core';
+import { ControlValueAccessor, FormControl, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@angular/forms';
 import { FmToggleComponent } from '../../primitives/toggle/toggle.component';
 
 type SettingRowVariant = 'toggle' | 'link' | 'action';
 
 @Component({
   selector: 'fm-setting-row',
-  imports: [FmToggleComponent],
+  imports: [FmToggleComponent, ReactiveFormsModule],
   templateUrl: './setting-row.component.html',
   styleUrl: './setting-row.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => FmSettingRowComponent),
+      multi: true
+    }
+  ]
 })
-export class FmSettingRowComponent {
+export class FmSettingRowComponent implements ControlValueAccessor {
   readonly icon = input('');
   readonly iconClass = input('bg-slate-500/10 text-slate-500');
   readonly label = input('');
   readonly description = input('');
   readonly value = input('');
   readonly variant = input<SettingRowVariant>('toggle');
-  readonly checked = input(false);
-  readonly disabled = input(false);
 
-  readonly toggleChange = output<boolean>();
   readonly rowClick = output<void>();
+
+  readonly toggleControl = new FormControl(false);
+  readonly disabled = signal(false);
 
   readonly iconContainerClass = computed(() => {
     const base = 'flex items-center justify-center w-8 h-8 rounded-lg';
@@ -30,25 +47,56 @@ export class FmSettingRowComponent {
 
   readonly rowClass = computed(() => {
     const base = 'flex items-center justify-between p-4 min-h-[56px]';
-    const interactive = this.variant() === 'toggle' ? '' : 'hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors';
+    const interactive =
+      this.variant() === 'toggle' ? '' : 'hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer transition-colors';
     return [base, interactive].filter(Boolean).join(' ');
   });
 
   readonly rowRole = computed(() => (this.variant() === 'toggle' ? null : 'button'));
   readonly rowTabIndex = computed(() => (this.variant() === 'toggle' ? null : 0));
 
-  onToggleChange(nextValue: boolean) {
-    this.toggleChange.emit(nextValue);
+  private onChange: (value: boolean) => void = () => {};
+  private onTouched: () => void = () => {};
+
+  constructor() {
+    this.toggleControl.valueChanges.subscribe((value: boolean | null) => {
+      this.onChange(value ?? false);
+      this.onTouched();
+    });
+
+    effect(() => {
+      if (this.disabled()) {
+        this.toggleControl.disable({ emitEvent: false });
+      } else {
+        this.toggleControl.enable({ emitEvent: false });
+      }
+    });
   }
 
-  onRowClick() {
+  writeValue(value: boolean): void {
+    this.toggleControl.setValue(value ?? false, { emitEvent: false });
+  }
+
+  registerOnChange(fn: (value: boolean) => void): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    this.disabled.set(isDisabled);
+  }
+
+  onRowClick(): void {
     if (this.variant() === 'toggle') {
       return;
     }
     this.rowClick.emit();
   }
 
-  onRowKeydown(event: KeyboardEvent) {
+  onRowKeydown(event: KeyboardEvent): void {
     if (this.variant() === 'toggle') {
       return;
     }

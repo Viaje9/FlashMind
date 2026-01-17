@@ -1,5 +1,5 @@
 /**
- * FlashMind Auth API
+ * FlashMind API
  *
  * 
  *

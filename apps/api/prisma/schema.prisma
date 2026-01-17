@@ -7,9 +7,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Provider {
+  EMAIL
+  GOOGLE
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String         @id @default(cuid())
+  email           String         @unique
+  passwordHash    String?
+  primaryProvider Provider       @default(EMAIL)
+  lastLoginAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  oauthAccounts   OAuthAccount[]
+  sessions        Session[]
+}
+
+model OAuthAccount {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     Provider
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  userAgent  String?
+  ipAddress  String?
+  expiresAt  DateTime
+  rememberMe Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

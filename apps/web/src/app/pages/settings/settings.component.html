@@ -8,17 +8,17 @@
   </fm-page-header>
 
   <main class="mx-auto w-full max-w-lg p-4 space-y-6">
-    <fm-profile-card name="王小明" email="xiaoming@example.com" actionLabel="管理帳戶"></fm-profile-card>
+    <fm-profile-card [name]="userName()" [email]="userEmail()" actionLabel="管理帳戶"></fm-profile-card>
 
     <section>
       <fm-section-heading text="學習偏好"></fm-section-heading>
       <div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
         <fm-setting-row
+          [formControl]="dailyReminderControl"
           icon="notifications_active"
           iconClass="bg-blue-500/10 text-blue-500"
           label="每日學習提醒"
           variant="toggle"
-          [checked]="true"
         ></fm-setting-row>
         <div class="pl-6">
           <fm-setting-row
@@ -30,14 +30,15 @@
           ></fm-setting-row>
         </div>
         <fm-setting-row
+          [formControl]="spacedRepetitionControl"
           icon="psychology"
           iconClass="bg-purple-500/10 text-purple-500"
           label="間隔重複模式"
           description="根據記憶曲線優化複習"
           variant="toggle"
-          [checked]="true"
         ></fm-setting-row>
         <fm-setting-row
+          [formControl]="smartShuffleControl"
           icon="shuffle"
           iconClass="bg-green-500/10 text-green-500"
           label="智能洗牌"
@@ -57,13 +58,14 @@
           variant="link"
         ></fm-setting-row>
         <fm-setting-row
+          [formControl]="soundEffectsControl"
           icon="volume_up"
           iconClass="bg-pink-500/10 text-pink-500"
           label="應用程式音效"
           variant="toggle"
-          [checked]="true"
         ></fm-setting-row>
         <fm-setting-row
+          [formControl]="hapticFeedbackControl"
           icon="vibration"
           iconClass="bg-slate-500/10 text-slate-500"
           label="觸覺回饋"
@@ -91,7 +93,13 @@
     </section>
 
     <section class="space-y-4">
-      <fm-button variant="danger" [fullWidth]="true">登出帳戶</fm-button>
+      <fm-button variant="danger" [fullWidth]="true" (click)="logout()" [disabled]="loading()">
+        @if (loading()) {
+          登出中...
+        } @else {
+          登出帳戶
+        }
+      </fm-button>
       <p class="text-center text-xs text-slate-400 dark:text-slate-600">
         FlashMind v0.1.0 (Build 20231024)<br />
         © 2024 FlashMind

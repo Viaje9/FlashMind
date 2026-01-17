@@ -1,21 +1,35 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  forwardRef,
+  input,
+  signal
+} from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
   selector: 'fm-glow-textarea',
   templateUrl: './glow-textarea.component.html',
   styleUrl: './glow-textarea.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => FmGlowTextareaComponent),
+      multi: true
+    }
+  ]
 })
-export class FmGlowTextareaComponent {
-  readonly value = input('');
+export class FmGlowTextareaComponent implements ControlValueAccessor {
   readonly placeholder = input('');
   readonly minHeightClass = input('min-h-[140px]');
   readonly maxLength = input<number | null>(null);
   readonly showCount = input(true);
-  readonly disabled = input(false);
   readonly ariaLabel = input('');
 
-  readonly valueChange = output<string>();
+  readonly value = signal('');
+  readonly disabled = signal(false);
 
   readonly textAreaClass = computed(() => {
     const base =
@@ -36,11 +50,35 @@ export class FmGlowTextareaComponent {
 
   readonly ariaLabelValue = computed(() => this.ariaLabel() || this.placeholder() || '輸入內容');
 
-  onInput(event: Event) {
+  private onChange: (value: string) => void = () => {};
+  private onTouched: () => void = () => {};
+
+  writeValue(value: string): void {
+    this.value.set(value ?? '');
+  }
+
+  registerOnChange(fn: (value: string) => void): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState(isDisabled: boolean): void {
+    this.disabled.set(isDisabled);
+  }
+
+  onInput(event: Event): void {
     const target = event.target as HTMLTextAreaElement | null;
     if (!target) {
       return;
     }
-    this.valueChange.emit(target.value);
+    this.value.set(target.value);
+    this.onChange(target.value);
+  }
+
+  onBlur(): void {
+    this.onTouched();
   }
 }

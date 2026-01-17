@@ -7,19 +7,9 @@ import { ChangeDetectionStrategy, Component, output } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FmSocialLoginRowComponent {
-  readonly appleClick = output<void>();
   readonly googleClick = output<void>();
-  readonly facebookClick = output<void>();
-
-  onAppleClick() {
-    this.appleClick.emit();
-  }
 
   onGoogleClick() {
     this.googleClick.emit();
-  }
-
-  onFacebookClick() {
-    this.facebookClick.emit();
   }
 }

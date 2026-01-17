@@ -1,45 +1,36 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
+  FmAuthPageLayoutComponent,
   FmButtonComponent,
   FmDividerComponent,
   FmSocialLoginRowComponent,
-  DialogService,
-  FmConfirmDialogComponent,
 } from '@flashmind/ui';
 import { FmWelcomeHeroComponent } from './components/welcome-hero/welcome-hero.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-welcome-page',
   imports: [
-    FmWelcomeHeroComponent,
+    RouterLink,
+    FmAuthPageLayoutComponent,
     FmButtonComponent,
     FmDividerComponent,
     FmSocialLoginRowComponent,
-    RouterLink
+    FmWelcomeHeroComponent,
   ],
   templateUrl: './welcome.component.html',
   styleUrl: './welcome.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WelcomeComponent {
-  private dialogService = inject(DialogService);
+  private authService = inject(AuthService);
 
   readonly heroTitle = 'FlashMind';
   readonly heroDescription = '建立、學習、記憶。\n讓知識累積變得前所未有的簡單。';
   readonly heroBadge = '每日學習';
 
-  testDialog() {
-    const dialogRef = this.dialogService.open(FmConfirmDialogComponent, {
-      data: {
-        title: '測試對話框',
-        message: '這是一個測試對話框。點擊確認或取消來關閉它。'
-      },
-      maxWidth: '480px'
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      console.log('對話框關閉，結果:', result);
-    });
+  loginWithGoogle() {
+    this.authService.loginWithGoogle();
   }
 }

@@ -1,5 +1,5 @@
 /**
- * FlashMind Auth API
+ * FlashMind API
  *
  * 
  *
@@ -7,13 +7,13 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { ErrorResponseError } from './errorResponseError';
 
 
+/**
+ * 錯誤回應（符合 ADR-016）
+ */
 export interface ErrorResponse { 
-    code: string;
-    /**
-     * 對使用者可理解的錯誤訊息
-     */
-    message: string;
+    error: ErrorResponseError;
 }
 

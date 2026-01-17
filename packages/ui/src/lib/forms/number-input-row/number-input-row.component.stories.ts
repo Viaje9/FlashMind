@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { FmNumberInputRowComponent } from './number-input-row.component';
 
 const meta: Meta<FmNumberInputRowComponent> = {
@@ -10,19 +11,23 @@ const meta: Meta<FmNumberInputRowComponent> = {
     description: '建議初學者設定 20 張',
     icon: 'library_add',
     iconClass: 'bg-blue-500/10 text-blue-500',
-    value: 20,
     unit: '張',
     min: 0,
     max: 200,
-    step: 5,
-    disabled: false
+    step: 5
   },
   render: (args) => ({
-    props: args,
+    props: {
+      ...args,
+      control: new FormControl(20)
+    },
+    moduleMetadata: {
+      imports: [ReactiveFormsModule]
+    },
     template:
-      '<div class="bg-background-light dark:bg-background-dark p-4">'
-      + '<fm-number-input-row [label]="label" [title]="title" [description]="description" [icon]="icon" [iconClass]="iconClass" [value]="value" [unit]="unit" [min]="min" [max]="max" [step]="step" [disabled]="disabled"></fm-number-input-row>'
-      + '</div>'
+      '<div class="bg-background-light dark:bg-background-dark p-4">' +
+      '<fm-number-input-row [formControl]="control" [label]="label" [title]="title" [description]="description" [icon]="icon" [iconClass]="iconClass" [unit]="unit" [min]="min" [max]="max" [step]="step"></fm-number-input-row>' +
+      '</div>'
   })
 };
 
@@ -39,13 +44,35 @@ export const 複習上限: Story = {
     description: '包含舊卡片複習',
     icon: 'history',
     iconClass: 'bg-amber-500/10 text-amber-500',
-    value: 100,
     step: 10
-  }
+  },
+  render: (args) => ({
+    props: {
+      ...args,
+      control: new FormControl(100)
+    },
+    moduleMetadata: {
+      imports: [ReactiveFormsModule]
+    },
+    template:
+      '<div class="bg-background-light dark:bg-background-dark p-4">' +
+      '<fm-number-input-row [formControl]="control" [label]="label" [title]="title" [description]="description" [icon]="icon" [iconClass]="iconClass" [unit]="unit" [min]="min" [max]="max" [step]="step"></fm-number-input-row>' +
+      '</div>'
+  })
 };
 
 export const 停用: Story = {
-  args: {
-    disabled: true
-  }
+  render: (args) => ({
+    props: {
+      ...args,
+      control: new FormControl({ value: 20, disabled: true })
+    },
+    moduleMetadata: {
+      imports: [ReactiveFormsModule]
+    },
+    template:
+      '<div class="bg-background-light dark:bg-background-dark p-4">' +
+      '<fm-number-input-row [formControl]="control" [label]="label" [title]="title" [description]="description" [icon]="icon" [iconClass]="iconClass" [unit]="unit" [min]="min" [max]="max" [step]="step"></fm-number-input-row>' +
+      '</div>'
+  })
 };

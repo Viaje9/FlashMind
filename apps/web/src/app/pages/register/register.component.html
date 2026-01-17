@@ -1,0 +1,57 @@
+<fm-auth-page-layout>
+  <ng-container main>
+    <fm-auth-header title="註冊帳號">
+      <a routerLink="/login" class="text-primary hover:text-primary/80 transition-colors">
+        登入現有帳號
+      </a>
+    </fm-auth-header>
+
+    @if (errorMessage) {
+      <fm-alert [message]="errorMessage" type="error" />
+    }
+
+    <form class="space-y-4" (ngSubmit)="onSubmit()">
+      <fm-labeled-input
+        [formField]="registerForm.email"
+        label="Email"
+        icon="mail"
+        placeholder="請輸入 Email"
+        type="email"
+        ariaLabel="Email"
+      />
+
+      <fm-labeled-input
+        [formField]="registerForm.password"
+        label="密碼"
+        icon="lock"
+        placeholder="請輸入密碼（至少 8 字元）"
+        type="password"
+        ariaLabel="密碼"
+      />
+
+      <fm-labeled-input
+        [formField]="registerForm.confirmPassword"
+        label="確認密碼"
+        icon="lock"
+        placeholder="請再次輸入密碼"
+        type="password"
+        ariaLabel="確認密碼"
+      />
+
+      <div class="pt-2">
+        <fm-button [type]="'submit'" [fullWidth]="true" [disabled]="loading()">
+          @if (loading()) {
+            註冊中...
+          } @else {
+            註冊
+          }
+        </fm-button>
+      </div>
+    </form>
+  </ng-container>
+
+  <ng-container footer>
+    <fm-divider label="或使用其他方式註冊" [uppercase]="false" />
+    <fm-social-login-row (googleClick)="loginWithGoogle()" />
+  </ng-container>
+</fm-auth-page-layout>

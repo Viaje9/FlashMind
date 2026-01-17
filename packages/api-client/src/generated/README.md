@@ -1,6 +1,6 @@
 # @
 
-帳號與登入相關 API 契約
+FlashMind API 契約  ## 設計規範 - Response 格式：統一 Wrapper `{ data, meta? }` - Error 格式：`{ error: { code, message } }` - 認證方式：HttpOnly Cookie - 詳見 ADR-016 
 
 The version of the OpenAPI document: 0.1.0
 

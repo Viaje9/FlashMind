@@ -8,7 +8,7 @@
     <section class="flex flex-col gap-3">
       <fm-form-section-header title="正面" icon="web_stories"></fm-form-section-header>
       <fm-glow-textarea
-        [value]="frontText"
+        [formControl]="frontTextControl"
         placeholder="輸入單字、片語或問題..."
         [maxLength]="200"
       ></fm-glow-textarea>

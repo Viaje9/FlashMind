@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
   FmButtonComponent,
   FmPageHeaderComponent,
@@ -7,6 +8,7 @@ import {
   FmSectionHeadingComponent,
   FmSettingRowComponent
 } from '../../../../../../packages/ui/src/index';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-settings-page',
@@ -16,10 +18,33 @@ import {
     FmProfileCardComponent,
     FmSectionHeadingComponent,
     FmSettingRowComponent,
-    RouterLink
+    RouterLink,
+    ReactiveFormsModule
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SettingsComponent {}
+export class SettingsComponent {
+  private authService = inject(AuthService);
+
+  readonly user = this.authService.user;
+  readonly loading = this.authService.loading;
+
+  readonly dailyReminderControl = new FormControl(true);
+  readonly spacedRepetitionControl = new FormControl(true);
+  readonly smartShuffleControl = new FormControl(false);
+  readonly soundEffectsControl = new FormControl(true);
+  readonly hapticFeedbackControl = new FormControl(false);
+
+  readonly userName = computed(() => {
+    const email = this.user()?.email;
+    return email ? email.split('@')[0] : '使用者';
+  });
+
+  readonly userEmail = computed(() => this.user()?.email || '');
+
+  logout() {
+    this.authService.logout().subscribe();
+  }
+}
