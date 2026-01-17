@@ -69,6 +69,85 @@ flashmind/
 - `.env` 放在專案根目錄，需包含 `DATABASE_URL`
 - 使用 pnpm 指令（避免 npm/yarn）
 
+## API 設計規範（ADR-016）
+
+### Response 格式
+
+統一使用 Wrapper 結構：
+
+```json
+{
+  "data": { ... },
+  "meta": { "nextCursor": "...", "hasMore": true }
+}
+```
+
+### Error 格式
+
+```json
+{
+  "error": {
+    "code": "AUTH_INVALID_CREDENTIALS",
+    "message": "Email 或密碼錯誤"
+  }
+}
+```
+
+### 分頁
+
+使用 cursor-based 分頁：
+
+- `nextCursor`: 下一頁的 cursor（Base64 編碼）
+- `hasMore`: 是否還有更多資料
+
+### 認證
+
+使用 HttpOnly Cookie：
+
+```text
+Set-Cookie: session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/
+```
+
+### 命名慣例
+
+| 項目 | 格式 | 範例 |
+|------|------|------|
+| URL 路徑 | kebab-case | `/auth/google/callback` |
+| Request/Response body | camelCase | `rememberMe` |
+| Error code | SCREAMING_SNAKE_CASE | `AUTH_INVALID_CREDENTIALS` |
+| operationId | camelCase | `getCurrentUser` |
+
+### OpenAPI operationId
+
+**每個 endpoint 必須定義 `operationId`**，它會決定自動生成的 API client 方法名稱：
+
+```yaml
+paths:
+  /auth/me:
+    get:
+      operationId: getCurrentUser  # 生成 authService.getCurrentUser()
+```
+
+命名建議：
+- 動詞開頭：`get`、`create`、`update`、`delete`、`list`
+- 清楚描述動作：`getCurrentUser`、`initiateGoogleOAuth`
+- 避免重複路徑資訊：用 `login` 而非 `authLogin`
+
+### HTTP Status Code
+
+| Status | 用途 |
+|--------|------|
+| 200 | 成功 |
+| 201 | 建立成功 |
+| 204 | 無內容（如登出） |
+| 400 | 請求格式錯誤 |
+| 401 | 未認證 |
+| 403 | 無權限 |
+| 404 | 資源不存在 |
+| 409 | 資源衝突 |
+| 422 | 商業邏輯錯誤 |
+| 500 | 伺服器錯誤 |
+
 ## 前端開發規範
 
 ### 元件組織（共置原則）

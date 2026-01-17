@@ -79,6 +79,30 @@ pnpm --filter ./apps/api prisma:migrate   # 執行資料庫遷移
 2. 執行 `pnpm --filter ./apps/web generate:api` 產生 TypeScript 客戶端至 `packages/api-client`
 3. 前後端依規格實作
 
+### API 設計規範（ADR-016）
+
+**Response 格式**：統一 Wrapper `{ data, meta? }`
+
+```json
+{ "data": { ... }, "meta": { "nextCursor": "...", "hasMore": true } }
+```
+
+**Error 格式**：`{ error: { code, message } }`
+
+```json
+{ "error": { "code": "AUTH_INVALID_CREDENTIALS", "message": "Email 或密碼錯誤" } }
+```
+
+**分頁**：cursor-based（`nextCursor`, `hasMore`）
+
+**認證**：HttpOnly Cookie（非 Bearer Token）
+
+**命名慣例**：
+- URL: kebab-case
+- Body: camelCase
+- Error code: SCREAMING_SNAKE_CASE
+- operationId: camelCase（必填，影響生成的 API client 方法名）
+
 ### Frontend Patterns
 
 - **Standalone Components**: 無 NgModule，所有元件皆為 standalone

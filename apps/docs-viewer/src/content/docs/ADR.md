@@ -13,6 +13,7 @@ summary: "記錄 FlashMind 專案的關鍵技術架構決策及其背景與理�
 | 1.3  | 2026-01-17 | — | ADR-012 加入 Domain 層（Pure Function 商業邏輯） |
 | 1.4  | 2026-01-17 | — | ADR-012 加入業務元件放置規則；新增 ADR-014 UI 元件庫設計 |
 | 1.5  | 2026-01-17 | — | ADR-008 改為 Azure OpenAI；新增 ADR-015 TTS 語音合成服務 |
+| 1.6  | 2026-01-17 | — | 新增 ADR-016 API 設計規範 |
 
 ---
 
@@ -882,6 +883,226 @@ FlashMind 作為語言學習應用，需要提供單字與例句的語音朗讀�
 | 雙服務增加維護複雜度 | 封裝統一的 TTS Service 介面 |
 | API 成本 | 實作快取機制，相同內容不重複呼叫 |
 | 服務中斷 | 可考慮互為備援（單字改用 Azure、例句改用 Google） |
+
+---
+
+## ADR-016：API 設計規範
+
+### 狀態
+
+已採用
+
+### 背景
+
+ADR-007 決定採用 OpenAPI 契約驅動開發，但未定義 API 的格式規範。需要統一：
+
+- Request / Response 格式
+- 錯誤處理結構
+- 分頁機制
+- 認證方式
+- 命名慣例
+
+### 決策
+
+#### 1. URL 命名
+
+- 資源路徑使用 **kebab-case**
+- 資源導向設計，CRUD 操作對應 HTTP Method
+- 非 CRUD 動作使用動詞（如 `/auth/login`）
+
+```
+GET    /decks                  # 列表
+POST   /decks                  # 建立
+GET    /decks/:id              # 單一資源
+PATCH  /decks/:id              # 部分更新
+DELETE /decks/:id              # 刪除
+GET    /decks/:id/cards        # 子資源
+POST   /auth/login             # 動作
+```
+
+#### 2. Request 格式
+
+- Body 與 Query 參數使用 **camelCase**
+
+```json
+POST /decks
+{
+  "name": "日文 N3 單字",
+  "isPublic": false
+}
+
+GET /decks?sortBy=createdAt&sortOrder=desc
+```
+
+#### 3. Response 格式
+
+採用**統一 Wrapper** 結構，所有回應使用 `{ data, meta? }` 包裝：
+
+```typescript
+// 單一資源
+GET /decks/abc123
+→ 200 OK
+{
+  "data": {
+    "id": "abc123",
+    "name": "日文 N3 單字",
+    "cardCount": 42,
+    "createdAt": "2026-01-17T10:30:00Z"
+  }
+}
+
+// 列表（含分頁 meta）
+GET /decks?limit=20
+→ 200 OK
+{
+  "data": [
+    { "id": "abc123", "name": "日文 N3 單字", ... },
+    { "id": "def456", "name": "英文托福", ... }
+  ],
+  "meta": {
+    "nextCursor": "eyJpZCI6ImRlZjQ1NiJ9",
+    "hasMore": true
+  }
+}
+
+// 建立資源
+POST /decks
+→ 201 Created
+{
+  "data": {
+    "id": "abc123",
+    "name": "日文 N3 單字",
+    ...
+  }
+}
+
+// 無內容操作
+DELETE /decks/abc123
+→ 204 No Content
+```
+
+#### 4. Error 格式
+
+錯誤回應使用 `{ error: { code, message } }` 結構：
+
+```typescript
+{
+  "error": {
+    "code": "AUTH_INVALID_CREDENTIALS",
+    "message": "Email 或密碼錯誤"
+  }
+}
+```
+
+**Error Code 命名規範：**
+
+- 格式：`SCREAMING_SNAKE_CASE`
+- 領域錯誤加前綴：`AUTH_`、`DECK_`、`CARD_`
+
+**HTTP Status Code 對應：**
+
+| Status | 用途 | Error Code 範例 |
+|--------|------|-----------------|
+| 400 | 請求格式錯誤、驗證失敗 | `VALIDATION_ERROR` |
+| 401 | 未認證 | `UNAUTHORIZED`, `SESSION_EXPIRED` |
+| 403 | 無權限 | `FORBIDDEN` |
+| 404 | 資源不存在 | `NOT_FOUND`, `DECK_NOT_FOUND` |
+| 409 | 資源衝突 | `EMAIL_ALREADY_EXISTS` |
+| 422 | 商業邏輯錯誤 | `DECK_LIMIT_EXCEEDED` |
+| 500 | 伺服器錯誤 | `INTERNAL_ERROR` |
+
+#### 5. 分頁機制
+
+採用 **cursor-based** 分頁：
+
+```typescript
+// 第一頁
+GET /decks?limit=20
+
+→ 200 OK
+{
+  "data": [...],
+  "meta": {
+    "nextCursor": "eyJpZCI6ImNsaDEyMzQ1In0=",
+    "hasMore": true
+  }
+}
+
+// 下一頁
+GET /decks?limit=20&cursor=eyJpZCI6ImNsaDEyMzQ1In0=
+```
+
+- `cursor`：Base64 編碼的識別資訊（通常是 id 或 createdAt）
+- `hasMore`：是否還有更多資料
+- `nextCursor`：下一頁的 cursor（無更多資料時為 null）
+
+#### 6. 認證機制
+
+採用 **HttpOnly Cookie** 儲存 Session：
+
+```
+Set-Cookie: session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/
+```
+
+- 前端不需手動處理 token，瀏覽器自動帶上
+- 防止 XSS 攻擊竊取 token
+- 後端可隨時撤銷 session
+
+#### 7. 時間與 ID 格式
+
+```json
+{
+  "id": "clh1234567890abcdef",
+  "createdAt": "2026-01-17T10:30:00Z",
+  "lastLoginAt": null
+}
+```
+
+- **ID**：cuid 格式（由 Prisma 生成）
+- **時間**：ISO 8601 UTC 格式
+- **可選時間欄位**：允許 `null`
+
+#### 8. 刪除策略
+
+採用**硬刪除**（Hard Delete），不保留 `deletedAt` 欄位。
+
+#### 9. OpenAPI operationId
+
+每個 endpoint **必須**定義 `operationId`，它決定自動生成的 API client 方法名稱：
+
+```yaml
+paths:
+  /auth/me:
+    get:
+      operationId: getCurrentUser  # → authService.getCurrentUser()
+```
+
+**命名規範：**
+
+- 格式：camelCase
+- 動詞開頭：`get`、`create`、`update`、`delete`、`list`
+- 清楚描述動作：`getCurrentUser`、`initiateGoogleOAuth`
+- 避免重複路徑資訊：用 `login` 而非 `authLogin`
+
+### 理由
+
+| 決策 | 理由 |
+|------|------|
+| 統一 Wrapper | 所有回應結構一致，前端處理邏輯統一 |
+| 簡化 Error | MVP 階段不需要欄位級錯誤，簡化實作 |
+| cursor-based 分頁 | 效能穩定，適合未來資料量成長 |
+| HttpOnly Cookie | 比 localStorage 更安全，防止 XSS |
+| 硬刪除 | 簡化實作，MVP 階段無需資料還原功能 |
+
+### 替代方案
+
+| 方案 | 評估 |
+|------|------|
+| 直接回傳資料（無 Wrapper） | 結構不一致，單一資源與列表處理方式不同 |
+| Error 含 details 陣列 | 增加複雜度，MVP 階段不需要 |
+| offset/limit 分頁 | 大量資料時效能差，資料變動時不穩定 |
+| Bearer Token in localStorage | 有 XSS 風險 |
+| 軟刪除 | 增加查詢複雜度，MVP 階段不需要 |
 
 ---
 
