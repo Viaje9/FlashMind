@@ -75,7 +75,7 @@ pnpm --filter ./apps/api prisma:migrate   # 執行資料庫遷移
 
 ### API-First Development
 
-1. 在 `specs/` 撰寫 OpenAPI 規格
+1. 在 `openapi/` 撰寫 OpenAPI 規格
 2. 執行 `pnpm --filter ./apps/web generate:api` 產生 TypeScript 客戶端至 `packages/api-client`
 3. 前後端依規格實作
 

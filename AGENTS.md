@@ -57,7 +57,7 @@ flashmind/
 │   ├── shared/                 # 前後端共用型別與驗證
 │   ├── ui/                     # 共用 UI 元件庫
 │   └── config/                 # 共用設定（eslint/tsconfig 等）
-├── specs/                      # OpenAPI 契約定義
+├── openapi/                    # OpenAPI 契約定義
 ├── openspec/                   # 變更提案管理
 ├── prototype/                  # Figma 匯出的設計稿
 └── docs/                       # 專案層級文件

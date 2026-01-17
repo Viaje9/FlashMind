@@ -38,7 +38,7 @@ FlashMind/
 │   ├── ui/           # 共用 UI 元件
 │   ├── config/       # 共用設定
 │   └── shared/       # 共用工具
-├── specs/            # 功能規格文件
+├── openapi/          # OpenAPI 規格
 └── openspec/         # OpenSpec 設定
 ```
 
@@ -81,7 +81,7 @@ FlashMind/
 - Prisma 作為資料存取層
 
 **API 開發流程**:
-1. 在 `specs/` 撰寫 OpenAPI 規格
+1. 在 `openapi/` 撰寫 OpenAPI 規格
 2. 執行 `generate:api` 產生 TypeScript 客戶端
 3. 前後端依規格實作
 
@@ -216,7 +216,7 @@ FlashMind/
 
 ## API Contracts
 
-**已定義的 API** (`specs/001-account-auth/contracts/openapi.yaml`):
+**已定義的 API** (`openapi/api.yaml`):
 - `POST /auth/register`: 註冊帳號 (Email/Google)
 - `POST /auth/login`: 登入帳號 (Email/Google)
 - `POST /auth/logout`: 登出帳號
