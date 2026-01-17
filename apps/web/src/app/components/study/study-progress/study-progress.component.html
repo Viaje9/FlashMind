@@ -1,0 +1,7 @@
+<div class="px-6 py-2">
+  <div class="flex justify-between items-end mb-2">
+    <span class="text-sm font-medium text-secondary-text">{{ label() }}</span>
+    <span class="text-sm font-bold text-primary">{{ progressLabel() }}</span>
+  </div>
+  <fm-progress-bar [value]="progressValue()" [tone]="tone()"></fm-progress-bar>
+</div>

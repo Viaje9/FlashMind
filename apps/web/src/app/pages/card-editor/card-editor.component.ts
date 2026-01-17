@@ -5,10 +5,9 @@ import {
   FmButtonComponent,
   FmFormSectionHeaderComponent,
   FmGlowTextareaComponent,
-  FmMeaningEditorCardComponent,
-  FmPageHeaderComponent,
-  MeaningDraft
-} from '../../../../../../packages/ui/src/index';
+  FmPageHeaderComponent
+} from '@flashmind/ui';
+import { FmMeaningEditorCardComponent, MeaningDraft } from '../../components/card/meaning-editor-card/meaning-editor-card.component';
 
 interface MeaningBlock {
   id: string;

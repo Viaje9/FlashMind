@@ -1,13 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import {
-  FmCardListItemComponent,
-  FmDeckStatsCardComponent,
-  FmFabComponent,
-  FmIconButtonComponent,
-  FmPageHeaderComponent,
-  FmSearchInputComponent
-} from '../../../../../../packages/ui/src/index';
+import { FmFabComponent, FmIconButtonComponent, FmPageHeaderComponent, FmSearchInputComponent } from '@flashmind/ui';
+import { FmCardListItemComponent } from '../../components/card/card-list-item/card-list-item.component';
+import { FmDeckStatsCardComponent } from '../../components/deck/deck-stats-card/deck-stats-card.component';
 
 interface CardPreview {
   id: string;

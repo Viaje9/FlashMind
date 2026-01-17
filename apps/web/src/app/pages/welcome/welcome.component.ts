@@ -1,11 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  FmButtonComponent,
-  FmDividerComponent,
-  FmSocialLoginRowComponent,
-  FmWelcomeHeroComponent
-} from '../../../../../../packages/ui/src/index';
+import { FmButtonComponent, FmDividerComponent, FmSocialLoginRowComponent } from '@flashmind/ui';
+import { FmWelcomeHeroComponent } from '../../components/auth/welcome-hero/welcome-hero.component';
 import { DialogService } from '../../services/dialog/dialog.service';
 import { ConfirmDialogComponent } from '../../components/dialog/confirm-dialog.component';
 

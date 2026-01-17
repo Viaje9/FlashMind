@@ -17,7 +17,9 @@
     "baseUrl": ".",
     "paths": {
       "@flashmind/api-client": ["../../packages/api-client/src/generated/index.ts"],
-      "@flashmind/api-client/*": ["../../packages/api-client/src/generated/*"]
+      "@flashmind/api-client/*": ["../../packages/api-client/src/generated/*"],
+      "@flashmind/ui": ["../../packages/ui/src/index.ts"],
+      "@flashmind/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "angularCompilerOptions": {
