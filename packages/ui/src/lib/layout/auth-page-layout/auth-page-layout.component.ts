@@ -8,4 +8,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class FmAuthPageLayoutComponent {
   /** 主內容區域的垂直對齊方式 */
   readonly mainAlign = input<'center' | 'start'>('center');
+  readonly testId = input<string>();
 }

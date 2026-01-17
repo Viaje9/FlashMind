@@ -34,6 +34,7 @@ export class FmSettingRowComponent implements ControlValueAccessor {
   readonly description = input('');
   readonly value = input('');
   readonly variant = input<SettingRowVariant>('toggle');
+  readonly testId = input<string>();
 
   readonly rowClick = output<void>();
 

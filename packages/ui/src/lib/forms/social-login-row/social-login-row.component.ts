@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'fm-social-login-row',
@@ -7,6 +7,7 @@ import { ChangeDetectionStrategy, Component, output } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FmSocialLoginRowComponent {
+  readonly testId = input<string>();
   readonly googleClick = output<void>();
 
   onGoogleClick() {

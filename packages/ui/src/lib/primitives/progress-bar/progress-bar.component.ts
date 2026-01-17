@@ -12,6 +12,7 @@ export class FmProgressBarComponent {
   readonly value = input(0);
   readonly showLabel = input(false);
   readonly tone = input<ProgressTone>('primary');
+  readonly testId = input<string>();
 
   readonly clampedValue = computed(() => {
     const raw = Number(this.value() ?? 0);

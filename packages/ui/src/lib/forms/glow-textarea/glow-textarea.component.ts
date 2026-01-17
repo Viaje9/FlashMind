@@ -27,6 +27,7 @@ export class FmGlowTextareaComponent implements ControlValueAccessor {
   readonly maxLength = input<number | null>(null);
   readonly showCount = input(true);
   readonly ariaLabel = input('');
+  readonly testId = input<string>();
 
   readonly value = signal('');
   readonly disabled = signal(false);

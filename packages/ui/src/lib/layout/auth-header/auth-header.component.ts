@@ -9,4 +9,5 @@ export class FmAuthHeaderComponent {
   readonly title = input.required<string>();
   /** 連結前的文字，預設為「或」 */
   readonly prefix = input('或');
+  readonly testId = input<string>();
 }

@@ -1,4 +1,4 @@
-<section class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex items-center gap-4 transition-colors duration-300 hover:bg-slate-50 dark:hover:bg-[#233036]">
+<section class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 shadow-sm flex items-center gap-4 transition-colors duration-300 hover:bg-slate-50 dark:hover:bg-[#233036]" [attr.data-testid]="testId()">
   <div class="relative shrink-0">
     @if (avatarUrl()) {
       <img

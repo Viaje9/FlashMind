@@ -16,6 +16,7 @@ export class FmIconButtonComponent {
   readonly type = input<ButtonType>('button');
   readonly disabled = input(false);
   readonly ariaLabel = input('');
+  readonly testId = input<string>();
 
   readonly ariaLabelValue = computed(() => this.ariaLabel() || null);
 

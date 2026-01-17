@@ -23,6 +23,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 export class FmSearchInputComponent implements ControlValueAccessor {
   readonly placeholder = input('搜尋...');
   readonly ariaLabel = input('搜尋');
+  readonly testId = input<string>();
 
   readonly value = signal('');
   readonly disabled = signal(false);

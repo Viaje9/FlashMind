@@ -2,6 +2,7 @@
   [class]="rowClass()"
   [attr.role]="rowRole()"
   [attr.tabindex]="rowTabIndex()"
+  [attr.data-testid]="testId()"
   (click)="onRowClick()"
   (keydown)="onRowKeydown($event)"
 >

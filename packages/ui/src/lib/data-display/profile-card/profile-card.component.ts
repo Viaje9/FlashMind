@@ -14,6 +14,7 @@ export class FmProfileCardComponent {
   readonly avatarUrl = input('');
   readonly actionLabel = input('管理帳戶');
   readonly showEditIndicator = input(true);
+  readonly testId = input<string>();
 
   readonly actionClick = output<void>();
 

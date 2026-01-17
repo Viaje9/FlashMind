@@ -32,6 +32,7 @@ export class FmLabeledInputComponent implements ControlValueAccessor {
   readonly icon = input('');
   readonly type = input('text');
   readonly ariaLabel = input('');
+  readonly testId = input<string>();
 
   // Signal Forms support: use model() for two-way binding
   readonly value = model('');

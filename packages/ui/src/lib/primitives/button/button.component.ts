@@ -20,6 +20,7 @@ export class FmButtonComponent {
   readonly fullWidth = input(false);
   readonly disabled = input(false);
   readonly type = input<ButtonType>('button');
+  readonly testId = input<string>();
 
   readonly classes = computed(() => {
     const base =

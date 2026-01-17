@@ -253,3 +253,55 @@ packages/ui/src/lib/
 - 安裝：`pnpm install`
 - Prisma：`pnpm --filter ./apps/api prisma:generate`、`pnpm --filter ./apps/api prisma:migrate`
 - E2E 測試：`pnpm test:e2e`、`pnpm test:e2e:ui`
+
+## Playwright MCP 使用規範（重要）
+
+此專案為 monorepo，Playwright 安裝在 `e2e/` 目錄而非根目錄。使用 `playwright-test` MCP 工具時**必須指定 `seedFile` 參數**，否則會出現 `Cannot find module '@playwright/test'` 錯誤。
+
+### 正確用法
+
+```typescript
+// generator_setup_page - 用於測試生成
+mcp__playwright-test__generator_setup_page({
+  plan: "測試計畫描述",
+  seedFile: "e2e/tests/seed.spec.ts"  // 必須指定！
+})
+
+// planner_setup_page - 用於測試規劃
+mcp__playwright-test__planner_setup_page({
+  seedFile: "e2e/tests/seed.spec.ts"  // 必須指定！
+})
+```
+
+### 錯誤用法（會失敗）
+
+```typescript
+// 缺少 seedFile 參數會導致模組找不到錯誤
+mcp__playwright-test__generator_setup_page({
+  plan: "測試計畫描述"
+  // 缺少 seedFile！
+})
+```
+
+### E2E 測試選擇器規範
+
+UI 元件庫（`packages/ui`）的元件支援 `testId` 屬性，會渲染為 `data-testid` HTML 屬性。撰寫 E2E 測試時**優先使用 `getByTestId()` 選擇器**：
+
+```typescript
+// 推薦 - 使用 data-testid
+await page.getByTestId('login-email').fill('test@example.com');
+await page.getByTestId('login-submit').click();
+
+// 次要 - 使用 role + name
+await page.getByRole('button', { name: '登入', exact: true }).click();
+```
+
+### 常用 testId 命名慣例
+
+| 頁面 | 元素 | testId |
+|------|------|--------|
+| 登入 | Email 輸入框 | `login-email` |
+| 登入 | 密碼輸入框 | `login-password` |
+| 登入 | 記住我 | `login-remember-me` |
+| 登入 | 登入按鈕 | `login-submit` |
+| 登入 | 錯誤訊息 | `login-error` |

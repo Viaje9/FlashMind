@@ -10,6 +10,7 @@ export type AlertType = 'error' | 'warning' | 'info' | 'success';
 export class FmAlertComponent {
   readonly message = input.required<string>();
   readonly type = input<AlertType>('error');
+  readonly testId = input<string>();
 
   readonly containerClass = computed(() => {
     const base = 'mb-6 rounded-xl border p-4';

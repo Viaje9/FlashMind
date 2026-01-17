@@ -10,4 +10,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class FmDialogComponent {
   readonly width = input<string>();
   readonly maxWidth = input<string>('600px');
+  readonly testId = input<string>();
 }

@@ -1,9 +1,10 @@
 {
   "mcpServers": {
     "playwright-test": {
-      "command": "npx",
+      "type": "stdio",
+      "command": "node",
       "args": [
-        "playwright",
+        "e2e/node_modules/@playwright/test/cli.js",
         "run-test-mcp-server"
       ]
     }

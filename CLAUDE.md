@@ -127,6 +127,27 @@ pnpm --filter ./apps/api prisma:migrate   # 執行資料庫遷移
 - **測試目錄**: 按領域分組（`auth/`、`deck/`、`card/`、`study/`）
 - **執行**: `pnpm test:e2e` 或 `cd e2e && pnpm test`
 
+### Playwright MCP 設定（重要）
+
+此專案為 monorepo，Playwright 安裝在 `e2e/` 目錄。使用 `playwright-test` MCP 時**必須指定 `seedFile` 參數**：
+
+```typescript
+// 正確用法 - 指定 e2e 目錄的 seed 檔案
+mcp__playwright-test__generator_setup_page({
+  plan: "測試計畫描述",
+  seedFile: "e2e/tests/seed.spec.ts"  // 必須指定！
+})
+
+mcp__playwright-test__planner_setup_page({
+  seedFile: "e2e/tests/seed.spec.ts"  // 必須指定！
+})
+```
+
+**注意事項**：
+- 不指定 `seedFile` 會導致找不到 `@playwright/test` 模組錯誤
+- seed 檔案位於 `e2e/tests/seed.spec.ts`
+- UI 元件支援 `testId` 屬性，測試時優先使用 `page.getByTestId()` 選擇器
+
 ### 測試驅動開發（TDD）
 
 採用 **Red-Green-Refactor** 循環：先寫測試 → 實作程式碼 → 重構

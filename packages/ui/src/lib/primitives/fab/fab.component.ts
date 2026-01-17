@@ -15,6 +15,7 @@ export class FmFabComponent {
   readonly type = input<ButtonType>('button');
   readonly ariaLabel = input('');
   readonly disabled = input(false);
+  readonly testId = input<string>();
 
   readonly ariaLabelValue = computed(() => this.ariaLabel() || null);
 

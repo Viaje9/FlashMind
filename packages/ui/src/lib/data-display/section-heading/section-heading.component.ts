@@ -9,6 +9,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export class FmSectionHeadingComponent {
   readonly text = input('');
   readonly padded = input(true);
+  readonly testId = input<string>();
 
   readonly classes = computed(() => {
     const base = 'text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider';

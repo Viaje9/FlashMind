@@ -14,6 +14,7 @@ export class FmPageHeaderComponent {
   readonly layout = input<HeaderLayout>('start');
   readonly sticky = input(true);
   readonly dense = input(false);
+  readonly testId = input<string>();
 
   readonly containerClass = computed(() => {
     const base =

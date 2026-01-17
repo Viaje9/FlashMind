@@ -1,4 +1,4 @@
-<button type="button" [class]="buttonClass()" (click)="clicked.emit()">
+<button type="button" [class]="buttonClass()" [attr.data-testid]="testId()" (click)="clicked.emit()">
   <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">{{ icon() }}</span>
   <span class="text-sm font-medium">{{ label() }}</span>
 </button>

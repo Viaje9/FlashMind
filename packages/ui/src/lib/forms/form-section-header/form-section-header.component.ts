@@ -9,4 +9,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class FmFormSectionHeaderComponent {
   readonly title = input('');
   readonly icon = input('');
+  readonly testId = input<string>();
 }

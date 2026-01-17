@@ -1,0 +1,8 @@
+# 測試產出
+test-results/
+playwright-report/
+playwright/.cache/
+
+# 截圖與追蹤
+screenshots/
+traces/

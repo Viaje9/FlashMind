@@ -10,6 +10,7 @@ type BadgeTone = 'info' | 'warning' | 'success' | 'neutral';
 })
 export class FmBadgeComponent {
   readonly tone = input<BadgeTone>('neutral');
+  readonly testId = input<string>();
 
   readonly classes = computed(() => {
     const base = 'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset';

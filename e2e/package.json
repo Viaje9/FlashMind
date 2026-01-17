@@ -8,6 +8,7 @@
     "codegen": "playwright codegen http://localhost:4200"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.9"
   }
 }

@@ -3,6 +3,7 @@
     type="button"
     class="w-14 h-14 flex items-center justify-center bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/10 rounded-full shadow-md hover:bg-slate-50 dark:hover:bg-white/5 transition transform hover:-translate-y-1"
     aria-label="使用 Google 登入"
+    [attr.data-testid]="testId()"
     (click)="onGoogleClick()"
   >
     <svg class="w-6 h-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

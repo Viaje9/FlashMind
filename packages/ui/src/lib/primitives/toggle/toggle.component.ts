@@ -23,6 +23,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 })
 export class FmToggleComponent implements ControlValueAccessor {
   readonly ariaLabel = input('');
+  readonly testId = input<string>();
 
   // Signal Forms support: use model() for two-way binding
   readonly checked = model(false);

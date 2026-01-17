@@ -10,6 +10,7 @@ export class FmAddItemButtonComponent {
   readonly label = input('新增');
   readonly icon = input('add_circle');
   readonly disabled = input(false);
+  readonly testId = input<string>();
 
   readonly clicked = output<void>();
 

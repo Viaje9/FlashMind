@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'fm-dialog-title',
   template: `
-    <h2 class="fm-dialog-title">
+    <h2 class="fm-dialog-title" [attr.data-testid]="testId()">
       <ng-content></ng-content>
     </h2>
   `,
@@ -11,4 +11,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
-export class FmDialogTitleComponent {}
+export class FmDialogTitleComponent {
+  readonly testId = input<string>();
+}

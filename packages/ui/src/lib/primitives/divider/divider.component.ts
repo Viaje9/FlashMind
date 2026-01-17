@@ -9,6 +9,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export class FmDividerComponent {
   readonly label = input('分隔');
   readonly uppercase = input(true);
+  readonly testId = input<string>();
 
   readonly labelClass = computed(() => {
     const base = 'flex-shrink-0 mx-4 text-slate-400';

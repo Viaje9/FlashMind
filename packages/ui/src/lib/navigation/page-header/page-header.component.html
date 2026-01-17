@@ -1,4 +1,4 @@
-<header [class]="containerClass()">
+<header [class]="containerClass()" [attr.data-testid]="testId()">
   <div class="flex items-center gap-3">
     <ng-content select=".fm-header-left"></ng-content>
     <ng-content select="[slot=left]"></ng-content>

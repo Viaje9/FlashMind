@@ -1,11 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
 
 /**
  * FlashMind E2E 測試配置
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: '.',
+  testDir: path.join(__dirname, 'tests'),
+  testMatch: '**/*.spec.ts',
   /* 每個測試的最大執行時間 */
   timeout: 30 * 1000,
   /* 每個斷言的最大等待時間 */
@@ -26,7 +28,7 @@ export default defineConfig({
   use: {
     /* 用於除錯的截圖和追蹤 */
     actionTimeout: 0,
-    baseURL: 'http://localhost:4200',
+    baseURL: 'http://localhost:4280',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -39,12 +41,14 @@ export default defineConfig({
     },
   ],
 
-  /* 在測試前啟動開發伺服器 */
-  webServer: {
-    command: 'pnpm dev:web',
-    url: 'http://localhost:4200',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-    cwd: '..',
-  },
+  /* 在測試前啟動開發伺服器（僅 CI 環境） */
+  webServer: process.env.CI
+    ? {
+        command: 'pnpm dev:web',
+        url: 'http://localhost:4280',
+        reuseExistingServer: false,
+        timeout: 120 * 1000,
+        cwd: '..',
+      }
+    : undefined,
 });

@@ -9,6 +9,7 @@
         [disabled]="disabled()"
         [attr.maxlength]="maxLength()"
         [attr.aria-label]="ariaLabelValue()"
+        [attr.data-testid]="testId()"
         (input)="onInput($event)"
         (blur)="onBlur()"
       ></textarea>
