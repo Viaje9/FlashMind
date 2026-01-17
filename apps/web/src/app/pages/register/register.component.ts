@@ -75,7 +75,6 @@ export class RegisterComponent {
 
     await submit(this.registerForm, async () => {
       const { email, password } = this.formModel();
-
       return new Promise<void>((resolve, reject) => {
         this.authService.register(email, password).subscribe({
           next: () => {
@@ -88,6 +87,8 @@ export class RegisterComponent {
           }
         });
       });
+    }).catch(() => {
+      // 驗證失敗或 API 錯誤已處理
     });
   }
 

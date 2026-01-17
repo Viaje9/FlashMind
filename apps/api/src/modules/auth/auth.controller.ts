@@ -118,9 +118,19 @@ export class AuthController {
   async handleGoogleCallback(
     @Query('code') code: string,
     @Query('state') state: string,
+    @Query('error') error: string,
     @Res() res: Response,
     @Req() req: Request,
   ) {
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4280';
+
+    // 處理 Google OAuth 錯誤（例如使用者取消授權）
+    if (error) {
+      res.redirect(`${frontendUrl}/welcome?error=${encodeURIComponent(error)}`);
+      return;
+    }
+
     const { user, rememberMe } = await this.authService.handleGoogleCallback(
       code,
       state,
@@ -141,8 +151,6 @@ export class AuthController {
       maxAge,
     });
 
-    const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4280';
     res.redirect(frontendUrl);
   }
 

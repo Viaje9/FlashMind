@@ -6,6 +6,10 @@
     [badgeText]="heroBadge"
   />
 
+  @if (errorMessage()) {
+    <fm-alert main [message]="errorMessage()!" type="error" testId="welcome-error" />
+  }
+
   <ng-container footer>
     <div class="space-y-3 flex flex-col gap-1.5">
       <fm-button [fullWidth]="true" routerLink="/register">
@@ -19,7 +23,7 @@
 
     <fm-divider label="其他登入方式" />
 
-    <fm-social-login-row (googleLogin)="loginWithGoogle()" />
+    <fm-social-login-row (googleClick)="loginWithGoogle()" />
 
     <p class="text-center text-xs text-slate-400">
       註冊即代表您同意我們的

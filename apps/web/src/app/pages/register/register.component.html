@@ -10,7 +10,7 @@
       <fm-alert [message]="errorMessage" type="error" testId="register-error" />
     }
 
-    <form class="space-y-4" (ngSubmit)="onSubmit()">
+    <form class="space-y-4" (submit)="$event.preventDefault(); onSubmit()">
       <fm-labeled-input
         [formField]="registerForm.email"
         label="Email"
@@ -42,7 +42,7 @@
       />
 
       <div class="pt-2">
-        <fm-button [type]="'submit'" [fullWidth]="true" [disabled]="loading()" testId="register-submit">
+        <fm-button type="submit" [fullWidth]="true" [disabled]="loading()" testId="register-submit">
           @if (loading()) {
             註冊中...
           } @else {

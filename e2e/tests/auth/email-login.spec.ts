@@ -4,16 +4,19 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Email 登入功能', () => {
   test('成功使用 Email 登入', async ({ page, request }) => {
-    const testEmail = 'test@example.com';
+    // 使用時間戳確保每次測試使用唯一 email
+    const testEmail = `test-login-${Date.now()}@example.com`;
     const testPassword = 'password123456';
 
     // 前置條件：在資料庫建立測試帳號
-    await request.post('http://localhost:3280/auth/register', {
+    const registerResponse = await request.post('http://localhost:3280/auth/register', {
       data: {
         email: testEmail,
         password: testPassword
       }
     });
+    // 確保註冊成功
+    expect(registerResponse.ok()).toBeTruthy();
 
     // 1. 前往登入頁面 /login
     await page.goto('/login');

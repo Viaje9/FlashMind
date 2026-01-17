@@ -27,11 +27,17 @@ test.describe('登出功能', () => {
     // 2. 捲動至頁面底部
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    // 3. 點擊「登出帳戶」按鈕
+    // 3. 攔截 logout API，加入延遲讓測試有時間觀察 loading 狀態
+    await page.route('**/auth/logout', async (route) => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await route.fulfill({ status: 204 });
+    });
+
+    // 4. 點擊「登出帳戶」按鈕
     const logoutButton = page.getByRole('button', { name: '登出帳戶' });
     await logoutButton.click();
 
-    // 4. 在 API 回應前觀察按鈕狀態
+    // 5. 在 API 回應前觀察按鈕狀態
     // 驗證按鈕文字變更為「登出中...」
     await expect(page.getByRole('button', { name: '登出中...' })).toBeVisible();
 

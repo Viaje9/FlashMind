@@ -68,7 +68,6 @@ export class LoginComponent {
 
     await submit(this.loginForm, async () => {
       const { email, password, rememberMe } = this.formModel();
-
       return new Promise<void>((resolve, reject) => {
         this.authService.login(email, password, rememberMe).subscribe({
           next: () => {
@@ -81,6 +80,8 @@ export class LoginComponent {
           }
         });
       });
+    }).catch(() => {
+      // 驗證失敗或 API 錯誤已處理
     });
   }
 

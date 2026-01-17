@@ -10,7 +10,7 @@
       <fm-alert [message]="errorMessage" type="error" testId="login-error" />
     }
 
-    <form class="space-y-4" (ngSubmit)="onSubmit()">
+    <form class="space-y-4" (submit)="$event.preventDefault(); onSubmit()">
       <fm-labeled-input
         [formField]="loginForm.email"
         label="Email"
@@ -37,7 +37,7 @@
       </div>
 
       <div class="pt-2">
-        <fm-button [type]="'submit'" [fullWidth]="true" [disabled]="loading()" testId="login-submit">
+        <fm-button type="submit" [fullWidth]="true" [disabled]="loading()" testId="login-submit">
           @if (loading()) {
             登入中...
           } @else {
