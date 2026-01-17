@@ -12,6 +12,7 @@ summary: "記錄 FlashMind 專案的關鍵技術架構決策及其背景與理�
 | 1.2  | 2026-01-17 | — | ADR-011 改為 Signal Stores；ADR-012 加入共置原則 |
 | 1.3  | 2026-01-17 | — | ADR-012 加入 Domain 層（Pure Function 商業邏輯） |
 | 1.4  | 2026-01-17 | — | ADR-012 加入業務元件放置規則；新增 ADR-014 UI 元件庫設計 |
+| 1.5  | 2026-01-17 | — | ADR-008 改為 Azure OpenAI；新增 ADR-015 TTS 語音合成服務 |
 
 ---
 
@@ -289,23 +290,32 @@ FlashMind 的核心差異化功能之一是 AI 自動生成卡片內容（詞義
 
 ### 決策
 
-支援多個 LLM 服務提供者：
-- 主要：OpenAI API (GPT-4)
-- 備選：Claude API
+採用 **Azure OpenAI Service** 作為 AI 內容生成服務：
+- 不限定特定模型，可根據需求部署 GPT-4o、GPT-4、GPT-3.5 Turbo 等
+- 初期不實作多服務提供者抽象，但設計時預留擴展空間
 
 ### 理由
 
-- **品質**：GPT-4 / Claude 在語言生成任務上表現優異
-- **彈性**：支援多個服務提供者，避免供應商鎖定
-- **成本控制**：可根據需求切換不同模型 (GPT-4 / GPT-3.5)
+- **品質**：GPT-4 系列模型在語言生成任務上表現優異
+- **企業級保障**：Azure 提供 SLA、合規性認證、資料落地保證
+- **彈性**：可根據需求部署不同模型，控制成本與效能平衡
+- **整合便利**：未來可與其他 Azure 服務（如 Azure AD、Application Insights）整合
+
+### 技術細節
+
+| 項目 | 說明 |
+|------|------|
+| 端點格式 | `https://{resource}.openai.azure.com/` |
+| 認證方式 | API Key 或 Azure AD（建議生產環境用 Azure AD） |
+| 模型指定 | 透過 deployment name，非直接指定模型名稱 |
 
 ### 風險與緩解
 
 | 風險 | 緩解措施 |
 |------|----------|
 | 生成品質不佳 | 用戶可編輯生成內容；持續優化 prompt |
-| API 成本過高 | 設定每日生成上限；考慮本地模型 |
-| 服務中斷 | 支援多個服務提供者作為備援 |
+| API 成本過高 | 設定每日生成上限；監控用量 |
+| 服務中斷 | Azure 提供 SLA；未來可擴展支援其他服務提供者 |
 
 ---
 
@@ -833,6 +843,48 @@ export class MyComponent {
 
 ---
 
+## ADR-015：TTS 語音合成服務整合
+
+### 狀態
+
+已採用
+
+### 背景
+
+FlashMind 作為語言學習應用，需要提供單字與例句的語音朗讀功能，幫助用戶學習正確發音。
+
+### 決策
+
+依據使用情境採用不同的 TTS 服務：
+
+| 用途 | 服務 | 說明 |
+|------|------|------|
+| 單字發音 | Google Cloud TTS | 發音精準，適合短詞 |
+| 例句朗讀 | Azure Speech Service | 語調自然，適合長句 |
+
+### 理由
+
+- **單字用 Google TTS**：發音清晰準確，支援多語言與多種口音
+- **例句用 Azure TTS**：Neural Voice 語調更自然流暢，長句朗讀體驗佳
+- **分工互補**：各取所長，提供最佳的學習體驗
+
+### 技術細節
+
+| 服務 | 端點 | 認證方式 |
+|------|------|----------|
+| Google Cloud TTS | `texttospeech.googleapis.com` | API Key 或 Service Account |
+| Azure Speech | `{region}.tts.speech.microsoft.com` | API Key 或 Azure AD |
+
+### 風險與緩解
+
+| 風險 | 緩解措施 |
+|------|----------|
+| 雙服務增加維護複雜度 | 封裝統一的 TTS Service 介面 |
+| API 成本 | 實作快取機制，相同內容不重複呼叫 |
+| 服務中斷 | 可考慮互為備援（單字改用 Azure、例句改用 Google） |
+
+---
+
 ## 附錄：技術棧總覽
 
 | 層級 | 技術選擇 |
@@ -846,7 +898,8 @@ export class MyComponent {
 | 套件管理 | pnpm workspace |
 | API 契約 | OpenAPI 3.0 |
 | 間隔重複 | FSRS (ts-fsrs) |
-| AI 服務 | OpenAI / Claude API |
+| AI 內容生成 | Azure OpenAI Service |
+| TTS 語音合成 | Google Cloud TTS / Azure Speech |
 | 應用形態 | PWA |
 
 ---
