@@ -57,6 +57,10 @@ flashmind/
 │   ├── shared/                 # 前後端共用型別與驗證
 │   ├── ui/                     # 共用 UI 元件庫
 │   └── config/                 # 共用設定（eslint/tsconfig 等）
+├── e2e/                        # E2E 測試（Playwright，獨立 workspace）
+│   ├── playwright.config.ts
+│   ├── fixtures/               # 測試資料
+│   └── auth/                   # 認證相關測試
 ├── openapi/                    # OpenAPI 契約定義
 ├── openspec/                   # 變更提案管理
 ├── prototype/                  # Figma 匯出的設計稿
@@ -222,7 +226,30 @@ packages/ui/src/lib/
     `調整 Prisma 產生命令與輸出路徑，方便 CI 使用。`
     `影響範圍：apps/api Prisma 指令與 CI 腳本。`
 
+## 測試驅動開發（TDD）
+
+採用 **Red-Green-Refactor** 循環：
+
+1. **Red** → 先寫測試，確認測試失敗
+2. **Green** → 寫最少的程式碼讓測試通過
+3. **Refactor** → 重構程式碼，保持測試通過
+
+### TDD 強制程度
+
+| 層級 | TDD 強制程度 |
+|------|--------------|
+| 前端 Domain (`*.domain.ts`) | **強制** |
+| 後端 Service | **強制** |
+| E2E 測試（功能規格明確時） | **強制** |
+| 前端元件、後端 Controller | 建議 |
+
+### 測試覆蓋率目標
+
+- Domain 層：90%+
+- Service 層：80%+
+
 ## 指令範例
 
 - 安裝：`pnpm install`
 - Prisma：`pnpm --filter ./apps/api prisma:generate`、`pnpm --filter ./apps/api prisma:migrate`
+- E2E 測試：`pnpm test:e2e`、`pnpm test:e2e:ui`

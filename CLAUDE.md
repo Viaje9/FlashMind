@@ -36,6 +36,8 @@ pnpm dev:web          # 啟動前端開發伺服器
 pnpm dev:api          # 啟動後端開發伺服器（watch mode）
 pnpm dev:docs         # 啟動文件檢視器
 pnpm storybook:web    # 啟動 Storybook
+pnpm test:e2e         # 執行 E2E 測試（Playwright）
+pnpm test:e2e:ui      # E2E 測試 UI 模式
 ```
 
 ### Frontend (apps/web)
@@ -72,6 +74,7 @@ pnpm --filter ./apps/api prisma:migrate   # 執行資料庫遷移
 - **packages/api-client**: OpenAPI 自動產生的 TypeScript Angular 客戶端（`@flashmind/api-client`）
 - **packages/config**: 共用設定
 - **packages/shared**: 共用工具
+- **e2e**: Playwright E2E 測試（獨立 workspace package）
 
 ### API-First Development
 
@@ -115,7 +118,25 @@ pnpm --filter ./apps/api prisma:migrate   # 執行資料庫遷移
 
 - **模組化**: Controller → Service → Repository 分層
 - **Prisma**: 資料存取層，schema 位於 `apps/api/prisma/schema.prisma`
-- **測試**: 單元測試 `*.spec.ts`，E2E 測試 `test/*.e2e-spec.ts`
+- **測試**: 單元測試 `*.spec.ts`，API E2E 測試 `test/*.e2e-spec.ts`
+
+### E2E Testing (e2e/)
+
+- **框架**: Playwright
+- **位置**: `e2e/`（獨立 workspace package）
+- **測試目錄**: 按領域分組（`auth/`、`deck/`、`card/`、`study/`）
+- **執行**: `pnpm test:e2e` 或 `cd e2e && pnpm test`
+
+### 測試驅動開發（TDD）
+
+採用 **Red-Green-Refactor** 循環：先寫測試 → 實作程式碼 → 重構
+
+**TDD 強制範圍**:
+- 前端 Domain 層（`*.domain.ts`）
+- 後端 Service 層
+- E2E 測試（功能規格明確時）
+
+**覆蓋率目標**: Domain 90%+、Service 80%+
 
 ## Code Conventions
 
