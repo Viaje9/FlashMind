@@ -32,3 +32,7 @@ export * from './lib/overlays/dialog/dialog.component';
 export * from './lib/overlays/dialog/dialog-title.component';
 export * from './lib/overlays/dialog/dialog-content.component';
 export * from './lib/overlays/dialog/dialog-actions.component';
+export * from './lib/overlays/dialog/dialog.service';
+export * from './lib/overlays/dialog/dialog-ref';
+export * from './lib/overlays/dialog/dialog-config';
+export * from './lib/overlays/dialog/confirm-dialog.component';

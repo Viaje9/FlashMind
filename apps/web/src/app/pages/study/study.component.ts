@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
-import { FmStudyCardComponent, StudyExample } from '../../components/study/study-card/study-card.component';
-import { FmStudyDecisionBarComponent } from '../../components/study/study-decision-bar/study-decision-bar.component';
-import { FmStudyProgressComponent } from '../../components/study/study-progress/study-progress.component';
+import { FmStudyCardComponent, StudyExample } from './components/study-card/study-card.component';
+import { FmStudyDecisionBarComponent } from './components/study-decision-bar/study-decision-bar.component';
+import { FmStudyProgressComponent } from './components/study-progress/study-progress.component';
 
 @Component({
   selector: 'app-study-page',

@@ -1,9 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FmButtonComponent, FmDividerComponent, FmSocialLoginRowComponent } from '@flashmind/ui';
-import { FmWelcomeHeroComponent } from '../../components/auth/welcome-hero/welcome-hero.component';
-import { DialogService } from '../../services/dialog/dialog.service';
-import { ConfirmDialogComponent } from '../../components/dialog/confirm-dialog.component';
+import {
+  FmButtonComponent,
+  FmDividerComponent,
+  FmSocialLoginRowComponent,
+  DialogService,
+  FmConfirmDialogComponent,
+} from '@flashmind/ui';
+import { FmWelcomeHeroComponent } from './components/welcome-hero/welcome-hero.component';
 
 @Component({
   selector: 'app-welcome-page',
@@ -26,7 +30,7 @@ export class WelcomeComponent {
   readonly heroBadge = '每日學習';
 
   testDialog() {
-    const dialogRef = this.dialogService.open(ConfirmDialogComponent, {
+    const dialogRef = this.dialogService.open(FmConfirmDialogComponent, {
       data: {
         title: '測試對話框',
         message: '這是一個測試對話框。點擊確認或取消來關閉它。'

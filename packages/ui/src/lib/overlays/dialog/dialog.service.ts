@@ -118,7 +118,7 @@ export class DialogService {
     }
 
     if (config.closeOnEsc) {
-      dialogRef.keydownEvents().subscribe((event) => {
+      dialogRef.keydownEvents().subscribe((event: KeyboardEvent) => {
         if (event.key === 'Escape') {
           dialogRef.close();
         }

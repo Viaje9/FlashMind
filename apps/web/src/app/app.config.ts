@@ -2,7 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import { DialogService } from './services/dialog/dialog.service';
+import { DialogService } from '@flashmind/ui';
 
 export const appConfig: ApplicationConfig = {
   providers: [

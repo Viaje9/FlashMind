@@ -221,6 +221,9 @@ importers:
       '@storybook/angular':
         specifier: ^10.1.10
         version: 10.1.10(488b149af6856bc32f97e756d86ca679)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
       tslib:
         specifier: ^2.3.0
         version: 2.8.1

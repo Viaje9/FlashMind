@@ -6,6 +6,7 @@
     "@angular/common": "^21.0.0",
     "@angular/core": "^21.0.0",
     "@angular/cdk": "^21.0.0",
+    "rxjs": "^7.8.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
@@ -13,6 +14,7 @@
     "@angular/core": "^21.0.0",
     "@angular/cdk": "^21.0.0",
     "@storybook/angular": "^10.1.10",
+    "rxjs": "^7.8.0",
     "tslib": "^2.3.0"
   }
 }

@@ -7,7 +7,7 @@ import {
   FmGlowTextareaComponent,
   FmPageHeaderComponent
 } from '@flashmind/ui';
-import { FmMeaningEditorCardComponent, MeaningDraft } from '../../components/card/meaning-editor-card/meaning-editor-card.component';
+import { FmMeaningEditorCardComponent, MeaningDraft } from './components/meaning-editor-card/meaning-editor-card.component';
 
 interface MeaningBlock {
   id: string;
