@@ -29,7 +29,7 @@
 - [x] 3.9 實作 `AuthController` - `/auth/me` endpoint
 - [x] 3.10 實作 `AuthGuard` - HttpOnly Cookie session 驗證
 - [x] 3.11 設定環境變數 (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL`)
-- [ ] 3.12 撰寫單元測試覆蓋主要邏輯
+- [x] 3.12 撰寫單元測試覆蓋主要邏輯
 
 ## 4. 前端 API 客戶端生成
 
@@ -49,9 +49,9 @@
 
 ## 6. 整合與測試
 
-- [ ] 6.1 E2E 測試 - Email 註冊流程
-- [ ] 6.2 E2E 測試 - Email 登入流程
-- [ ] 6.3 E2E 測試 - Google OAuth 登入流程
-- [ ] 6.4 E2E 測試 - 登出流程
-- [ ] 6.5 驗證 session 過期與「記住我」效期邏輯
-- [ ] 6.6 更新 Storybook 展示登入/註冊表單元件
+- [x] 6.1 E2E 測試 - Email 註冊流程
+- [x] 6.2 E2E 測試 - Email 登入流程
+- [x] 6.3 E2E 測試 - Google OAuth 登入流程
+- [x] 6.4 E2E 測試 - 登出流程
+- [x] 6.5 驗證 session 過期與「記住我」效期邏輯
+- [x] 6.6 更新 Storybook 展示登入/註冊表單元件
