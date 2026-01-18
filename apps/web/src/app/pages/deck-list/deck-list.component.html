@@ -20,6 +20,7 @@
           [completed]="deck.completed"
           [showAction]="deck.showAction"
           [actionLabel]="deck.actionLabel"
+          (cardClick)="onDeckAction(deck.id)"
           (actionClick)="onDeckAction(deck.id)"
         ></fm-deck-card>
       }

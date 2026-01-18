@@ -9,13 +9,14 @@ export interface MeaningDraft {
 @Component({
   selector: 'fm-meaning-editor-card',
   templateUrl: './meaning-editor-card.component.html',
-  styleUrl: './meaning-editor-card.component.css',
+  host: { class: 'block' },
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FmMeaningEditorCardComponent {
   readonly meaning = input<MeaningDraft>({ zhMeaning: '', enExample: '', zhExample: '' });
   readonly tagLabel = input('');
   readonly showDelete = input(true);
+  readonly testId = input<string>();
 
   readonly meaningChange = output<MeaningDraft>();
   readonly deleteClick = output<void>();

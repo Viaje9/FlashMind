@@ -14,6 +14,8 @@ export class FmDeckStatsCardComponent {
   readonly createdAtLabel = input('');
   readonly lastReviewLabel = input('');
   readonly actionLabel = input('開始學習');
+  readonly actionDisabled = input(false);
+  readonly testId = input<string>();
 
   readonly actionClick = output<void>();
 

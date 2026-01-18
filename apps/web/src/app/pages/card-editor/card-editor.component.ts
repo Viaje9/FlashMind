@@ -1,14 +1,18 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { form, FormField, required, submit } from '@angular/forms/signals';
 import {
   FmAddItemButtonComponent,
+  FmAlertComponent,
   FmButtonComponent,
   FmFormSectionHeaderComponent,
   FmGlowTextareaComponent,
   FmPageHeaderComponent
 } from '@flashmind/ui';
 import { FmMeaningEditorCardComponent, MeaningDraft } from './components/meaning-editor-card/meaning-editor-card.component';
+import { CardStore } from '../../components/card/card.store';
+import { CardMeaningDraft, canDeleteMeaning, createEmptyMeaning } from '../../components/card/card.domain';
+import { validateMeaningsForSubmit } from '../../components/card/card.form';
 
 interface MeaningBlock {
   id: string;
@@ -25,34 +29,133 @@ interface MeaningBlock {
     FmGlowTextareaComponent,
     FmMeaningEditorCardComponent,
     FmAddItemButtonComponent,
-    RouterLink,
-    ReactiveFormsModule
+    FmAlertComponent,
+    FormField
   ],
   templateUrl: './card-editor.component.html',
-  styleUrl: './card-editor.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CardEditorComponent {
-  readonly frontTextControl = new FormControl('Hello');
+export class CardEditorComponent implements OnInit {
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly cardStore = inject(CardStore);
 
-  readonly meaningBlocks: MeaningBlock[] = [
-    {
-      id: 'meaning-1',
-      label: '你好',
-      data: {
-        zhMeaning: '你好',
-        enExample: 'Hello, how are you today?',
-        zhExample: '你好，你今天好嗎？'
-      }
-    },
-    {
-      id: 'meaning-2',
-      label: '喂',
-      data: {
-        zhMeaning: '（打電話時的招呼語）喂',
-        enExample: 'Hello? Is anyone there?',
-        zhExample: '喂？有人在嗎？'
-      }
+  readonly deckId = signal('');
+  readonly cardId = signal<string | null>(null);
+  readonly isEditMode = computed(() => !!this.cardId());
+  readonly pageTitle = computed(() => this.isEditMode() ? '編輯快閃卡' : '新增快閃卡');
+
+  // Signal Forms model
+  readonly formModel = signal({ front: '' });
+  readonly cardForm = form(this.formModel, (f) => {
+    required(f.front, { message: '請輸入正面內容' });
+  });
+
+  // 詞義使用獨立 signal 管理（動態陣列）
+  readonly meanings = signal<CardMeaningDraft[]>([createEmptyMeaning()]);
+
+  readonly meaningBlocks = computed<MeaningBlock[]>(() => {
+    return this.meanings().map((m, i) => ({
+      id: `meaning-${i}`,
+      label: m.zhMeaning || `詞義 ${i + 1}`,
+      data: m
+    }));
+  });
+
+  readonly canDeleteMeanings = computed(() => canDeleteMeaning(this.meanings().length));
+  readonly loading = this.cardStore.loading;
+  readonly error = signal<string | null>(null);
+
+  ngOnInit() {
+    const deckId = this.route.snapshot.paramMap.get('deckId');
+    const cardId = this.route.snapshot.paramMap.get('cardId');
+
+    if (deckId) {
+      this.deckId.set(deckId);
     }
-  ];
+    if (cardId) {
+      this.cardId.set(cardId);
+      this.loadCard(deckId!, cardId);
+    }
+  }
+
+  private async loadCard(deckId: string, cardId: string) {
+    await this.cardStore.loadCard(deckId, cardId);
+    const card = this.cardStore.currentCard();
+    if (card) {
+      this.formModel.set({ front: card.front });
+      this.meanings.set(
+        card.meanings.map((m) => ({
+          zhMeaning: m.zhMeaning,
+          enExample: m.enExample ?? '',
+          zhExample: m.zhExample ?? ''
+        }))
+      );
+    }
+  }
+
+  onMeaningChange(index: number, meaning: MeaningDraft) {
+    const updated = [...this.meanings()];
+    updated[index] = meaning;
+    this.meanings.set(updated);
+  }
+
+  onDeleteMeaning(index: number) {
+    if (!this.canDeleteMeanings()) return;
+    const updated = this.meanings().filter((_, i) => i !== index);
+    this.meanings.set(updated);
+  }
+
+  onAddMeaning() {
+    this.meanings.update((list) => [...list, createEmptyMeaning()]);
+  }
+
+  async onSave() {
+    this.error.set(null);
+
+    // 使用 Signal Forms submit 驗證
+    await submit(this.cardForm, async () => {
+      // 驗證詞義
+      const meaningsError = validateMeaningsForSubmit(this.meanings());
+      if (meaningsError) {
+        this.error.set(meaningsError);
+        return;
+      }
+
+      const requestData = {
+        front: this.formModel().front.trim(),
+        meanings: this.meanings().map((m) => ({
+          zhMeaning: m.zhMeaning,
+          enExample: m.enExample || undefined,
+          zhExample: m.zhExample || undefined
+        }))
+      };
+
+      if (this.isEditMode()) {
+        const success = await this.cardStore.updateCard(this.deckId(), this.cardId()!, requestData);
+        if (success) {
+          this.navigateBack();
+        } else {
+          this.error.set(this.cardStore.error() ?? '更新失敗');
+        }
+      } else {
+        const cardId = await this.cardStore.createCard(this.deckId(), requestData);
+        if (cardId) {
+          this.navigateBack();
+        } else {
+          this.error.set(this.cardStore.error() ?? '建立失敗');
+        }
+      }
+    }).catch(() => {
+      // 驗證失敗時不做額外處理，錯誤已顯示在表單欄位
+    });
+  }
+
+  onCancel() {
+    this.navigateBack();
+  }
+
+  private navigateBack() {
+    void this.router.navigate(['/decks', this.deckId()]);
+  }
 }

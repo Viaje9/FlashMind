@@ -432,6 +432,262 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ============================================================
+  # Cards
+  # ============================================================
+  /decks/{deckId}/cards:
+    get:
+      operationId: listCards
+      tags:
+        - Cards
+      summary: 取得牌組內卡片列表
+      description: 取得指定牌組內的所有卡片列表。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardListResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createCard
+      tags:
+        - Cards
+      summary: 新增卡片
+      description: 在指定牌組內新增卡片。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCardRequest"
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 請輸入正面內容
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /decks/{deckId}/cards/{cardId}:
+    get:
+      operationId: getCard
+      tags:
+        - Cards
+      summary: 取得單張卡片
+      description: 取得指定卡片的詳細資訊。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+        - name: cardId
+          in: path
+          required: true
+          description: 卡片 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 卡片不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: CARD_NOT_FOUND
+                  message: 找不到此卡片
+
+    patch:
+      operationId: updateCard
+      tags:
+        - Cards
+      summary: 更新卡片
+      description: 更新指定卡片的內容。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+        - name: cardId
+          in: path
+          required: true
+          description: 卡片 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCardRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardResponse"
+        "400":
+          description: 輸入資料格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 卡片不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteCard
+      tags:
+        - Cards
+      summary: 刪除卡片
+      description: 刪除指定卡片。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+        - name: cardId
+          in: path
+          required: true
+          description: 卡片 ID
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 刪除成功
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 卡片不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     cookieAuth:
@@ -789,3 +1045,181 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/DeckDetail"
+
+    # ============================================================
+    # Cards
+    # ============================================================
+    CardMeaning:
+      type: object
+      description: 卡片詞義
+      required:
+        - id
+        - zhMeaning
+      properties:
+        id:
+          type: string
+          description: 詞義 ID
+          example: clh1234567890meaning
+        zhMeaning:
+          type: string
+          description: 中文解釋（必填）
+          example: 你好
+        enExample:
+          type: string
+          nullable: true
+          description: 英文例句
+          example: Hello, how are you?
+        zhExample:
+          type: string
+          nullable: true
+          description: 中文例句翻譯
+          example: 你好，你好嗎？
+
+    Card:
+      type: object
+      description: 卡片資料
+      required:
+        - id
+        - front
+        - meanings
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: 卡片 ID（cuid）
+          example: clh1234567890card
+        front:
+          type: string
+          description: 正面內容（單字/片語/問題）
+          example: Hello
+        meanings:
+          type: array
+          description: 詞義列表
+          items:
+            $ref: "#/components/schemas/CardMeaning"
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間（ISO 8601 UTC）
+          example: "2026-01-17T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新時間（ISO 8601 UTC）
+          example: "2026-01-17T14:45:30Z"
+
+    CardListItem:
+      type: object
+      description: 卡片列表項目
+      required:
+        - id
+        - front
+        - summary
+      properties:
+        id:
+          type: string
+          description: 卡片 ID
+          example: clh1234567890card
+        front:
+          type: string
+          description: 正面內容
+          example: Hello
+        summary:
+          type: string
+          description: 摘要（第一筆詞義的中文解釋）
+          example: 你好
+
+    CreateCardMeaningRequest:
+      type: object
+      description: 建立詞義請求
+      required:
+        - zhMeaning
+      properties:
+        zhMeaning:
+          type: string
+          description: 中文解釋（必填）
+          example: 你好
+        enExample:
+          type: string
+          description: 英文例句
+          example: Hello, how are you?
+        zhExample:
+          type: string
+          description: 中文例句翻譯
+          example: 你好，你好嗎？
+
+    CreateCardRequest:
+      type: object
+      description: 建立卡片請求
+      required:
+        - front
+        - meanings
+      properties:
+        front:
+          type: string
+          description: 正面內容（必填）
+          example: Hello
+        meanings:
+          type: array
+          description: 詞義列表（至少一筆）
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CreateCardMeaningRequest"
+
+    UpdateCardMeaningRequest:
+      type: object
+      description: 更新詞義請求
+      properties:
+        id:
+          type: string
+          description: 詞義 ID（若有則更新，若無則新增）
+          example: clh1234567890meaning
+        zhMeaning:
+          type: string
+          description: 中文解釋
+          example: 你好
+        enExample:
+          type: string
+          nullable: true
+          description: 英文例句
+          example: Hello, how are you?
+        zhExample:
+          type: string
+          nullable: true
+          description: 中文例句翻譯
+          example: 你好，你好嗎？
+
+    UpdateCardRequest:
+      type: object
+      description: 更新卡片請求
+      properties:
+        front:
+          type: string
+          description: 正面內容
+          example: Hello
+        meanings:
+          type: array
+          description: 詞義列表（整包替換）
+          items:
+            $ref: "#/components/schemas/UpdateCardMeaningRequest"
+
+    CardResponse:
+      type: object
+      description: 卡片回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Card"
+
+    CardListResponse:
+      type: object
+      description: 卡片列表回應
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardListItem"

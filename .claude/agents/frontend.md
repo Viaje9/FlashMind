@@ -108,6 +108,57 @@ async onSubmit(): Promise<void> {
 
 **重要**：表單提交用 `(submit)="$event.preventDefault(); onSubmit()"`，不要用 `(ngSubmit)`。
 
+### UI 元件 Signal Forms 支援
+
+當遇到 `@flashmind/ui` 的組件不支援 Angular Signal Forms（缺少 `model()`、`errors` input 等）時，應該：
+
+1. **升級該 UI 組件以支援 Signal Forms**
+2. **參考 `packages/ui/src/lib/forms/labeled-input/labeled-input.component.ts` 的實作模式**
+3. **組件需要同時支援 Signal Forms 和傳統 CVA（ControlValueAccessor）以保持向後相容**
+
+Signal Forms 相容組件的關鍵實作：
+
+```typescript
+import { model, input, computed, forwardRef } from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+
+export interface ValidationError {
+  kind: string;
+  message?: string;
+}
+
+@Component({
+  // ...
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => MyComponent),
+      multi: true
+    }
+  ]
+})
+export class MyComponent implements ControlValueAccessor {
+  // Signal Forms support: use model() for two-way binding
+  readonly value = model('');
+  readonly touched = model(false);
+  readonly disabled = input(false);
+
+  // Signal Forms auto-binds errors to this input
+  readonly errors = input<readonly ValidationError[]>([]);
+
+  // Show error when touched and has errors
+  readonly showError = computed(() => this.touched() && this.errors().length > 0);
+  readonly firstErrorMessage = computed(() => this.errors()[0]?.message ?? '');
+
+  // ControlValueAccessor implementation for traditional Reactive Forms
+  writeValue(value: string): void {
+    this.value.set(value ?? '');
+  }
+
+  // ... 其他 CVA 方法
+}
+```
+
 ### testId 規範
 
 所有可互動元素必須添加 testId，格式：`{page/context}-{element}[-{qualifier}]`

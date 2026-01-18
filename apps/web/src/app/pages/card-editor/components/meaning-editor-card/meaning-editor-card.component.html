@@ -1,4 +1,4 @@
-<article class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-white/10 shadow-sm transition-all hover:border-primary/30 group">
+<article class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-slate-200 dark:border-white/10 shadow-sm transition-all hover:border-primary/30 group" [attr.data-testid]="testId() || null">
   @if (showDelete()) {
     <div class="absolute top-3 right-3 flex gap-2">
       <button

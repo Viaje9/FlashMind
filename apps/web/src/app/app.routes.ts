@@ -56,7 +56,15 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'cards/new',
+    path: 'decks/:deckId/cards/new',
+    loadComponent: () =>
+      import('./pages/card-editor/card-editor.component').then(
+        (module) => module.CardEditorComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'decks/:deckId/cards/:cardId/edit',
     loadComponent: () =>
       import('./pages/card-editor/card-editor.component').then(
         (module) => module.CardEditorComponent,

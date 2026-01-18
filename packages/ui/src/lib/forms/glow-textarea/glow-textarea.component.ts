@@ -4,9 +4,10 @@ import {
   computed,
   forwardRef,
   input,
-  signal
+  model
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ValidationError } from '../labeled-input/labeled-input.component';
 
 @Component({
   selector: 'fm-glow-textarea',
@@ -24,13 +25,18 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 export class FmGlowTextareaComponent implements ControlValueAccessor {
   readonly placeholder = input('');
   readonly minHeightClass = input('min-h-[140px]');
-  readonly maxLength = input<number | null>(null);
+  readonly maxLength = input<number | null | undefined>(null);
   readonly showCount = input(true);
   readonly ariaLabel = input('');
   readonly testId = input<string>();
 
-  readonly value = signal('');
-  readonly disabled = signal(false);
+  // Signal Forms support: use model() for two-way binding
+  readonly value = model('');
+  readonly disabled = input(false);
+  readonly touched = model(false);
+
+  // Signal Forms auto-binds errors to this input
+  readonly errors = input<readonly ValidationError[]>([]);
 
   readonly textAreaClass = computed(() => {
     const base =
@@ -51,9 +57,14 @@ export class FmGlowTextareaComponent implements ControlValueAccessor {
 
   readonly ariaLabelValue = computed(() => this.ariaLabel() || this.placeholder() || '輸入內容');
 
+  // Show error when touched and has errors
+  readonly showError = computed(() => this.touched() && this.errors().length > 0);
+  readonly firstErrorMessage = computed(() => this.errors()[0]?.message ?? '');
+
   private onChange: (value: string) => void = () => {};
   private onTouched: () => void = () => {};
 
+  // ControlValueAccessor implementation for traditional Reactive Forms
   writeValue(value: string): void {
     this.value.set(value ?? '');
   }
@@ -67,7 +78,7 @@ export class FmGlowTextareaComponent implements ControlValueAccessor {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
+    // Note: disabled is now an input for Signal Forms compatibility
   }
 
   onInput(event: Event): void {
@@ -80,6 +91,7 @@ export class FmGlowTextareaComponent implements ControlValueAccessor {
   }
 
   onBlur(): void {
+    this.touched.set(true);
     this.onTouched();
   }
 }

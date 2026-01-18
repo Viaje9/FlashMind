@@ -25,6 +25,7 @@ export class FmDeckCardComponent {
   readonly actionLabel = input('開始學習');
 
   readonly actionClick = output<void>();
+  readonly cardClick = output<void>();
 
   readonly tagList = computed<DeckTag[]>(() => {
     const custom = this.tags();

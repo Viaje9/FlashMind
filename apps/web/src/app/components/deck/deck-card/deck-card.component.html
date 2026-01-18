@@ -1,4 +1,4 @@
-<article class="group relative flex flex-col gap-4 rounded-2xl bg-white dark:bg-surface-dark p-5 shadow-sm ring-1 ring-slate-100 dark:ring-white/5 transition-all active:scale-[0.98]">
+<article class="group relative flex flex-col gap-4 rounded-2xl bg-white dark:bg-surface-dark p-5 shadow-sm ring-1 ring-slate-100 dark:ring-white/5 transition-all active:scale-[0.98] cursor-pointer hover:ring-primary/30" (click)="cardClick.emit()">
   <div class="flex items-start justify-between">
     <div class="flex flex-col gap-2">
       <h3 class="text-lg font-bold leading-tight text-slate-900 dark:text-white">{{ title() }}</h3>
@@ -12,7 +12,7 @@
       <fm-icon-button
         variant="primary"
         [ariaLabel]="actionLabel()"
-        (click)="actionClick.emit()"
+        (click)="actionClick.emit(); $event.stopPropagation()"
       >
         <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
       </fm-icon-button>

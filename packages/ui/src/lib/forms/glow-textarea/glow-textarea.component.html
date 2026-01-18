@@ -1,7 +1,17 @@
 <div class="flex flex-col gap-2">
   <div class="relative group">
-    <div class="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-purple-600/30 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
-    <div class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-1">
+    <div
+      class="absolute -inset-0.5 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-500"
+      [class.bg-gradient-to-r]="!showError()"
+      [class.from-primary/30]="!showError()"
+      [class.to-purple-600/30]="!showError()"
+      [class.bg-red-500/30]="showError()"
+    ></div>
+    <div
+      class="relative bg-surface-light dark:bg-surface-dark rounded-xl p-1"
+      [class.ring-1]="showError()"
+      [class.ring-red-500/50]="showError()"
+    >
       <textarea
         [class]="textAreaClass()"
         [value]="value()"
@@ -9,13 +19,20 @@
         [disabled]="disabled()"
         [attr.maxlength]="maxLength()"
         [attr.aria-label]="ariaLabelValue()"
-        [attr.data-testid]="testId()"
+        [attr.data-testid]="testId() || null"
         (input)="onInput($event)"
         (blur)="onBlur()"
       ></textarea>
     </div>
   </div>
-  @if (countLabel()) {
-    <p class="text-xs text-slate-400 dark:text-slate-500 px-1 text-right">{{ countLabel() }}</p>
-  }
+  <div class="flex justify-between px-1">
+    @if (showError()) {
+      <p class="text-xs text-red-400">{{ firstErrorMessage() }}</p>
+    } @else {
+      <span></span>
+    }
+    @if (countLabel()) {
+      <p class="text-xs text-slate-400 dark:text-slate-500">{{ countLabel() }}</p>
+    }
+  </div>
 </div>

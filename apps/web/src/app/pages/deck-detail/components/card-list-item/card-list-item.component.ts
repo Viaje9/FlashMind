@@ -11,6 +11,7 @@ export class FmCardListItemComponent {
   readonly description = input('');
   readonly editLabel = input('編輯');
   readonly deleteLabel = input('刪除');
+  readonly testId = input<string>();
 
   readonly editClick = output<void>();
   readonly deleteClick = output<void>();

@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DeckModule } from './modules/deck/deck.module';
+import { CardModule } from './modules/card/card.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { DeckModule } from './modules/deck/deck.module';
     PrismaModule,
     AuthModule,
     DeckModule,
+    CardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
