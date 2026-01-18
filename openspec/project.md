@@ -71,10 +71,42 @@ FlashMind/
 
 ### Architecture Patterns
 
-**前端 (Angular)**:
+**前端分層架構 (Angular)**:
+
+| 層級 | 檔案 | 職責 | 特性 |
+|------|------|------|------|
+| Domain | `*.domain.ts` | 商業邏輯、規則判斷 | Pure function、無框架依賴 |
+| Store | `*.store.ts` | 狀態管理、API 呼叫 | 使用 Angular Signals |
+| Form | `*.form.ts` | 表單結構、欄位驗證 | 使用 Signal Forms |
+| Component | `*.component.ts` | UI 渲染、使用者互動 | 使用 Store 與 Form |
+
+**前端元件組織（共置原則）**:
+
+按業務領域組織元件，Domain、Store、Form 放在對應的領域目錄中：
+```
+apps/web/src/app/components/
+├── auth/                       # 登入/註冊領域
+│   ├── auth.domain.ts          # 商業邏輯
+│   ├── auth.store.ts           # 狀態管理
+│   ├── auth.form.ts            # 表單定義
+│   ├── login/
+│   └── register/
+├── deck/                       # 牌組領域
+├── card/                       # 卡片領域
+├── study/                      # 學習領域
+└── shared/                     # 跨領域共用 UI 元件
+```
+
+**業務元件放置規則**:
+| 元件類型 | 放置位置 | 說明 |
+|----------|----------|------|
+| 通用 UI 元件 | `packages/ui/` | 無業務邏輯，純 UI |
+| 共用業務元件 | `components/{domain}/` | 多個頁面會用到 |
+| 頁面專屬元件 | `pages/{page}/components/` | 只有該頁面用到 |
+
+**前端通用規範**:
 - Standalone components (無 NgModule)
 - Signal-based 狀態管理
-- 依功能分頁面 (`pages/`) 和元件 (`components/`)
 - 服務透過 DI 注入
 
 **後端 (NestJS)**:
@@ -117,22 +149,135 @@ TDD 強制範圍：
 - 按領域分組: `auth/`, `deck/`, `card/`, `study/`
 - 執行: `pnpm test:e2e` 或 `pnpm test:e2e:ui`
 
+**E2E 測試選擇器規範**:
+優先使用 `getByTestId()` 選擇器：
+```typescript
+// 推薦 - 使用 data-testid
+await page.getByTestId('login-email').fill('test@example.com');
+await page.getByTestId('login-submit').click();
+
+// 次要 - 使用 role + name
+await page.getByRole('button', { name: '登入', exact: true }).click();
+```
+
+**Playwright MCP 使用規範**:
+此專案為 monorepo，Playwright 安裝在 `e2e/` 目錄。使用 `playwright-test` MCP 工具時**必須指定 `seedFile` 參數**：
+```typescript
+mcp__playwright-test__generator_setup_page({
+  plan: "測試計畫描述",
+  seedFile: "e2e/tests/seed.spec.ts"  // 必須指定！
+})
+```
+
 **元件開發**:
 - 使用 Storybook 進行視覺化開發與測試
 
+### 前端 testId 規範 (ADR-019)
+
+**開發前端頁面時，必須為所有可互動元素添加 testId**。
+
+**必須添加 testId 的元素**:
+| 元素類型 | 說明 | 範例 |
+|----------|------|------|
+| 表單輸入 | input、textarea、select | `login-email`、`deck-form-name` |
+| 按鈕 | 提交、取消、操作按鈕 | `login-submit`、`deck-form-delete` |
+| 連結/導航 | 重要的路由連結 | `deck-detail-back`、`deck-detail-settings` |
+| 錯誤訊息 | 表單驗證、API 錯誤 | `login-error`、`deck-form-error` |
+| 列表項目 | 可點擊的列表項 | `deck-item-{id}`、`card-item-{id}` |
+| 對話框 | dialog、modal | `confirm-dialog`、`delete-dialog` |
+| 開關/切換 | toggle、checkbox | `login-remember-me`、`deck-form-public` |
+
+**命名格式**：`{page/context}-{element}[-{qualifier}]`（kebab-case）
+
+**使用方式**:
+```html
+<!-- UI 元件使用 testId 屬性 -->
+<fm-button testId="login-submit">登入</fm-button>
+<fm-labeled-input testId="login-email" ... />
+
+<!-- 原生元素使用 data-testid 屬性 -->
+<div data-testid="deck-list-empty">尚無牌組</div>
+```
+
+### 前端表單規範 (Signal Forms)
+
+使用 Angular Signal Forms（`@angular/forms/signals`）建立表單。
+
+**重要：表單提交事件綁定**:
+```html
+<!-- ❌ 錯誤寫法 - 會導致頁面重載 -->
+<form (ngSubmit)="onSubmit()">
+
+<!-- ✅ 正確寫法 -->
+<form (submit)="$event.preventDefault(); onSubmit()">
+```
+
+**基本用法**:
+```typescript
+import { signal } from '@angular/core';
+import { form, required, email, submit } from '@angular/forms/signals';
+
+readonly formModel = signal<LoginFormData>({ email: '', password: '' });
+
+readonly loginForm = form(this.formModel, (f) => {
+  required(f.email, { message: '請輸入 Email' });
+  email(f.email, { message: '請輸入有效的 Email 格式' });
+  required(f.password, { message: '請輸入密碼' });
+});
+
+async onSubmit(): Promise<void> {
+  await submit(this.loginForm, async () => {
+    const { email, password } = this.formModel();
+    await this.authService.login(email, password);
+  });
+}
+```
+
+**常用驗證器**:
+| 驗證器 | 說明 | 範例 |
+|--------|------|------|
+| `required()` | 必填 | `required(f.email, { message: '必填' })` |
+| `email()` | Email 格式 | `email(f.email, { message: '格式錯誤' })` |
+| `minLength()` | 最小長度 | `minLength(f.password, 8, { message: '至少 8 字' })` |
+| `maxLength()` | 最大長度 | `maxLength(f.name, 50, { message: '最多 50 字' })` |
+| `validate()` | 自訂驗證 | 用於確認密碼等情境 |
+
 ### Git Workflow
 
-**Commit 格式**:
+**Commit 格式（Conventional Commits）**:
 ```
-(type) 描述（繁體中文）
+<type>(<scope>): <subject>
+
+<body>
 ```
+
+- 標題：`<type>(<scope>): <subject>`
+- 內文（body）：說明「為什麼要改」與「影響範圍」
+- subject 使用繁體中文、動詞開頭、簡短描述
 
 **Type 類型**:
 - `feat`: 新功能
 - `fix`: 修復 bug
-- `chore`: 雜項維護
-- `ci`: CI/CD 相關
 - `docs`: 文件更新
+- `style`: 格式調整
+- `refactor`: 重構
+- `perf`: 效能優化
+- `test`: 測試
+- `build`: 建構相關
+- `ci`: CI/CD 相關
+- `chore`: 雜項維護
+- `revert`: 回退
+
+**Scope**:
+- 以模組/套件為主：`web`、`api`、`ui`、`shared`
+
+**範例**:
+```
+feat(ui): 新增牌組卡片元件
+
+新增牌組卡片與進度條元件，提供 UI 預覽與互動事件。
+影響範圍：packages/ui 與 apps/web 預覽頁面。
+```
 
 **分支策略**:
 - `main`: 主分支
@@ -195,12 +340,26 @@ TDD 強制範圍：
 - Body: Noto Sans TC, sans-serif
 
 **UI 元件庫結構** (`packages/ui/src/lib/`):
-- `primitives/`: 基礎元件 (Button, IconButton, Badge, ProgressBar, Toggle, SearchInput, Fab, Divider)
-- `navigation/`: 導覽元件 (PageHeader)
-- `data-display/`: 資料顯示 (SettingRow, ProfileCard, SectionHeading)
-- `forms/`: 表單元件 (LabeledInput, NumberInputRow, FormSectionHeader, GlowTextarea, AddItemButton, SocialLoginRow)
-- `feedback/`: 回饋元件 (EmptyState)
-- `overlays/`: 覆蓋層元件 (Dialog)
+```
+packages/ui/src/lib/
+├── primitives/       # 最基礎元件（button, badge, toggle）
+├── layouts/          # 版面配置（row, column, stack）
+├── forms/            # 表單輸入（labeled-input, textarea）
+├── navigation/       # 導航相關（navbar, tabs）
+├── feedback/         # 使用者回饋（toast, loading-spinner）
+├── data-display/     # 資料展示（card, list-item, avatar）
+└── overlays/         # 浮層元件（dialog, drawer, popover）
+```
+
+浮層元件透過 Service 呼叫，而非直接在 template 中使用。
+
+**目前已實作**:
+- `primitives/`: Button, IconButton, Badge, ProgressBar, Toggle, SearchInput, Fab, Divider
+- `navigation/`: PageHeader
+- `data-display/`: SettingRow, ProfileCard, SectionHeading
+- `forms/`: LabeledInput, NumberInputRow, FormSectionHeader, GlowTextarea, AddItemButton, SocialLoginRow
+- `feedback/`: EmptyState
+- `overlays/`: Dialog
 
 ## Current Routes
 
