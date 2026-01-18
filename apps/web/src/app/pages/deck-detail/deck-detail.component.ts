@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { FmFabComponent, FmIconButtonComponent, FmPageHeaderComponent, FmSearchInputComponent } from '@flashmind/ui';
 import { FmCardListItemComponent } from './components/card-list-item/card-list-item.component';
@@ -27,10 +27,19 @@ interface CardPreview {
   styleUrl: './deck-detail.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DeckDetailComponent {
+export class DeckDetailComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
+  readonly deckId = signal('');
   readonly searchControl = new FormControl('');
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.deckId.set(id);
+    }
+  }
 
   readonly cards: CardPreview[] = [
     {

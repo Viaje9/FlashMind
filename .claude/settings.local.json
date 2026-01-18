@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(openspec list:*)"
+      "Bash(openspec list:*)",
+      "Bash(openspec show:*)",
+      "mcp__playwright-test__browser_click",
+      "mcp__playwright-test__browser_type",
+      "mcp__playwright-test__browser_navigate",
+      "mcp__playwright-test__planner_save_plan",
+      "mcp__playwright-test__browser_close",
+      "Bash(pnpm:*)",
+      "WebSearch"
     ]
   }
 }

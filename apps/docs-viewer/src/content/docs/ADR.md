@@ -16,6 +16,8 @@ summary: "記錄 FlashMind 專案的關鍵技術架構決策及其背景與理�
 | 1.6  | 2026-01-17 | — | 新增 ADR-016 API 設計規範 |
 | 1.7  | 2026-01-17 | — | 新增 ADR-017 E2E 測試框架與目錄結構 |
 | 1.8  | 2026-01-17 | — | 新增 ADR-018 測試驅動開發（TDD） |
+| 1.9  | 2026-01-18 | — | 新增 ADR-019 前端 testId 規範 |
+| 1.10 | 2026-01-18 | — | ADR-012、ADR-014 改用 Signal Forms 取代 Reactive Forms |
 
 ---
 
@@ -522,7 +524,7 @@ apps/web/src/app/components/
 |------|------|------|------|
 | Domain | `*.domain.ts` | 商業邏輯、規則判斷 | Pure function、可 throw error、無框架依賴 |
 | Store | `*.store.ts` | 狀態管理、API 呼叫 | 使用 Angular Signals、呼叫 Domain |
-| Form | `*.form.ts` | 表單結構、欄位驗證 | 使用 Reactive Forms |
+| Form | `*.form.ts` | 表單結構、欄位驗證 | 使用 Signal Forms |
 | Component | `*.component.ts` | UI 渲染、使用者互動 | 使用 Store 與 Form |
 
 ### Domain 層設計原則
@@ -590,6 +592,80 @@ export const studyStore = {
     // 更新狀態...
   },
 };
+```
+
+### Form 層範例（Signal Forms）
+
+Form 層使用 Angular Signal Forms（`@angular/forms/signals`）建立表單：
+
+```typescript
+// auth.form.ts
+import { signal } from '@angular/core';
+import { form, required, email, minLength, validate } from '@angular/forms/signals';
+
+interface RegisterFormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export function createRegisterForm() {
+  const formModel = signal<RegisterFormData>({
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const registerForm = form(formModel, (f) => {
+    required(f.email, { message: '請輸入 Email' });
+    email(f.email, { message: '請輸入有效的 Email 格式' });
+    required(f.password, { message: '請輸入密碼' });
+    minLength(f.password, 8, { message: '密碼至少需要 8 個字元' });
+    required(f.confirmPassword, { message: '請再次輸入密碼' });
+    validate(f.confirmPassword, ({ value }) => {
+      if (value() && formModel().password && value() !== formModel().password) {
+        return { kind: 'passwordMismatch', message: '密碼與確認密碼不一致' };
+      }
+      return undefined;
+    });
+  });
+
+  return { formModel, registerForm };
+}
+```
+
+在 Component 中使用：
+
+```typescript
+// register.component.ts
+import { form, FormField, submit } from '@angular/forms/signals';
+
+@Component({
+  imports: [FormField, FmLabeledInputComponent],
+  // ...
+})
+export class RegisterComponent {
+  readonly formModel = signal<RegisterFormData>({ ... });
+  readonly registerForm = form(this.formModel, (f) => { ... });
+
+  async onSubmit(): Promise<void> {
+    await submit(this.registerForm, async () => {
+      // 表單驗證通過後執行
+      const { email, password } = this.formModel();
+      await this.authService.register(email, password);
+    });
+  }
+}
+```
+
+Template 使用 `[formField]` 綁定：
+
+```html
+<fm-labeled-input
+  [formField]="registerForm.email"
+  label="Email"
+  placeholder="請輸入 Email"
+/>
 ```
 
 ### 檔案命名規範
@@ -798,7 +874,7 @@ packages/ui/src/lib/
 |------|------|------|
 | primitives | 最基礎的 UI 元素 | 無依賴其他元件 |
 | layouts | 控制子元素排列方式 | 用於頁面結構 |
-| forms | 表單輸入與控制項 | 支援 Reactive Forms |
+| forms | 表單輸入與控制項 | 支援 Signal Forms |
 | navigation | 頁面間或區塊間導航 | 可能依賴 Router |
 | feedback | 向用戶傳達狀態或結果 | 通常是非阻塞式 |
 | data-display | 展示資料的容器 | 可搭配 primitives |
@@ -1301,6 +1377,119 @@ export function validatePassword(password: string): boolean {
 - UI 樣式測試不適用 TDD，使用 Storybook 視覺測試
 - 原型開發階段可暫緩 TDD，但正式實作時需補上
 - 測試覆蓋率目標：Domain 層 90%+，Service 層 80%+
+
+---
+
+## ADR-019：前端 testId 規範
+
+### 狀態
+
+已採用
+
+### 背景
+
+E2E 測試需要穩定的選擇器來定位頁面元素。相較於 CSS class 或 DOM 結構，`data-testid` 屬性：
+
+- 不受樣式重構影響
+- 語意明確，易於維護
+- 與業務邏輯解耦
+
+需要建立統一的 testId 規範，確保：
+
+- 前端開發時一致地埋設 testId
+- E2E 測試能可靠地選取元素
+- 命名有跡可循，易於查找
+
+### 決策
+
+#### 1. 何時需要添加 testId
+
+**必須添加 testId 的元素：**
+
+| 元素類型 | 說明 | 範例 |
+|----------|------|------|
+| 表單輸入 | input、textarea、select | `login-email`、`deck-name` |
+| 按鈕 | 提交、取消、操作按鈕 | `login-submit`、`deck-delete` |
+| 連結/導航 | 重要的路由連結 | `nav-home`、`deck-settings-link` |
+| 錯誤訊息 | 表單驗證、API 錯誤 | `login-error`、`deck-create-error` |
+| 列表項目 | 可點擊的列表項 | `deck-item-{id}`、`card-item-{id}` |
+| 對話框 | dialog、modal | `confirm-dialog`、`delete-dialog` |
+| 開關/切換 | toggle、checkbox | `login-remember-me`、`deck-public` |
+
+**可省略 testId 的元素：**
+
+- 純裝飾性元素（icon、分隔線）
+- 靜態文字（標題、說明文字）
+- 不需要測試互動的元素
+
+#### 2. 命名規範
+
+**格式：`{page/context}-{element}[-{qualifier}]`**
+
+| 部分 | 說明 | 範例 |
+|------|------|------|
+| page/context | 頁面或功能區塊 | `login`、`deck-create`、`card-editor` |
+| element | 元素類型或用途 | `email`、`submit`、`error`、`cancel` |
+| qualifier | 可選，用於區分相似元素 | `deck-item-{id}`、`card-field-front` |
+
+**命名規則：**
+
+- 使用 kebab-case
+- 動作按鈕用動詞：`submit`、`cancel`、`delete`、`save`
+- 輸入欄位用名詞：`email`、`password`、`name`
+- 避免過長，保持簡潔
+
+#### 3. 範例：登入頁
+
+以登入頁為例，展示 testId 的應用：
+
+| 元素 | testId |
+|------|--------|
+| Email 輸入框 | `login-email` |
+| 密碼輸入框 | `login-password` |
+| 記住我開關 | `login-remember-me` |
+| 登入按鈕 | `login-submit` |
+| 錯誤訊息 | `login-error` |
+
+其他頁面依此原則命名，如牌組列表的搜尋框為 `deck-list-search`、牌組詳情的返回按鈕為 `deck-detail-back`。
+
+#### 4. UI 元件庫支援
+
+`packages/ui` 的元件透過 `testId` 屬性接收值，渲染為 `data-testid`：
+
+```html
+<!-- 使用方式 -->
+<fm-button testId="login-submit">登入</fm-button>
+<fm-labeled-input testId="login-email" ... />
+
+<!-- 渲染結果 -->
+<button data-testid="login-submit">登入</button>
+<input data-testid="login-email" ... />
+```
+
+### 理由
+
+| 決策 | 理由 |
+|------|------|
+| 必須為互動元素添加 testId | 確保 E2E 測試穩定性，不受樣式重構影響 |
+| kebab-case 命名 | 與 HTML 屬性慣例一致，易於閱讀 |
+| {page}-{element} 格式 | 避免命名衝突，一眼識別元素所屬頁面 |
+| 列表項含 ID | 支援測試特定項目的操作 |
+
+### 替代方案
+
+| 方案 | 評估 |
+|------|------|
+| 使用 CSS class | 樣式重構時容易破壞測試 |
+| 使用 DOM 結構 | 結構變更時容易破壞測試 |
+| 使用 aria-label | 語意正確但較冗長，且可能與 a11y 用途衝突 |
+| 不統一命名 | 難以維護，測試難以查找對應元素 |
+
+### 注意事項
+
+- 新增頁面或元件時，應同步規劃 testId
+- Code Review 時應檢查互動元素是否有 testId
+- 重構頁面時需同步更新對應的 E2E 測試
 
 ---
 

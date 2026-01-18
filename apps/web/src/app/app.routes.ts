@@ -34,6 +34,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'decks/:id/settings',
+    loadComponent: () =>
+      import('./pages/deck-settings/deck-settings.component').then(
+        (module) => module.DeckSettingsComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'decks/:id',
     loadComponent: () =>
       import('./pages/deck-detail/deck-detail.component').then(

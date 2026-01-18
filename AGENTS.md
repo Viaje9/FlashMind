@@ -204,6 +204,148 @@ packages/ui/src/lib/
 
 浮層元件透過 Service 呼叫，而非直接在 template 中使用。
 
+### 前端 testId 開發規範（ADR-019）
+
+**開發前端頁面時，必須為所有可互動元素添加 testId**，確保 E2E 測試的穩定性。
+
+#### 開發流程
+
+當開發前端頁面時，**AI 助理會優先套用 `testid-guide` skill，為可互動元素添加 testId**。
+
+#### 必須添加 testId 的元素
+
+| 元素類型 | 說明 | 範例 |
+|----------|------|------|
+| 表單輸入 | input、textarea、select | `login-email`、`deck-form-name` |
+| 按鈕 | 提交、取消、操作按鈕 | `login-submit`、`deck-form-delete` |
+| 連結/導航 | 重要的路由連結 | `deck-detail-back`、`deck-detail-settings` |
+| 錯誤訊息 | 表單驗證、API 錯誤 | `login-error`、`deck-form-error` |
+| 列表項目 | 可點擊的列表項 | `deck-item-{id}`、`card-item-{id}` |
+| 對話框 | dialog、modal | `confirm-dialog`、`delete-dialog` |
+| 開關/切換 | toggle、checkbox | `login-remember-me`、`deck-form-public` |
+
+#### 命名規範
+
+**格式：`{page/context}-{element}[-{qualifier}]`**
+
+- 使用 kebab-case
+- 動作按鈕用動詞：`submit`、`cancel`、`delete`、`save`
+- 輸入欄位用名詞：`email`、`password`、`name`
+
+#### 使用方式
+
+```html
+<!-- UI 元件使用 testId 屬性 -->
+<fm-button testId="login-submit">登入</fm-button>
+<fm-labeled-input testId="login-email" ... />
+<fm-icon-button testId="deck-detail-back" ... />
+
+<!-- 原生元素使用 data-testid 屬性 -->
+<div data-testid="deck-list-empty">尚無牌組</div>
+```
+
+#### 各頁面 testId 參考
+
+詳細的各頁面 testId 規範請參考 `ADR-019`。常用範例：
+
+| 頁面 | 元素 | testId |
+|------|------|--------|
+| 登入 | Email 輸入框 | `login-email` |
+| 登入 | 密碼輸入框 | `login-password` |
+| 登入 | 記住我 | `login-remember-me` |
+| 登入 | 登入按鈕 | `login-submit` |
+| 登入 | 錯誤訊息 | `login-error` |
+| 牌組列表 | 搜尋輸入框 | `deck-list-search` |
+| 牌組列表 | 新增按鈕 | `deck-list-create` |
+| 牌組詳情 | 返回按鈕 | `deck-detail-back` |
+| 牌組詳情 | 設定按鈕 | `deck-detail-settings` |
+| 牌組詳情 | 開始學習 | `deck-detail-start-study` |
+| 牌組表單 | 名稱輸入框 | `deck-form-name` |
+| 牌組表單 | 儲存按鈕 | `deck-form-submit` |
+
+### 前端表單開發規範（Signal Forms）
+
+**使用 Angular Signal Forms（`@angular/forms/signals`）建立表單**。
+
+#### 開發流程
+
+當開發含有表單的前端頁面時，**AI 助理會優先套用 `form-guide` skill，使用 Signal Forms 模式開發**。
+
+#### 重要：表單提交事件綁定
+
+async `onSubmit()` 搭配 `(ngSubmit)` 會導致瀏覽器預設提交行為觸發，造成頁面重載。
+
+```html
+<!-- ❌ 錯誤寫法 - 會導致頁面重載 -->
+<form (ngSubmit)="onSubmit()">
+
+<!-- ✅ 正確寫法 -->
+<form (submit)="$event.preventDefault(); onSubmit()">
+```
+
+#### 基本用法
+
+```typescript
+import { signal } from '@angular/core';
+import { form, FormField, required, email, submit } from '@angular/forms/signals';
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+// 表單模型
+readonly formModel = signal<LoginFormData>({ email: '', password: '' });
+
+// 表單定義與驗證
+readonly loginForm = form(this.formModel, (f) => {
+  required(f.email, { message: '請輸入 Email' });
+  email(f.email, { message: '請輸入有效的 Email 格式' });
+  required(f.password, { message: '請輸入密碼' });
+});
+
+// 提交處理
+async onSubmit(): Promise<void> {
+  await submit(this.loginForm, async () => {
+    const { email, password } = this.formModel();
+    await this.authService.login(email, password);
+  });
+}
+```
+
+Template 使用 `[formField]` 綁定：
+
+```html
+<fm-labeled-input
+  [formField]="loginForm.email"
+  label="Email"
+  placeholder="請輸入 Email"
+/>
+```
+
+#### 常用驗證器
+
+| 驗證器 | 說明 | 範例 |
+|--------|------|------|
+| `required()` | 必填 | `required(f.email, { message: '必填' })` |
+| `email()` | Email 格式 | `email(f.email, { message: '格式錯誤' })` |
+| `minLength()` | 最小長度 | `minLength(f.password, 8, { message: '至少 8 字' })` |
+| `maxLength()` | 最大長度 | `maxLength(f.name, 50, { message: '最多 50 字' })` |
+| `validate()` | 自訂驗證 | 見下方範例 |
+
+**自訂驗證器**（如確認密碼）：
+
+```typescript
+validate(f.confirmPassword, ({ value }) => {
+  if (value() && formModel().password && value() !== formModel().password) {
+    return { kind: 'passwordMismatch', message: '密碼不一致' };
+  }
+  return undefined;
+});
+```
+
+詳細規範參考 `ADR-012` Form 層範例。
+
 ## Git 提交規範
 
 - 使用約定式提交（Conventional Commits）
@@ -285,7 +427,7 @@ mcp__playwright-test__generator_setup_page({
 
 ### E2E 測試選擇器規範
 
-UI 元件庫（`packages/ui`）的元件支援 `testId` 屬性，會渲染為 `data-testid` HTML 屬性。撰寫 E2E 測試時**優先使用 `getByTestId()` 選擇器**：
+撰寫 E2E 測試時**優先使用 `getByTestId()` 選擇器**：
 
 ```typescript
 // 推薦 - 使用 data-testid
@@ -295,13 +437,3 @@ await page.getByTestId('login-submit').click();
 // 次要 - 使用 role + name
 await page.getByRole('button', { name: '登入', exact: true }).click();
 ```
-
-### 常用 testId 命名慣例
-
-| 頁面 | 元素 | testId |
-|------|------|--------|
-| 登入 | Email 輸入框 | `login-email` |
-| 登入 | 密碼輸入框 | `login-password` |
-| 登入 | 記住我 | `login-remember-me` |
-| 登入 | 登入按鈕 | `login-submit` |
-| 登入 | 錯誤訊息 | `login-error` |

@@ -11,7 +11,7 @@
     </div>
 
     <div class="flex flex-col gap-4">
-      @for (deck of decks; track deck.id) {
+      @for (deck of decks(); track deck.id) {
         <fm-deck-card
           [title]="deck.title"
           [newCount]="deck.newCount"
@@ -24,11 +24,13 @@
         ></fm-deck-card>
       }
 
-      <fm-empty-state
-        icon="library_add"
-        title="點擊 + 按鈕建立新牌組"
-        description="建立第一個學習計畫，開始每天複習。"
-      ></fm-empty-state>
+      @if (showEmptyState()) {
+        <fm-empty-state
+          icon="library_add"
+          [title]="isEmpty() ? '尚無牌組' : '無符合的牌組'"
+          [description]="isEmpty() ? '點擊右下角 + 按鈕建立第一個牌組' : '請嘗試其他搜尋條件'"
+        ></fm-empty-state>
+      }
     </div>
 
     <div class="h-24"></div>

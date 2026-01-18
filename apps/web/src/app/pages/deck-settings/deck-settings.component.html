@@ -1,0 +1,102 @@
+<div class="min-h-screen pb-6">
+  <fm-page-header title="牌組設定">
+    <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回" [routerLink]="['/decks', deckId()]">
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md px-4 pt-4">
+    @if (isLoading()) {
+      <div class="flex justify-center py-8">
+        <span class="text-slate-400">載入中...</span>
+      </div>
+    } @else {
+      <form class="flex flex-col gap-6">
+        <fm-labeled-input
+          [formControl]="deckNameControl"
+          label="牌組名稱"
+          icon="style"
+          placeholder="例如：日文 N5 單字"
+          ariaLabel="牌組名稱"
+        ></fm-labeled-input>
+
+        <div class="flex flex-col gap-4">
+          <fm-section-heading text="學習計畫設定"></fm-section-heading>
+
+          <fm-number-input-row
+            [formControl]="dailyNewCardsControl"
+            label="每日新卡數"
+            title="新學習"
+            description="建議初學者設定 20 張"
+            icon="library_add"
+            iconClass="bg-blue-500/10 text-blue-500"
+            [min]="5"
+            [max]="100"
+            [step]="5"
+            unit="張"
+            ariaLabel="每日新卡數"
+          ></fm-number-input-row>
+
+          <fm-number-input-row
+            [formControl]="dailyReviewCardsControl"
+            label="每日複習數"
+            title="複習上限"
+            description="包含舊卡片複習"
+            icon="history"
+            iconClass="bg-amber-500/10 text-amber-500"
+            [min]="10"
+            [max]="500"
+            [step]="10"
+            unit="張"
+            ariaLabel="每日複習數"
+          ></fm-number-input-row>
+        </div>
+
+        <p class="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+          提示：較高的每日新卡數可能會導致未來的複習量大幅增加。新設定將於下次學習時生效。
+        </p>
+
+        @if (errorMessage()) {
+          <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+        }
+      </form>
+
+      <div class="mt-8 border-t border-slate-200 pt-6 dark:border-slate-700">
+        <fm-section-heading text="危險區域"></fm-section-heading>
+        <p class="mb-4 text-sm text-slate-500 dark:text-slate-400">
+          刪除牌組將同時刪除所有卡片與學習紀錄，此操作無法復原。
+        </p>
+        <fm-button
+          variant="ghost"
+          [fullWidth]="true"
+          [disabled]="isDeleting()"
+          (click)="onDelete()"
+        >
+          <span class="text-red-500">{{ isDeleting() ? '刪除中...' : '刪除牌組' }}</span>
+        </fm-button>
+      </div>
+    }
+  </main>
+
+  @if (!isLoading()) {
+    <div class="mt-auto p-4 pt-2">
+      <div class="flex flex-col gap-3">
+        <fm-button
+          [fullWidth]="true"
+          [disabled]="isSubmitting()"
+          (click)="onSave()"
+        >
+          {{ isSubmitting() ? '儲存中...' : '儲存設定' }}
+        </fm-button>
+        <fm-button
+          variant="ghost"
+          [fullWidth]="true"
+          [disabled]="isSubmitting()"
+          (click)="onCancel()"
+        >
+          取消
+        </fm-button>
+      </div>
+    </div>
+  }
+</div>

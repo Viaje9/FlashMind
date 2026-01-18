@@ -228,6 +228,210 @@ paths:
                   code: UNAUTHORIZED
                   message: 請先登入
 
+  # ============================================================
+  # Decks
+  # ============================================================
+  /decks:
+    get:
+      operationId: listDecks
+      tags:
+        - Decks
+      summary: 取得牌組列表
+      description: 取得目前使用者的所有牌組列表，包含學習統計資訊。
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeckListResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createDeck
+      tags:
+        - Decks
+      summary: 建立新牌組
+      description: 建立新牌組，成功後返回牌組資訊。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeckRequest"
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeckResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 請輸入牌組名稱
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /decks/{id}:
+    get:
+      operationId: getDeck
+      tags:
+        - Decks
+      summary: 取得牌組詳情
+      description: 取得指定牌組的詳細資訊，包含學習統計。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeckDetailResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: 無權限存取此牌組
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: DECK_NOT_FOUND
+                  message: 找不到此牌組
+
+    patch:
+      operationId: updateDeck
+      tags:
+        - Decks
+      summary: 更新牌組設定
+      description: 更新指定牌組的設定。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeckRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeckResponse"
+        "400":
+          description: 輸入資料格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限修改此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteDeck
+      tags:
+        - Decks
+      summary: 刪除牌組
+      description: 刪除指定牌組及其所有卡片和學習紀錄。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 刪除成功
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限刪除此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     cookieAuth:
@@ -354,3 +558,234 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/User"
+
+    # ============================================================
+    # Decks
+    # ============================================================
+    Deck:
+      type: object
+      description: 牌組資料
+      required:
+        - id
+        - name
+        - dailyNewCards
+        - dailyReviewCards
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: 牌組 ID（cuid）
+          example: clh1234567890abcdef
+        name:
+          type: string
+          description: 牌組名稱
+          maxLength: 100
+          example: 英文單字
+        dailyNewCards:
+          type: integer
+          description: 每日新卡數
+          minimum: 5
+          maximum: 100
+          default: 20
+          example: 20
+        dailyReviewCards:
+          type: integer
+          description: 每日複習數
+          minimum: 10
+          maximum: 500
+          default: 100
+          example: 100
+        createdAt:
+          type: string
+          format: date-time
+          description: 建立時間（ISO 8601 UTC）
+          example: "2026-01-17T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新時間（ISO 8601 UTC）
+          example: "2026-01-17T14:45:30Z"
+
+    DeckListItem:
+      type: object
+      description: 牌組列表項目（含學習統計）
+      required:
+        - id
+        - name
+        - newCount
+        - reviewCount
+        - totalCount
+        - completedCount
+        - progress
+      properties:
+        id:
+          type: string
+          description: 牌組 ID
+          example: clh1234567890abcdef
+        name:
+          type: string
+          description: 牌組名稱
+          example: 英文單字
+        newCount:
+          type: integer
+          description: 今日可學習新卡數
+          example: 10
+        reviewCount:
+          type: integer
+          description: 今日待複習數
+          example: 25
+        totalCount:
+          type: integer
+          description: 總卡片數
+          example: 100
+        completedCount:
+          type: integer
+          description: 已完成學習的卡片數
+          example: 65
+        progress:
+          type: number
+          format: float
+          description: 學習進度百分比（0-100）
+          minimum: 0
+          maximum: 100
+          example: 65.0
+
+    DeckDetail:
+      type: object
+      description: 牌組詳情（含學習統計）
+      required:
+        - id
+        - name
+        - dailyNewCards
+        - dailyReviewCards
+        - stats
+      properties:
+        id:
+          type: string
+          description: 牌組 ID
+          example: clh1234567890abcdef
+        name:
+          type: string
+          description: 牌組名稱
+          example: 英文單字
+        dailyNewCards:
+          type: integer
+          description: 每日新卡數
+          example: 20
+        dailyReviewCards:
+          type: integer
+          description: 每日複習數
+          example: 100
+        stats:
+          $ref: "#/components/schemas/DeckStats"
+
+    DeckStats:
+      type: object
+      description: 牌組學習統計
+      required:
+        - newCount
+        - reviewCount
+        - totalCount
+        - createdAt
+      properties:
+        newCount:
+          type: integer
+          description: 今日可學習新卡數
+          example: 10
+        reviewCount:
+          type: integer
+          description: 今日待複習數
+          example: 25
+        totalCount:
+          type: integer
+          description: 總卡片數
+          example: 100
+        createdAt:
+          type: string
+          format: date-time
+          description: 牌組建立時間
+          example: "2026-01-17T10:30:00Z"
+        lastStudiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 上次學習時間
+          example: "2026-01-17T14:45:30Z"
+
+    CreateDeckRequest:
+      type: object
+      description: 建立牌組請求
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: 牌組名稱（必填）
+          maxLength: 100
+          example: 英文單字
+        dailyNewCards:
+          type: integer
+          description: 每日新卡數（預設 20）
+          minimum: 5
+          maximum: 100
+          default: 20
+          example: 20
+        dailyReviewCards:
+          type: integer
+          description: 每日複習數（預設 100）
+          minimum: 10
+          maximum: 500
+          default: 100
+          example: 100
+
+    UpdateDeckRequest:
+      type: object
+      description: 更新牌組請求
+      properties:
+        name:
+          type: string
+          description: 牌組名稱
+          maxLength: 100
+          example: 英文單字
+        dailyNewCards:
+          type: integer
+          description: 每日新卡數
+          minimum: 5
+          maximum: 100
+          example: 20
+        dailyReviewCards:
+          type: integer
+          description: 每日複習數
+          minimum: 10
+          maximum: 500
+          example: 100
+
+    DeckResponse:
+      type: object
+      description: 牌組回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Deck"
+
+    DeckListResponse:
+      type: object
+      description: 牌組列表回應
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeckListItem"
+
+    DeckDetailResponse:
+      type: object
+      description: 牌組詳情回應
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/DeckDetail"
