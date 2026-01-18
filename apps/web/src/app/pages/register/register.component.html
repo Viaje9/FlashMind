@@ -56,5 +56,12 @@
   <ng-container footer>
     <fm-divider label="或使用其他方式註冊" [uppercase]="false" />
     <fm-social-login-row (googleClick)="loginWithGoogle()" />
+
+    <p class="text-center text-xs text-slate-400">
+      註冊即代表您同意我們的
+      <a class="underline underline-offset-2 hover:text-primary" href="#">服務條款</a>
+      與
+      <a class="underline underline-offset-2 hover:text-primary" href="#">隱私權政策</a>
+    </p>
   </ng-container>
 </fm-auth-page-layout>
