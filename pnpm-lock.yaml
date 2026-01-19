@@ -47,6 +47,9 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      ts-fsrs:
+        specifier: ^5.2.3
+        version: 5.2.3
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.2.0
@@ -7867,6 +7870,10 @@ packages:
     resolution: {integrity: sha512-q5W7tVM71e2xjHZTlgfTDoPF/SmqKG5hddq9SzR49CH2hayqRKJtQ4mtRlSxKaJlR/+9rEM+mnBHf7I2/BQcpQ==}
     engines: {node: '>=6.10'}
 
+  ts-fsrs@5.2.3:
+    resolution: {integrity: sha512-R3IjceC9WfnvUin6Nx+DwqEzh3Qil6Gg2yEHqvocUcC7Nbi+xDrFg/1fKaYBT0tJedDnDAguXMSX0hijhi859w==}
+    engines: {node: '>=18.0.0'}
+
   ts-jest@29.4.6:
     resolution: {integrity: sha512-fSpWtOO/1AjSNQguk43hb/JCo16oJDnMJf3CdEGNkqsEX3t0KX96xvyX1D7PfLCpVoKu4MfVrqUkFyblYoY4lA==}
     engines: {node: ^14.15.0 || ^16.10.0 || ^18.0.0 || >=20.0.0}
@@ -12505,7 +12512,7 @@ snapshots:
 
   '@types/bonjour@3.5.13':
     dependencies:
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/chai@5.2.3':
     dependencies:
@@ -12515,7 +12522,7 @@ snapshots:
   '@types/connect-history-api-fallback@1.5.4':
     dependencies:
       '@types/express-serve-static-core': 5.1.0
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/connect@3.4.38':
     dependencies:
@@ -12547,7 +12554,7 @@ snapshots:
 
   '@types/express-serve-static-core@4.19.7':
     dependencies:
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
       '@types/qs': 6.14.0
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -12586,7 +12593,7 @@ snapshots:
 
   '@types/http-proxy@1.17.17':
     dependencies:
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
@@ -12623,7 +12630,7 @@ snapshots:
 
   '@types/node-forge@1.3.14':
     dependencies:
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/node@22.19.3':
     dependencies:
@@ -12650,7 +12657,7 @@ snapshots:
   '@types/send@0.17.6':
     dependencies:
       '@types/mime': 1.3.5
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/send@1.2.1':
     dependencies:
@@ -12663,7 +12670,7 @@ snapshots:
   '@types/serve-static@1.15.10':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
       '@types/send': 0.17.6
 
   '@types/serve-static@2.2.0':
@@ -12673,7 +12680,7 @@ snapshots:
 
   '@types/sockjs@0.3.36':
     dependencies:
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/stack-utils@2.0.3': {}
 
@@ -12695,7 +12702,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 24.10.4
+      '@types/node': 25.0.9
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -18193,6 +18200,8 @@ snapshots:
       typescript: 5.9.3
 
   ts-dedent@2.2.0: {}
+
+  ts-fsrs@5.2.3: {}
 
   ts-jest@29.4.6(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.3)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.9.3)))(typescript@5.9.3):
     dependencies:

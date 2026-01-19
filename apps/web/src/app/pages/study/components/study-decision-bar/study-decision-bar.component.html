@@ -1,10 +1,12 @@
 <div class="flex items-center justify-between w-full">
   @if (layout() === 'inline') {
+    <!-- Unknown (left) -->
     <button
       type="button"
-      [class]="unknownWrapperClass()"
+      [class]="wrapperClass()"
       [disabled]="disabled()"
       [attr.aria-label]="unknownLabel()"
+      data-testid="study-unknown-btn"
       (click)="unknownClick.emit()"
     >
       <div [class]="unknownButtonClass()">
@@ -12,11 +14,29 @@
       </div>
       <span [class]="unknownLabelClass()">{{ unknownLabel() }}</span>
     </button>
+
+    <!-- Unfamiliar (center) -->
     <button
       type="button"
-      [class]="knownWrapperClass()"
+      [class]="wrapperClass()"
+      [disabled]="disabled()"
+      [attr.aria-label]="unfamiliarLabel()"
+      data-testid="study-unfamiliar-btn"
+      (click)="unfamiliarClick.emit()"
+    >
+      <div [class]="unfamiliarButtonClass()">
+        <span class="material-symbols-outlined text-warning text-[20px]">expand_less</span>
+      </div>
+      <span [class]="unfamiliarLabelClass()">{{ unfamiliarLabel() }}</span>
+    </button>
+
+    <!-- Known (right) -->
+    <button
+      type="button"
+      [class]="wrapperClass()"
       [disabled]="disabled()"
       [attr.aria-label]="knownLabel()"
+      data-testid="study-known-btn"
       (click)="knownClick.emit()"
     >
       <span [class]="knownLabelClass()">{{ knownLabel() }}</span>
@@ -25,11 +45,13 @@
       </div>
     </button>
   } @else {
+    <!-- Stacked layout -->
     <button
       type="button"
-      [class]="unknownWrapperClass()"
+      [class]="wrapperClass()"
       [disabled]="disabled()"
       [attr.aria-label]="unknownLabel()"
+      data-testid="study-unknown-btn"
       (click)="unknownClick.emit()"
     >
       <div [class]="unknownButtonClass()">
@@ -37,11 +59,27 @@
       </div>
       <span [class]="unknownLabelClass()">{{ unknownLabel() }}</span>
     </button>
+
     <button
       type="button"
-      [class]="knownWrapperClass()"
+      [class]="wrapperClass()"
+      [disabled]="disabled()"
+      [attr.aria-label]="unfamiliarLabel()"
+      data-testid="study-unfamiliar-btn"
+      (click)="unfamiliarClick.emit()"
+    >
+      <div [class]="unfamiliarButtonClass()">
+        <span class="material-symbols-outlined text-warning text-[26px]">expand_less</span>
+      </div>
+      <span [class]="unfamiliarLabelClass()">{{ unfamiliarLabel() }}</span>
+    </button>
+
+    <button
+      type="button"
+      [class]="wrapperClass()"
       [disabled]="disabled()"
       [attr.aria-label]="knownLabel()"
+      data-testid="study-known-btn"
       (click)="knownClick.emit()"
     >
       <div [class]="knownButtonClass()">

@@ -803,6 +803,147 @@ paths:
                   message: AI 服務暫時無法使用，請稍後再試
 
   # ============================================================
+  # Study
+  # ============================================================
+  /decks/{deckId}/study/cards:
+    get:
+      operationId: getStudyCards
+      tags:
+        - Study
+      summary: 取得今日學習卡片
+      description: 取得指定牌組的今日學習卡片，包含待複習卡片和新卡片。待複習卡片優先，按 due 升序排列。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyCardsResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /decks/{deckId}/study/review:
+    post:
+      operationId: submitReview
+      tags:
+        - Study
+      summary: 提交學習評分
+      description: 對卡片提交學習評分，更新 FSRS 排程。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitReviewRequest"
+      responses:
+        "200":
+          description: 評分成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewResultResponse"
+        "400":
+          description: 輸入資料格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組或卡片不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /decks/{deckId}/study/summary:
+    get:
+      operationId: getStudySummary
+      tags:
+        - Study
+      summary: 取得學習統計摘要
+      description: 取得指定牌組的學習統計摘要。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySummaryResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ============================================================
   # TTS
   # ============================================================
   /tts/synthesize:
@@ -1569,6 +1710,147 @@ components:
               description: 生成的詞義列表
               items:
                 $ref: "#/components/schemas/GeneratedMeaning"
+
+    # ============================================================
+    # Study
+    # ============================================================
+    StudyCard:
+      type: object
+      description: 學習用卡片資料
+      required:
+        - id
+        - front
+        - meanings
+        - state
+        - isNew
+      properties:
+        id:
+          type: string
+          description: 卡片 ID
+          example: clh1234567890card
+        front:
+          type: string
+          description: 正面內容（單字/片語）
+          example: Hello
+        meanings:
+          type: array
+          description: 詞義列表
+          items:
+            $ref: "#/components/schemas/CardMeaning"
+        state:
+          type: string
+          enum: [NEW, LEARNING, REVIEW, RELEARNING]
+          description: 卡片狀態
+          example: NEW
+        isNew:
+          type: boolean
+          description: 是否為新卡
+          example: true
+
+    StudyCardsResponse:
+      type: object
+      description: 學習卡片列表回應
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudyCard"
+
+    SubmitReviewRequest:
+      type: object
+      description: 提交學習評分請求
+      required:
+        - cardId
+        - rating
+      properties:
+        cardId:
+          type: string
+          description: 卡片 ID
+          example: clh1234567890card
+        rating:
+          type: string
+          enum: [known, unfamiliar, unknown]
+          description: |
+            評分
+            - known: 知道（右滑）
+            - unfamiliar: 不熟（上滑）
+            - unknown: 不知道（左滑）
+          example: known
+
+    ReviewResult:
+      type: object
+      description: 評分結果
+      required:
+        - cardId
+        - rating
+        - nextDue
+        - newState
+      properties:
+        cardId:
+          type: string
+          description: 卡片 ID
+          example: clh1234567890card
+        rating:
+          type: string
+          enum: [known, unfamiliar, unknown]
+          description: 使用者評分
+          example: known
+        nextDue:
+          type: string
+          format: date-time
+          description: 下次複習時間
+          example: "2026-01-20T10:00:00Z"
+        newState:
+          type: string
+          enum: [NEW, LEARNING, REVIEW, RELEARNING]
+          description: 評分後的卡片狀態
+          example: LEARNING
+
+    ReviewResultResponse:
+      type: object
+      description: 評分結果回應
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ReviewResult"
+
+    StudySummary:
+      type: object
+      description: 學習統計摘要
+      required:
+        - totalCards
+        - newCount
+        - reviewCount
+        - todayStudied
+      properties:
+        totalCards:
+          type: integer
+          description: 總卡片數
+          example: 100
+        newCount:
+          type: integer
+          description: 新卡數
+          example: 30
+        reviewCount:
+          type: integer
+          description: 待複習數
+          example: 15
+        todayStudied:
+          type: integer
+          description: 今日已學習數
+          example: 10
+
+    StudySummaryResponse:
+      type: object
+      description: 學習統計摘要回應
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/StudySummary"
 
     # ============================================================
     # TTS

@@ -1,0 +1,47 @@
+<div class="swipeable-card-container">
+  <!-- 滑動指示器 -->
+  @if (currentDirection() === 'right') {
+    <div
+      class="swipe-indicator indicator-right"
+      [style.opacity]="indicatorOpacity()"
+    >
+      <span class="material-symbols-outlined text-4xl">check</span>
+      <span class="indicator-label">知道</span>
+    </div>
+  }
+
+  @if (currentDirection() === 'left') {
+    <div
+      class="swipe-indicator indicator-left"
+      [style.opacity]="indicatorOpacity()"
+    >
+      <span class="material-symbols-outlined text-4xl">close</span>
+      <span class="indicator-label">不知道</span>
+    </div>
+  }
+
+  @if (currentDirection() === 'up') {
+    <div
+      class="swipe-indicator indicator-up"
+      [style.opacity]="indicatorOpacity()"
+    >
+      <span class="material-symbols-outlined text-4xl">help</span>
+      <span class="indicator-label">不熟</span>
+    </div>
+  }
+
+  <!-- 可滑動卡片 -->
+  <div
+    #cardElement
+    class="swipeable-card"
+    [class.is-animating]="isAnimating()"
+    [class.is-flying-out]="isFlyingOut()"
+    [style.transform]="cardTransform()"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerCancel($event)"
+  >
+    <ng-content></ng-content>
+  </div>
+</div>

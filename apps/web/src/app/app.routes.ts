@@ -80,7 +80,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'study',
+    path: 'decks/:deckId/study',
     loadComponent: () =>
       import('./pages/study/study.component').then((module) => module.StudyComponent),
     canActivate: [authGuard],

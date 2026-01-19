@@ -8,6 +8,7 @@ import { DeckModule } from './modules/deck/deck.module';
 import { CardModule } from './modules/card/card.module';
 import { AiModule } from './modules/ai/ai.module';
 import { TtsModule } from './modules/tts/tts.module';
+import { StudyModule } from './modules/study/study.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TtsModule } from './modules/tts/tts.module';
     CardModule,
     AiModule,
     TtsModule,
+    StudyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

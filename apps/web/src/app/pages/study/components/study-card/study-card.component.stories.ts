@@ -19,14 +19,13 @@ const meta: Meta<FmStudyCardComponent> = {
         translation: '喂？有人在嗎？'
       }
     ],
-    showStack: true,
     showActions: true
   },
   render: (args) => ({
     props: args,
     template:
-      '<div class="bg-background-light dark:bg-background-dark p-4 max-w-md min-h-[640px]">'
-      + '<fm-study-card [word]="word" [translations]="translations" [examples]="examples" [showStack]="showStack" [showActions]="showActions"></fm-study-card>'
+      '<div class="bg-background-light dark:bg-background-dark p-4 max-w-md">'
+      + '<fm-study-card [word]="word" [translations]="translations" [examples]="examples" [showActions]="showActions"></fm-study-card>'
       + '</div>'
   })
 };

@@ -1,0 +1,78 @@
+.swipeable-card-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+}
+
+.swipeable-card {
+  position: relative;
+  width: 100%;
+  will-change: transform;
+  cursor: grab;
+}
+
+.swipeable-card:active {
+  cursor: grabbing;
+}
+
+.swipeable-card.is-animating {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.swipeable-card.is-flying-out {
+  pointer-events: none;
+}
+
+/* 滑動指示器 */
+.swipe-indicator {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  font-weight: bold;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.1s ease-out;
+}
+
+.indicator-label {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* 右滑指示器 - 知道 (綠色) - 放在卡片左側 */
+.indicator-right {
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  background-color: rgba(34, 197, 94, 0.95);
+  color: white;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+}
+
+/* 左滑指示器 - 不知道 (紅色) - 放在卡片右側 */
+.indicator-left {
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  background-color: rgba(239, 68, 68, 0.95);
+  color: white;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
+}
+
+/* 上滑指示器 - 不熟 (黃色) - 放在卡片底部 */
+.indicator-up {
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(245, 158, 11, 0.95);
+  color: white;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+}

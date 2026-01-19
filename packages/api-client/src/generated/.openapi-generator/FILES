@@ -7,6 +7,7 @@ api/api.ts
 api/auth.service.ts
 api/cards.service.ts
 api/decks.service.ts
+api/study.service.ts
 api/tTS.service.ts
 configuration.ts
 encoder.ts
@@ -41,6 +42,13 @@ model/loginRequest.ts
 model/models.ts
 model/paginationMeta.ts
 model/registerRequest.ts
+model/reviewResult.ts
+model/reviewResultResponse.ts
+model/studyCard.ts
+model/studyCardsResponse.ts
+model/studySummary.ts
+model/studySummaryResponse.ts
+model/submitReviewRequest.ts
 model/synthesizeSpeechRequest.ts
 model/synthesizeWordRequest.ts
 model/updateCardMeaningRequest.ts

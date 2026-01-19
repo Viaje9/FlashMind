@@ -16,7 +16,6 @@ export class FmStudyCardComponent {
   readonly word = input('');
   readonly translations = input<string[]>([]);
   readonly examples = input<StudyExample[]>([]);
-  readonly showStack = input(true);
   readonly showActions = input(true);
 
   readonly bookmarkClick = output<void>();
@@ -25,6 +24,7 @@ export class FmStudyCardComponent {
 
   readonly hasExamples = computed(() => this.examples().length > 0);
   readonly hasTranslations = computed(() => this.translations().length > 0);
+  readonly translationText = computed(() => this.translations().join('；'));
 
   onExampleAudioClick(index: number) {
     this.exampleAudioClick.emit(index);

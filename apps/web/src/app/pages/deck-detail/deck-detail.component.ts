@@ -91,7 +91,11 @@ export class DeckDetailComponent implements OnInit {
   }
 
   onStartStudy() {
-    void this.router.navigate(['/study']);
+    const d = this.deck();
+    if (!d) return;
+    void this.router.navigate(['/decks', this.deckId(), 'study'], {
+      queryParams: { name: d.name }
+    });
   }
 
   onEditCard(cardId: string) {

@@ -1,22 +1,115 @@
 <div class="min-h-screen flex flex-col">
-  <fm-page-header title="基礎單字" subtitle="日常對話" layout="center" [sticky]="false">
-    <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回" routerLink="/decks">
+  <fm-page-header [title]="deckName()" layout="center" [sticky]="false">
+    <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回" (click)="onBackToDeck()">
       <span class="material-symbols-outlined text-[22px]">arrow_back_ios_new</span>
     </fm-icon-button>
-    <fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="更多">
-      <span class="material-symbols-outlined text-[22px]">more_vert</span>
-    </fm-icon-button>
+    @if (canUndo()) {
+      <fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="返回上一張" (click)="onUndo()">
+        <span class="material-symbols-outlined text-[22px]">undo</span>
+      </fm-icon-button>
+    }
   </fm-page-header>
 
-  <div class="mx-auto w-full max-w-md">
-    <fm-study-progress [current]="12" [total]="50"></fm-study-progress>
-  </div>
+  @if (isLoading()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <span class="material-symbols-outlined text-4xl animate-spin text-primary">progress_activity</span>
+        <p class="mt-4 text-base-content/60">載入學習卡片中...</p>
+      </div>
+    </div>
+  } @else if (hasError()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <span class="material-symbols-outlined text-4xl text-error">error</span>
+        <p class="mt-4 text-error">{{ studyStore.error() }}</p>
+        <button class="btn btn-primary mt-4" (click)="onBackToDeck()">返回牌組</button>
+      </div>
+    </div>
+  } @else if (isCompleted()) {
+    <div class="flex-1 flex items-center justify-center px-4">
+      <div class="text-center w-full max-w-sm">
+        <span class="material-symbols-outlined text-6xl text-primary">celebration</span>
+        <h2 class="text-2xl font-bold mt-4">學習完成！</h2>
+        <div class="stats stats-vertical shadow mt-6 w-full">
+          <div class="stat">
+            <div class="stat-title">總學習</div>
+            <div class="stat-value text-primary">{{ stats().totalStudied }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-figure text-success">
+              <span class="material-symbols-outlined text-3xl">check_circle</span>
+            </div>
+            <div class="stat-title">知道</div>
+            <div class="stat-value text-success">{{ stats().knownCount }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-figure text-warning">
+              <span class="material-symbols-outlined text-3xl">help</span>
+            </div>
+            <div class="stat-title">不熟</div>
+            <div class="stat-value text-warning">{{ stats().unfamiliarCount }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-figure text-error">
+              <span class="material-symbols-outlined text-3xl">cancel</span>
+            </div>
+            <div class="stat-title">不知道</div>
+            <div class="stat-value text-error">{{ stats().unknownCount }}</div>
+          </div>
+        </div>
+        <div class="flex gap-4 mt-6">
+          <button class="btn btn-outline flex-1" (click)="onBackToDeck()">返回牌組</button>
+          <button class="btn btn-primary flex-1" (click)="onStudyAgain()">再學一次</button>
+        </div>
+      </div>
+    </div>
+  } @else if (isStudying()) {
+    <div class="mx-auto w-full max-w-md">
+      <fm-study-progress [current]="progress().current" [total]="progress().total"></fm-study-progress>
+    </div>
 
-  <main class="mx-auto w-full max-w-md flex-1 flex items-center justify-center px-4 pb-6">
-    <fm-study-card [word]="word" [translations]="translations" [examples]="examples"></fm-study-card>
-  </main>
+    <main
+      class="mx-auto w-full max-w-md flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden"
+      data-testid="study-card-container"
+    >
+      @if (currentCard(); as card) {
+        <fm-swipeable-card
+          (swipeStart)="onSwipeStart()"
+          (swipeComplete)="onSwipeComplete($event)"
+        >
+          @if (isFlipped()) {
+            <fm-study-card
+              [word]="word()"
+              [translations]="translations()"
+              [examples]="examples()"
+              (audioClick)="onAudioClick()"
+              (exampleAudioClick)="onExampleAudioClick($event)"
+            ></fm-study-card>
+          } @else {
+            <!-- 正面：只顯示單字 -->
+            <div
+              class="card bg-base-100 shadow-xl w-full cursor-pointer"
+              (click)="onCardClick()"
+            >
+              <div class="card-body items-center text-center py-16">
+                <h2 class="card-title text-4xl font-bold">{{ word() }}</h2>
+                <p class="text-base-content/60 mt-4">點擊或滑動查看答案</p>
+              </div>
+            </div>
+          }
+        </fm-swipeable-card>
+      }
+    </main>
 
-  <div class="mx-auto w-full max-w-md px-6 pb-6">
-    <fm-study-decision-bar layout="inline"></fm-study-decision-bar>
-  </div>
+    @if (showDecisionBar()) {
+      <div class="mx-auto w-full max-w-md px-6 pb-6">
+        <fm-study-decision-bar
+          layout="inline"
+          (unknownClick)="onRating('unknown')"
+          (unfamiliarClick)="onRating('unfamiliar')"
+          (knownClick)="onRating('known')"
+        ></fm-study-decision-bar>
+      </div>
+    }
+  }
 </div>
