@@ -3,6 +3,8 @@
     "allow": [
       "Bash(openspec list:*)",
       "Bash(openspec show:*)",
+      "Bash(openspec archive:*)",
+      "Bash(openspec validate:*)",
       "mcp__playwright-test__browser_click",
       "mcp__playwright-test__browser_type",
       "mcp__playwright-test__browser_navigate",
