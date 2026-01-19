@@ -33,6 +33,10 @@ model/generateCardContentRequest.ts
 model/generateCardContentResponse.ts
 model/generateCardContentResponseData.ts
 model/generatedMeaning.ts
+model/importCardError.ts
+model/importCardsRequest.ts
+model/importCardsResponse.ts
+model/importCardsResult.ts
 model/loginRequest.ts
 model/models.ts
 model/paginationMeta.ts

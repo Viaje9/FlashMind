@@ -3,6 +3,9 @@
     <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回" routerLink="/decks" testId="deck-detail-back">
       <span class="material-symbols-outlined text-[22px]">arrow_back</span>
     </fm-icon-button>
+    <fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="匯入" [routerLink]="['/decks', deckId(), 'cards', 'import']" testId="deck-detail-import">
+      <span class="material-symbols-outlined text-[22px]">upload</span>
+    </fm-icon-button>
     <fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="設定" [routerLink]="['/decks', deckId(), 'settings']" testId="deck-detail-settings">
       <span class="material-symbols-outlined text-[22px]">settings</span>
     </fm-icon-button>

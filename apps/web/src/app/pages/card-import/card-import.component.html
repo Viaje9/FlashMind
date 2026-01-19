@@ -1,0 +1,197 @@
+<div class="min-h-screen pb-24">
+  <fm-page-header title="匯入卡片" layout="center">
+    <fm-icon-button
+      class="fm-header-left"
+      variant="ghost"
+      ariaLabel="返回"
+      [routerLink]="['/decks', deckId()]"
+      testId="card-import-back"
+    >
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md px-4 pt-4 space-y-4">
+    <!-- 輸入階段 -->
+    @if (currentStep() === 'input') {
+      <div class="space-y-4">
+        <div class="text-sm text-secondary-text">
+          <p>請貼上 JSON 格式的卡片資料，或選擇 .json 檔案上傳。</p>
+        </div>
+
+        <!-- JSON 範例 -->
+        <div class="rounded-lg bg-surface-dark/50 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-secondary-text">JSON 格式範例</span>
+            <button
+              type="button"
+              class="text-xs text-primary hover:text-primary-dark"
+              (click)="copyExample()"
+              data-testid="card-import-copy-example"
+            >
+              複製範例
+            </button>
+          </div>
+          <pre class="text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap">{{ exampleJson }}</pre>
+        </div>
+
+        <!-- JSON 輸入區塊 -->
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-white">貼上 JSON</label>
+          <textarea
+            class="w-full h-48 px-3 py-2 rounded-lg bg-card-dark border border-slate-600 text-white placeholder-secondary-text focus:outline-none focus:border-primary resize-none font-mono text-sm"
+            placeholder="在此貼上 JSON..."
+            [value]="jsonInput()"
+            (input)="onJsonInputChange($event)"
+            data-testid="card-import-json-input"
+          ></textarea>
+        </div>
+
+        <!-- 檔案上傳 -->
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-secondary-text">或</span>
+          <label
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-dark text-white text-sm cursor-pointer hover:bg-slate-700 transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">upload_file</span>
+            選擇檔案
+            <input
+              type="file"
+              accept=".json"
+              class="hidden"
+              (change)="onFileSelect($event)"
+              data-testid="card-import-file-input"
+            />
+          </label>
+        </div>
+
+        <!-- 錯誤訊息 -->
+        @if (parseError()) {
+          <div
+            class="flex items-center gap-2 p-3 rounded-lg bg-red-900/30 text-red-400 text-sm"
+            data-testid="card-import-parse-error"
+          >
+            <span class="material-symbols-outlined text-[18px]">error</span>
+            {{ parseError() }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- 預覽階段 -->
+    @if (currentStep() === 'preview') {
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-secondary-text">
+            共 {{ parsedCards().length }} 張卡片
+            @if (invalidCards().length > 0) {
+              （{{ invalidCards().length }} 張有問題）
+            }
+          </span>
+          <button
+            type="button"
+            class="text-sm text-primary hover:text-primary-dark"
+            (click)="onBackToInput()"
+            data-testid="card-import-back-to-input"
+          >
+            重新輸入
+          </button>
+        </div>
+
+        <!-- 卡片預覽列表 -->
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+          @for (card of parsedCards(); track $index; let i = $index) {
+            <div
+              class="p-3 rounded-lg"
+              [class]="card.error ? 'bg-red-900/20 border border-red-800' : 'bg-card-dark'"
+              [attr.data-testid]="'card-import-preview-' + i"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-white truncate">{{ card.front }}</div>
+                  @if (card.meanings.length > 0 && card.meanings[0].zhMeaning) {
+                    <div class="text-sm text-secondary-text truncate">
+                      {{ card.meanings[0].zhMeaning }}
+                    </div>
+                  }
+                </div>
+                @if (card.error) {
+                  <div class="flex items-center gap-1 text-xs text-red-400 shrink-0">
+                    <span class="material-symbols-outlined text-[16px]">warning</span>
+                    {{ card.error }}
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- 確認匯入按鈕 -->
+        <div class="pt-4">
+          <fm-button
+            variant="primary"
+            class="w-full"
+            [disabled]="!canImport()"
+            (click)="onConfirmImport()"
+            testId="card-import-confirm"
+          >
+            @if (isImporting()) {
+              匯入中...
+            } @else {
+              確認匯入 {{ validCards().length }} 張卡片
+            }
+          </fm-button>
+        </div>
+      </div>
+    }
+
+    <!-- 結果階段 -->
+    @if (currentStep() === 'result') {
+      @if (importResult(); as result) {
+        <div class="space-y-6">
+          <!-- 結果摘要 -->
+          <div class="text-center py-8">
+            @if (result.failed === 0) {
+              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-green-900/30 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[32px] text-green-400">check_circle</span>
+              </div>
+              <h2 class="text-xl font-bold text-white mb-2">匯入完成</h2>
+            } @else {
+              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-900/30 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[32px] text-yellow-400">warning</span>
+              </div>
+              <h2 class="text-xl font-bold text-white mb-2">匯入完成（部分失敗）</h2>
+            }
+            <p class="text-secondary-text" data-testid="card-import-result-summary">
+              成功 {{ result.success }} 張，失敗 {{ result.failed }} 張
+            </p>
+          </div>
+
+          <!-- 錯誤詳情 -->
+          @if (result.errors.length > 0) {
+            <div class="space-y-2">
+              <h3 class="text-sm font-medium text-white">失敗原因</h3>
+              <div class="space-y-1">
+                @for (error of result.errors; track error.index) {
+                  <div class="flex items-center gap-2 text-sm text-red-400">
+                    <span>卡片 {{ error.index + 1 }}：{{ error.message }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- 返回按鈕 -->
+          <fm-button
+            variant="primary"
+            class="w-full"
+            (click)="onBackToDeck()"
+            testId="card-import-back-to-deck"
+          >
+            返回牌組
+          </fm-button>
+        </div>
+      }
+    }
+  </main>
+</div>

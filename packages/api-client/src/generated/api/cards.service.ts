@@ -25,6 +25,10 @@ import { CreateCardRequest } from '../model/createCardRequest';
 // @ts-ignore
 import { ErrorResponse } from '../model/errorResponse';
 // @ts-ignore
+import { ImportCardsRequest } from '../model/importCardsRequest';
+// @ts-ignore
+import { ImportCardsResponse } from '../model/importCardsResponse';
+// @ts-ignore
 import { UpdateCardRequest } from '../model/updateCardRequest';
 
 // @ts-ignore
@@ -232,6 +236,79 @@ export class CardsService extends BaseService {
         return this.httpClient.request<CardResponse>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * 批次匯入卡片
+     * 透過 JSON 格式批次匯入卡片至指定牌組。支援部分成功模式，回傳每張卡片的匯入結果。
+     * @endpoint post /decks/{deckId}/cards/import
+     * @param deckId 牌組 ID
+     * @param importCardsRequest 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public importCards(deckId: string, importCardsRequest: ImportCardsRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<ImportCardsResponse>;
+    public importCards(deckId: string, importCardsRequest: ImportCardsRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<ImportCardsResponse>>;
+    public importCards(deckId: string, importCardsRequest: ImportCardsRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<ImportCardsResponse>>;
+    public importCards(deckId: string, importCardsRequest: ImportCardsRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (deckId === null || deckId === undefined) {
+            throw new Error('Required parameter deckId was null or undefined when calling importCards.');
+        }
+        if (importCardsRequest === null || importCardsRequest === undefined) {
+            throw new Error('Required parameter importCardsRequest was null or undefined when calling importCards.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (cookieAuth) required
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/decks/${this.configuration.encodeParam({name: "deckId", value: deckId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined})}/cards/import`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<ImportCardsResponse>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: importCardsRequest,
                 responseType: <any>responseType_,
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,

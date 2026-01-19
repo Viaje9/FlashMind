@@ -12,7 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { CardService } from './card.service';
-import { CreateCardDto, UpdateCardDto } from './dto';
+import { CreateCardDto, UpdateCardDto, ImportCardsDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 
@@ -38,6 +38,17 @@ export class CardController {
     @Body() dto: CreateCardDto,
   ) {
     return this.cardService.create(deckId, req.user.id, dto);
+  }
+
+  @Post('import')
+  @HttpCode(HttpStatus.CREATED)
+  async importCards(
+    @Req() req: AuthenticatedRequest,
+    @Param('deckId') deckId: string,
+    @Body() dto: ImportCardsDto,
+  ) {
+    const result = await this.cardService.importCards(deckId, req.user.id, dto);
+    return { data: result };
   }
 
   @Get(':cardId')

@@ -4,7 +4,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateCardDto, UpdateCardDto } from './dto';
+import {
+  CreateCardDto,
+  UpdateCardDto,
+  ImportCardsDto,
+  ImportCardsResult,
+  ImportCardError,
+} from './dto';
 
 export interface CardListItem {
   id: string;
@@ -232,5 +238,72 @@ export class CardService {
     await this.prisma.card.delete({
       where: { id: cardId },
     });
+  }
+
+  async importCards(
+    deckId: string,
+    userId: string,
+    dto: ImportCardsDto,
+  ): Promise<ImportCardsResult> {
+    await this.validateDeckAccess(deckId, userId);
+
+    const errors: ImportCardError[] = [];
+    let successCount = 0;
+
+    for (let i = 0; i < dto.cards.length; i++) {
+      const cardData = dto.cards[i];
+
+      // 驗證每張卡片的必填欄位
+      if (!cardData.front || cardData.front.trim() === '') {
+        errors.push({ index: i, message: 'front 欄位為必填' });
+        continue;
+      }
+
+      if (
+        !cardData.meanings ||
+        !Array.isArray(cardData.meanings) ||
+        cardData.meanings.length === 0
+      ) {
+        errors.push({ index: i, message: 'meanings 欄位須為非空陣列' });
+        continue;
+      }
+
+      const hasValidMeaning = cardData.meanings.some(
+        (m) => m.zhMeaning && m.zhMeaning.trim() !== '',
+      );
+      if (!hasValidMeaning) {
+        errors.push({ index: i, message: '至少需要一筆有效的 zhMeaning' });
+        continue;
+      }
+
+      try {
+        await this.prisma.card.create({
+          data: {
+            front: cardData.front.trim(),
+            deckId,
+            meanings: {
+              create: cardData.meanings
+                .filter((m) => m.zhMeaning && m.zhMeaning.trim() !== '')
+                .map((m, idx) => ({
+                  zhMeaning: m.zhMeaning.trim(),
+                  enExample: m.enExample?.trim() || null,
+                  zhExample: m.zhExample?.trim() || null,
+                  sortOrder: idx,
+                })),
+            },
+          },
+        });
+        successCount++;
+      } catch {
+        errors.push({ index: i, message: '卡片建立失敗' });
+      }
+    }
+
+    return {
+      total: dto.cards.length,
+      success: successCount,
+      failed: dto.cards.length - successCount,
+      errors,
+    };
   }
 }

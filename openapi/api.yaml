@@ -688,6 +688,64 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /decks/{deckId}/cards/import:
+    post:
+      operationId: importCards
+      tags:
+        - Cards
+      summary: 批次匯入卡片
+      description: 透過 JSON 格式批次匯入卡片至指定牌組。支援部分成功模式，回傳每張卡片的匯入結果。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportCardsRequest"
+      responses:
+        "201":
+          description: 匯入完成（可能部分成功）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportCardsResponse"
+        "400":
+          description: 輸入資料格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: cards 欄位為必填且須為陣列
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # ============================================================
   # AI
   # ============================================================
@@ -1337,6 +1395,71 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CardListItem"
+
+    ImportCardsRequest:
+      type: object
+      description: 批次匯入卡片請求
+      required:
+        - cards
+      properties:
+        cards:
+          type: array
+          description: 要匯入的卡片列表
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CreateCardRequest"
+
+    ImportCardError:
+      type: object
+      description: 單張卡片匯入錯誤
+      required:
+        - index
+        - message
+      properties:
+        index:
+          type: integer
+          description: 錯誤卡片在陣列中的索引（從 0 開始）
+          example: 3
+        message:
+          type: string
+          description: 錯誤訊息
+          example: front 欄位為必填
+
+    ImportCardsResult:
+      type: object
+      description: 批次匯入結果
+      required:
+        - total
+        - success
+        - failed
+        - errors
+      properties:
+        total:
+          type: integer
+          description: 匯入卡片總數
+          example: 10
+        success:
+          type: integer
+          description: 成功匯入數量
+          example: 9
+        failed:
+          type: integer
+          description: 失敗數量
+          example: 1
+        errors:
+          type: array
+          description: 錯誤詳情列表
+          items:
+            $ref: "#/components/schemas/ImportCardError"
+
+    ImportCardsResponse:
+      type: object
+      description: 批次匯入卡片回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ImportCardsResult"
 
     # ============================================================
     # AI

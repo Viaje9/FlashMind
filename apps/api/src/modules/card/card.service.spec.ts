@@ -393,4 +393,136 @@ describe('CardService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('importCards', () => {
+    const validImportDto = {
+      cards: [
+        {
+          front: 'hello',
+          meanings: [
+            { zhMeaning: '你好', enExample: 'Hello!', zhExample: '你好！' },
+          ],
+        },
+        {
+          front: 'world',
+          meanings: [{ zhMeaning: '世界' }],
+        },
+      ],
+    };
+
+    it('應該成功匯入所有有效卡片', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.create.mockResolvedValue(mockCard);
+
+      const result = await service.importCards(
+        mockDeckId,
+        mockUserId,
+        validImportDto,
+      );
+
+      expect(result.total).toBe(2);
+      expect(result.success).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.errors).toHaveLength(0);
+      expect(prisma.card.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('缺少 front 欄位時應該記錄錯誤', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.create.mockResolvedValue(mockCard);
+
+      const result = await service.importCards(mockDeckId, mockUserId, {
+        cards: [
+          { front: '', meanings: [{ zhMeaning: '你好' }] },
+          { front: 'hello', meanings: [{ zhMeaning: '你好' }] },
+        ],
+      });
+
+      expect(result.total).toBe(2);
+      expect(result.success).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toEqual({
+        index: 0,
+        message: 'front 欄位為必填',
+      });
+    });
+
+    it('缺少 meanings 欄位時應該記錄錯誤', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.create.mockResolvedValue(mockCard);
+
+      const result = await service.importCards(mockDeckId, mockUserId, {
+        cards: [
+          { front: 'hello', meanings: [] },
+          { front: 'world', meanings: [{ zhMeaning: '世界' }] },
+        ],
+      });
+
+      expect(result.total).toBe(2);
+      expect(result.success).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors[0]).toEqual({
+        index: 0,
+        message: 'meanings 欄位須為非空陣列',
+      });
+    });
+
+    it('meanings 中沒有有效的 zhMeaning 時應該記錄錯誤', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.create.mockResolvedValue(mockCard);
+
+      const result = await service.importCards(mockDeckId, mockUserId, {
+        cards: [
+          { front: 'hello', meanings: [{ zhMeaning: '' }] },
+          { front: 'world', meanings: [{ zhMeaning: '世界' }] },
+        ],
+      });
+
+      expect(result.total).toBe(2);
+      expect(result.success).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors[0]).toEqual({
+        index: 0,
+        message: '至少需要一筆有效的 zhMeaning',
+      });
+    });
+
+    it('部分卡片匯入失敗時應該繼續處理其他卡片', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.create
+        .mockRejectedValueOnce(new Error('DB Error'))
+        .mockResolvedValueOnce(mockCard);
+
+      const result = await service.importCards(
+        mockDeckId,
+        mockUserId,
+        validImportDto,
+      );
+
+      expect(result.total).toBe(2);
+      expect(result.success).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors[0]).toEqual({
+        index: 0,
+        message: '卡片建立失敗',
+      });
+    });
+
+    it('牌組不存在時應該拋出 NotFoundException', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.importCards('nonexistent', mockUserId, validImportDto),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('使用者無權限時應該拋出 ForbiddenException', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+
+      await expect(
+        service.importCards(mockDeckId, 'other-user', validImportDto),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
 });
