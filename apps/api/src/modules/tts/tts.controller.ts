@@ -1,0 +1,26 @@
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  StreamableFile,
+  Header,
+} from '@nestjs/common';
+import { TtsService } from './tts.service';
+import { SynthesizeSpeechDto } from './dto';
+import { AuthGuard } from '../auth/auth.guard';
+
+@Controller('tts')
+@UseGuards(AuthGuard)
+export class TtsController {
+  constructor(private readonly ttsService: TtsService) {}
+
+  @Post('synthesize')
+  @Header('Content-Type', 'audio/mpeg')
+  async synthesizeSpeech(
+    @Body() dto: SynthesizeSpeechDto,
+  ): Promise<StreamableFile> {
+    const audioBuffer = await this.ttsService.synthesize(dto.text);
+    return new StreamableFile(audioBuffer);
+  }
+}

@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DeckModule } from './modules/deck/deck.module';
 import { CardModule } from './modules/card/card.module';
+import { AiModule } from './modules/ai/ai.module';
+import { TtsModule } from './modules/tts/tts.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { CardModule } from './modules/card/card.module';
     AuthModule,
     DeckModule,
     CardModule,
+    AiModule,
+    TtsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -40,11 +40,19 @@
         ></textarea>
         <button
           type="button"
-          class="absolute bottom-2 right-2 p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+          class="absolute bottom-2 right-2 p-1.5 rounded-lg transition-colors"
+          [class.text-primary]="!isPlayingAudio()"
+          [class.hover:bg-primary/10]="!isPlayingAudio()"
+          [class.text-green-500]="isPlayingAudio()"
+          [class.bg-green-500/10]="isPlayingAudio()"
           aria-label="播放語音"
           (click)="playAudioClick.emit()"
         >
-          <span class="material-symbols-outlined text-[20px]">volume_up</span>
+          @if (isPlayingAudio()) {
+            <span class="material-symbols-outlined text-[20px] animate-pulse">pause_circle</span>
+          } @else {
+            <span class="material-symbols-outlined text-[20px]">volume_up</span>
+          }
         </button>
       </div>
     </div>

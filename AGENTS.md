@@ -70,7 +70,7 @@ flashmind/
 ## 開發規範
 
 - 只在 `apps/api` 使用 Prisma CLI，schema 路徑：`apps/api/prisma/schema.prisma`
-- `.env` 放在專案根目錄，需包含 `DATABASE_URL`
+- `.env` 放在 `apps/api/` 目錄，需包含 `DATABASE_URL`
 - 使用 pnpm 指令（避免 npm/yarn）
 
 ## API 設計規範（ADR-016）

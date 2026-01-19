@@ -13,6 +13,9 @@ import { FmMeaningEditorCardComponent, MeaningDraft } from './components/meaning
 import { CardStore } from '../../components/card/card.store';
 import { CardMeaningDraft, canDeleteMeaning, createEmptyMeaning } from '../../components/card/card.domain';
 import { validateMeaningsForSubmit } from '../../components/card/card.form';
+import { AiStore } from '../../components/ai/ai.store';
+import { canGenerateContent } from '../../components/ai/ai.domain';
+import { TtsStore } from '../../components/tts/tts.store';
 
 interface MeaningBlock {
   id: string;
@@ -39,6 +42,8 @@ export class CardEditorComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly cardStore = inject(CardStore);
+  private readonly aiStore = inject(AiStore);
+  private readonly ttsStore = inject(TtsStore);
 
   readonly deckId = signal('');
   readonly cardId = signal<string | null>(null);
@@ -65,6 +70,13 @@ export class CardEditorComponent implements OnInit {
   readonly canDeleteMeanings = computed(() => canDeleteMeaning(this.meanings().length));
   readonly loading = this.cardStore.loading;
   readonly error = signal<string | null>(null);
+
+  // AI 生成狀態
+  readonly aiGenerating = this.aiStore.generating;
+  readonly canAiGenerate = computed(() => canGenerateContent(this.formModel().front));
+
+  // TTS 播放狀態
+  readonly ttsPlayingText = this.ttsStore.playingText;
 
   ngOnInit() {
     const deckId = this.route.snapshot.paramMap.get('deckId');
@@ -108,6 +120,29 @@ export class CardEditorComponent implements OnInit {
 
   onAddMeaning() {
     this.meanings.update((list) => [...list, createEmptyMeaning()]);
+  }
+
+  async onAiGenerate() {
+    if (!this.canAiGenerate() || this.aiGenerating()) return;
+
+    this.error.set(null);
+    const frontText = this.formModel().front.trim();
+    const meanings = await this.aiStore.generateCardContent(frontText);
+
+    if (meanings) {
+      this.meanings.set(meanings);
+    } else {
+      this.error.set(this.aiStore.error() ?? 'AI 生成失敗');
+    }
+  }
+
+  onPlayAudio(text: string) {
+    if (!text.trim()) return;
+    void this.ttsStore.play(text);
+  }
+
+  isPlayingAudio(text: string): boolean {
+    return this.ttsStore.isPlaying(text);
   }
 
   async onSave() {

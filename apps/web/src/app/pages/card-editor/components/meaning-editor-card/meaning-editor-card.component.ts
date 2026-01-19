@@ -17,6 +17,7 @@ export class FmMeaningEditorCardComponent {
   readonly tagLabel = input('');
   readonly showDelete = input(true);
   readonly testId = input<string>();
+  readonly isPlayingAudio = input(false);
 
   readonly meaningChange = output<MeaningDraft>();
   readonly deleteClick = output<void>();

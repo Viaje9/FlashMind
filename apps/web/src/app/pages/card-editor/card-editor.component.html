@@ -17,11 +17,32 @@
 
     <section class="flex flex-col gap-3">
       <fm-form-section-header title="正面" icon="web_stories"></fm-form-section-header>
-      <fm-glow-textarea
-        [formField]="cardForm.front"
-        placeholder="輸入單字、片語或問題..."
-        testId="card-editor-front"
-      ></fm-glow-textarea>
+      <div class="relative">
+        <fm-glow-textarea
+          [formField]="cardForm.front"
+          placeholder="輸入單字、片語或問題..."
+          testId="card-editor-front"
+        ></fm-glow-textarea>
+        @if (formModel().front.trim()) {
+          <button
+            type="button"
+            class="absolute top-4 right-4 p-1.5 rounded-lg transition-colors z-10"
+            [class.text-primary]="!isPlayingAudio(formModel().front)"
+            [class.hover:bg-primary/10]="!isPlayingAudio(formModel().front)"
+            [class.text-green-500]="isPlayingAudio(formModel().front)"
+            [class.bg-green-500/10]="isPlayingAudio(formModel().front)"
+            aria-label="播放語音"
+            data-testid="card-editor-front-play"
+            (click)="onPlayAudio(formModel().front)"
+          >
+            @if (isPlayingAudio(formModel().front)) {
+              <span class="material-symbols-outlined text-[20px] animate-pulse">pause_circle</span>
+            } @else {
+              <span class="material-symbols-outlined text-[20px]">volume_up</span>
+            }
+          </button>
+        }
+      </div>
     </section>
 
     <div class="flex items-center justify-center py-1 opacity-60">
@@ -33,12 +54,19 @@
 
       <button
         type="button"
-        class="relative overflow-hidden w-full py-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 font-medium flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-all group active:scale-[0.98]"
+        class="relative overflow-hidden w-full py-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 font-medium flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-all group active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         data-testid="card-editor-ai-generate"
+        [disabled]="!canAiGenerate() || aiGenerating()"
+        (click)="onAiGenerate()"
       >
         <div class="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">auto_awesome</span>
-        <span class="text-sm font-bold relative z-10">AI 生成詞義與例句</span>
+        @if (aiGenerating()) {
+          <span class="material-symbols-outlined text-[20px] animate-spin">progress_activity</span>
+          <span class="text-sm font-bold relative z-10">AI 生成中...</span>
+        } @else {
+          <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">auto_awesome</span>
+          <span class="text-sm font-bold relative z-10">AI 生成詞義與例句</span>
+        }
       </button>
 
       <div class="flex flex-col gap-4">
@@ -47,8 +75,10 @@
             [meaning]="block.data"
             [tagLabel]="block.label"
             [showDelete]="canDeleteMeanings()"
+            [isPlayingAudio]="isPlayingAudio(block.data.enExample)"
             (meaningChange)="onMeaningChange(i, $event)"
             (deleteClick)="onDeleteMeaning(i)"
+            (playAudioClick)="onPlayAudio(block.data.enExample)"
             [testId]="'card-editor-meaning-' + i"
           ></fm-meaning-editor-card>
         }

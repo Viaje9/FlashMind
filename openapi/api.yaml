@@ -688,6 +688,120 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ============================================================
+  # AI
+  # ============================================================
+  /ai/generate-card-content:
+    post:
+      operationId: generateCardContent
+      tags:
+        - AI
+      summary: AI 生成卡片內容
+      description: 根據正面文字（單字/片語）使用 AI 生成詞義與例句。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateCardContentRequest"
+      responses:
+        "200":
+          description: 生成成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateCardContentResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 請輸入要生成的文字
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: AI_SERVICE_ERROR
+                  message: AI 服務暫時無法使用，請稍後再試
+
+  # ============================================================
+  # TTS
+  # ============================================================
+  /tts/synthesize:
+    post:
+      operationId: synthesizeSpeech
+      tags:
+        - TTS
+      summary: 文字轉語音
+      description: 將英文文字轉換為語音，回傳 MP3 音訊。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SynthesizeSpeechRequest"
+      responses:
+        "200":
+          description: 合成成功
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+                description: MP3 音訊資料
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 請輸入要合成的文字
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
+        "500":
+          description: TTS 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: TTS_SERVICE_ERROR
+                  message: 語音服務暫時無法使用，請稍後再試
+
 components:
   securitySchemes:
     cookieAuth:
@@ -1223,3 +1337,73 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CardListItem"
+
+    # ============================================================
+    # AI
+    # ============================================================
+    GenerateCardContentRequest:
+      type: object
+      description: AI 生成卡片內容請求
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: 正面文字（單字/片語）
+          minLength: 1
+          maxLength: 200
+          example: Hello
+
+    GeneratedMeaning:
+      type: object
+      description: AI 生成的詞義
+      required:
+        - zhMeaning
+      properties:
+        zhMeaning:
+          type: string
+          description: 中文解釋
+          example: 你好
+        enExample:
+          type: string
+          nullable: true
+          description: 英文例句
+          example: Hello, how are you?
+        zhExample:
+          type: string
+          nullable: true
+          description: 中文例句翻譯
+          example: 你好，你好嗎？
+
+    GenerateCardContentResponse:
+      type: object
+      description: AI 生成卡片內容回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - meanings
+          properties:
+            meanings:
+              type: array
+              description: 生成的詞義列表
+              items:
+                $ref: "#/components/schemas/GeneratedMeaning"
+
+    # ============================================================
+    # TTS
+    # ============================================================
+    SynthesizeSpeechRequest:
+      type: object
+      description: TTS 語音合成請求
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: 要合成的英文文字
+          minLength: 1
+          maxLength: 500
+          example: Hello, how are you?
