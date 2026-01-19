@@ -1,8 +1,5 @@
-# ai-generation Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change add-ai-content-features. Update Purpose after archive.
-## Requirements
 ### Requirement: AI 生成卡片內容
 
 系統 SHALL 提供 AI 生成卡片背面內容的功能，降低使用者建卡成本。
@@ -49,28 +46,7 @@ TBD - created by archiving change add-ai-content-features. Update Purpose after 
 
 ---
 
-### Requirement: AI 生成 API
-
-後端 SHALL 提供 AI 內容生成的 API 端點。
-
-#### Scenario: 呼叫生成 API
-
-- **WHEN** 前端發送 `POST /ai/generate-card-content` 請求
-- **AND** 請求包含 `text` 欄位（正面文字）
-- **AND** 使用者已登入
-- **THEN** 系統呼叫 OpenAI API 生成內容
-- **AND** 回傳生成的詞義陣列
-
-#### Scenario: 未登入時拒絕
-
-- **WHEN** 未登入使用者呼叫 AI 生成 API
-- **THEN** 回傳 401 Unauthorized 錯誤
-
-#### Scenario: 輸入為空時拒絕
-
-- **WHEN** 請求的 `text` 欄位為空
-- **THEN** 回傳 400 Bad Request 錯誤
-- **AND** 錯誤訊息說明需要輸入文字
+## ADDED Requirements
 
 ### Requirement: AI 生成詞性標註格式
 
@@ -96,4 +72,3 @@ AI 生成的中文解釋 SHALL 包含詞性標註，以幫助使用者理解單�
 - **THEN** 可能產生：
   - `"跑步 (v.)"` 配合例句 "I run every morning."
   - `"賽跑 (n.)"` 配合例句 "He finished the run in 10 minutes."
-

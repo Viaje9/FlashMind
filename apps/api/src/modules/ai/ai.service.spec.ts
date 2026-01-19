@@ -27,7 +27,7 @@ describe('AiService', () => {
   });
 
   describe('generateCardContent', () => {
-    it('應該回傳生成的詞義陣列', async () => {
+    it('應該回傳生成的詞義陣列（含詞性標註）', async () => {
       const mockResponse = {
         ok: true,
         json: jest.fn().mockResolvedValue({
@@ -37,7 +37,7 @@ describe('AiService', () => {
                 content: JSON.stringify({
                   meanings: [
                     {
-                      zhMeaning: '你好',
+                      zhMeaning: '你好 (interj.)',
                       enExample: 'Hello, how are you?',
                       zhExample: '你好，你好嗎？',
                     },
@@ -55,7 +55,7 @@ describe('AiService', () => {
 
       expect(result.meanings).toHaveLength(1);
       expect(result.meanings[0]).toEqual({
-        zhMeaning: '你好',
+        zhMeaning: '你好 (interj.)',
         enExample: 'Hello, how are you?',
         zhExample: '你好，你好嗎？',
       });
@@ -136,7 +136,7 @@ describe('AiService', () => {
       );
     });
 
-    it('回傳結果應包含多筆詞義', async () => {
+    it('回傳結果應包含多筆詞義（含不同詞性）', async () => {
       const mockResponse = {
         ok: true,
         json: jest.fn().mockResolvedValue({
@@ -145,8 +145,8 @@ describe('AiService', () => {
               message: {
                 content: JSON.stringify({
                   meanings: [
-                    { zhMeaning: '你好', enExample: 'Hello!', zhExample: '你好！' },
-                    { zhMeaning: '喂（打招呼用語）', enExample: 'Hello?', zhExample: '喂？' },
+                    { zhMeaning: '跑步 (v.)', enExample: 'I run every morning.', zhExample: '我每天早上跑步。' },
+                    { zhMeaning: '賽跑 (n.)', enExample: 'He finished the run in 10 minutes.', zhExample: '他在 10 分鐘內完成賽跑。' },
                   ],
                 }),
               },
@@ -157,11 +157,11 @@ describe('AiService', () => {
 
       global.fetch = jest.fn().mockResolvedValue(mockResponse);
 
-      const result = await service.generateCardContent('Hello');
+      const result = await service.generateCardContent('run');
 
       expect(result.meanings).toHaveLength(2);
-      expect(result.meanings[0].zhMeaning).toBe('你好');
-      expect(result.meanings[1].zhMeaning).toBe('喂（打招呼用語）');
+      expect(result.meanings[0].zhMeaning).toBe('跑步 (v.)');
+      expect(result.meanings[1].zhMeaning).toBe('賽跑 (n.)');
     });
   });
 });
