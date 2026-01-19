@@ -1,78 +1,130 @@
-.swipeable-card-container {
+.swipeable-card-wrapper {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
-  touch-action: none;
-  user-select: none;
 }
 
+/* 可移動的卡片 */
 .swipeable-card {
-  position: relative;
+  flex: 1;
   width: 100%;
   will-change: transform;
-  cursor: grab;
-}
-
-.swipeable-card:active {
-  cursor: grabbing;
 }
 
 .swipeable-card.is-animating {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .swipeable-card.is-flying-out {
   pointer-events: none;
 }
 
-/* 滑動指示器 */
+/* 方向指示器 */
 .swipe-indicator {
-  position: absolute;
+  position: fixed;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   border-radius: 1rem;
   font-weight: bold;
-  z-index: 10;
+  z-index: 100;
   pointer-events: none;
-  transition: opacity 0.1s ease-out;
+  transition: transform 0.15s ease-out;
+}
+
+.swipe-indicator.triggered {
+  transform: scale(1.1);
 }
 
 .indicator-label {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
 }
 
-/* 右滑指示器 - 知道 (綠色) - 放在卡片左側 */
+/* 右滑指示器 - 知道 (綠色) */
 .indicator-right {
   top: 50%;
-  left: 1rem;
+  left: 1.5rem;
   transform: translateY(-50%);
   background-color: rgba(34, 197, 94, 0.95);
   color: white;
   box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
 }
 
-/* 左滑指示器 - 不知道 (紅色) - 放在卡片右側 */
+.indicator-right.triggered {
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* 左滑指示器 - 不知道 (紅色) */
 .indicator-left {
   top: 50%;
-  right: 1rem;
+  right: 1.5rem;
   transform: translateY(-50%);
   background-color: rgba(239, 68, 68, 0.95);
   color: white;
   box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
 }
 
-/* 上滑指示器 - 不熟 (黃色) - 放在卡片底部 */
+.indicator-left.triggered {
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* 上滑指示器 - 不熟 (黃色) */
 .indicator-up {
-  bottom: 1rem;
+  top: 6rem;
   left: 50%;
   transform: translateX(-50%);
   background-color: rgba(245, 158, 11, 0.95);
   color: white;
   box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+}
+
+.indicator-up.triggered {
+  transform: translateX(-50%) scale(1.1);
+}
+
+/* 拖動把手區域 */
+.drag-handle-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+  gap: 0.5rem;
+}
+
+.drag-handle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+}
+
+.drag-handle:hover {
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+}
+
+.drag-handle:active,
+.drag-handle.is-active {
+  cursor: grabbing;
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+}
+
+.hint-text {
+  font-size: 0.75rem;
+  color: rgba(100, 116, 139, 0.7);
 }

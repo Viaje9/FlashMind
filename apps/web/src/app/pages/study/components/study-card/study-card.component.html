@@ -13,9 +13,14 @@
         type="button"
         class="flex items-center justify-center size-10 rounded-full bg-slate-50 dark:bg-slate-800/80 text-primary hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
         aria-label="播放單字發音"
+        [disabled]="wordAudioLoading()"
         (click)="audioClick.emit()"
       >
-        <span class="material-symbols-outlined text-[24px]">volume_up</span>
+        @if (wordAudioLoading()) {
+          <span class="material-symbols-outlined text-[24px] animate-spin">progress_activity</span>
+        } @else {
+          <span class="material-symbols-outlined text-[24px]">volume_up</span>
+        }
       </button>
     </div>
   }
@@ -42,9 +47,14 @@
                 type="button"
                 class="shrink-0 flex items-center justify-center size-8 rounded-full text-primary bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 aria-label="播放例句語音"
+                [disabled]="isExampleLoading($index)"
                 (click)="onExampleAudioClick($index)"
               >
-                <span class="material-symbols-outlined text-[20px]">volume_up</span>
+                @if (isExampleLoading($index)) {
+                  <span class="material-symbols-outlined text-[20px] animate-spin">progress_activity</span>
+                } @else {
+                  <span class="material-symbols-outlined text-[20px]">volume_up</span>
+                }
               </button>
             </div>
             <p class="text-sm text-secondary-text leading-snug">{{ example.translation }}</p>

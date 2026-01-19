@@ -68,48 +68,40 @@
       <fm-study-progress [current]="progress().current" [total]="progress().total"></fm-study-progress>
     </div>
 
-    <main
-      class="mx-auto w-full max-w-md flex-1 min-h-0 flex flex-col px-4 py-4 overflow-hidden"
-      data-testid="study-card-container"
-    >
-      @if (currentCard(); as card) {
+    @if (currentCard(); as card) {
+      @if (isFlipped()) {
+        <!-- 翻牌後：可滑動的卡片 -->
         <fm-swipeable-card
-          (swipeStart)="onSwipeStart()"
-          (swipeComplete)="onSwipeComplete($event)"
+          class="mx-auto w-full max-w-md flex-1 min-h-0 flex flex-col px-4 py-4"
+          (swipeComplete)="onRating($event)"
         >
-          @if (isFlipped()) {
+          <div class="overflow-y-auto flex-1" data-testid="study-card-container">
             <fm-study-card
               [word]="word()"
               [translations]="translations()"
               [examples]="examples()"
+              [wordAudioLoading]="wordAudioLoading()"
+              [exampleAudioLoadingIndex]="exampleAudioLoadingIndex()"
               (audioClick)="onAudioClick()"
               (exampleAudioClick)="onExampleAudioClick($event)"
             ></fm-study-card>
-          } @else {
-            <!-- 正面：只顯示單字 -->
-            <div
-              class="card bg-base-100 shadow-xl w-full cursor-pointer"
-              (click)="onCardClick()"
-            >
-              <div class="card-body items-center text-center py-16">
-                <h2 class="card-title text-4xl font-bold">{{ word() }}</h2>
-                <p class="text-base-content/60 mt-4">點擊或滑動查看答案</p>
-              </div>
-            </div>
-          }
+          </div>
         </fm-swipeable-card>
+      } @else {
+        <!-- 正面：只顯示單字 -->
+        <main
+          class="mx-auto w-full max-w-md flex-1 min-h-0 flex flex-col items-center justify-center px-4 py-4 cursor-pointer"
+          data-testid="study-card-container"
+          (click)="onCardClick()"
+        >
+          <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 shadow-lg w-full hover:shadow-xl hover:border-primary/30 transition-all">
+            <div class="card-body items-center text-center py-16">
+              <h2 class="card-title text-4xl font-bold text-slate-800 dark:text-white">{{ word() }}</h2>
+              <p class="text-primary/70 mt-4 font-medium">點擊查看答案</p>
+            </div>
+          </div>
+        </main>
       }
-    </main>
-
-    @if (showDecisionBar()) {
-      <div class="mx-auto w-full max-w-md px-6 pb-6">
-        <fm-study-decision-bar
-          layout="inline"
-          (unknownClick)="onRating('unknown')"
-          (unfamiliarClick)="onRating('unfamiliar')"
-          (knownClick)="onRating('known')"
-        ></fm-study-decision-bar>
-      </div>
     }
   }
 </div>

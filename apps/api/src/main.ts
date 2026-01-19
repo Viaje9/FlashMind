@@ -16,10 +16,22 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:4280',
+    origin: (origin, callback) => {
+      // 允許 localhost 和區網 IP（開發環境）
+      const allowedPatterns = [
+        /^http:\/\/localhost:\d+$/,
+        /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
+        /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
+      ];
+      if (!origin || allowedPatterns.some((pattern) => pattern.test(origin))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3280);
+  await app.listen(process.env.PORT ?? 3280, '0.0.0.0');
 }
 bootstrap();

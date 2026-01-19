@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, OnDestroy
 import { ActivatedRoute, Router } from '@angular/router';
 import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { FmStudyCardComponent, StudyExample } from './components/study-card/study-card.component';
-import { FmStudyDecisionBarComponent } from './components/study-decision-bar/study-decision-bar.component';
 import { FmStudyProgressComponent } from './components/study-progress/study-progress.component';
 import { FmSwipeableCardComponent } from './components/swipeable-card/swipeable-card.component';
 import { StudyStore } from '../../components/study/study.store';
@@ -16,7 +15,6 @@ import { mapMeaningsToExamples, getTranslations, StudyRating } from '../../compo
     FmIconButtonComponent,
     FmStudyProgressComponent,
     FmStudyCardComponent,
-    FmStudyDecisionBarComponent,
     FmSwipeableCardComponent,
   ],
   templateUrl: './study.component.html',
@@ -56,6 +54,18 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly hasError = computed(() => this.phase() === 'error');
   readonly showDecisionBar = computed(() => this.isStudying() && this.isFlipped());
 
+  // TTS loading 狀態
+  readonly wordAudioLoading = computed(() => this.ttsStore.isLoading(this.word()));
+  readonly exampleAudioLoadingIndex = computed(() => {
+    const examples = this.examples();
+    for (let i = 0; i < examples.length; i++) {
+      if (this.ttsStore.isLoading(examples[i].sentence)) {
+        return i;
+      }
+    }
+    return null;
+  });
+
   ngOnInit(): void {
     this.deckId = this.route.snapshot.paramMap.get('deckId') ?? '';
     const deckName = this.route.snapshot.queryParamMap.get('name') ?? '學習';
@@ -73,17 +83,6 @@ export class StudyComponent implements OnInit, OnDestroy {
     if (!this.isFlipped()) {
       this.studyStore.flipCard();
     }
-  }
-
-  onSwipeStart(): void {
-    // 拖拽開始時自動翻牌
-    if (!this.isFlipped()) {
-      this.studyStore.flipCard();
-    }
-  }
-
-  onSwipeComplete(rating: StudyRating): void {
-    this.studyStore.submitRating(rating);
   }
 
   onRating(rating: StudyRating): void {

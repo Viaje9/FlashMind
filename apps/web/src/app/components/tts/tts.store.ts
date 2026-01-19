@@ -5,6 +5,7 @@ import { createAudioCacheKey, createWordAudioCacheKey } from './tts.domain';
 
 export interface TtsStoreState {
   playingText: string | null;
+  loadingText: string | null;
   error: string | null;
 }
 
@@ -16,14 +17,20 @@ export class TtsStore {
 
   private readonly state = signal<TtsStoreState>({
     playingText: null,
+    loadingText: null,
     error: null,
   });
 
   readonly playingText = computed(() => this.state().playingText);
+  readonly loadingText = computed(() => this.state().loadingText);
   readonly error = computed(() => this.state().error);
 
   isPlaying(text: string): boolean {
     return this.state().playingText === text;
+  }
+
+  isLoading(text: string): boolean {
+    return this.state().loadingText === text;
   }
 
   async play(text: string): Promise<void> {
@@ -41,16 +48,22 @@ export class TtsStore {
 
     this.state.update((s) => ({
       ...s,
-      playingText: trimmedText,
+      loadingText: trimmedText,
       error: null,
     }));
 
     try {
       const audioUrl = await this.getSentenceAudioUrl(trimmedText);
+      this.state.update((s) => ({
+        ...s,
+        loadingText: null,
+        playingText: trimmedText,
+      }));
       await this.playAudio(audioUrl, trimmedText);
     } catch (err) {
       this.state.update((s) => ({
         ...s,
+        loadingText: null,
         playingText: null,
         error: '語音播放失敗',
       }));
@@ -72,16 +85,22 @@ export class TtsStore {
 
     this.state.update((s) => ({
       ...s,
-      playingText: trimmedText,
+      loadingText: trimmedText,
       error: null,
     }));
 
     try {
       const audioUrl = await this.getWordAudioUrl(trimmedText);
+      this.state.update((s) => ({
+        ...s,
+        loadingText: null,
+        playingText: trimmedText,
+      }));
       await this.playAudio(audioUrl, trimmedText);
     } catch (err) {
       this.state.update((s) => ({
         ...s,
+        loadingText: null,
         playingText: null,
         error: '語音播放失敗',
       }));
@@ -94,7 +113,7 @@ export class TtsStore {
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
     }
-    this.state.update((s) => ({ ...s, playingText: null }));
+    this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
   }
 
   clearError(): void {
