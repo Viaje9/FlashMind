@@ -10,11 +10,11 @@
 
 
 /**
- * TTS 語音合成請求（句子用，使用 Azure TTS）
+ * TTS 單字合成請求（單字用，使用 Google Translate TTS）
  */
-export interface SynthesizeSpeechRequest { 
+export interface SynthesizeWordRequest { 
     /**
-     * 要合成的英文句子
+     * 要合成的英文單字
      */
     text: string;
 }

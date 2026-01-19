@@ -33,7 +33,7 @@
             [class.bg-green-500/10]="isPlayingAudio(formModel().front)"
             aria-label="播放語音"
             data-testid="card-editor-front-play"
-            (click)="onPlayAudio(formModel().front)"
+            (click)="onPlayWordAudio(formModel().front)"
           >
             @if (isPlayingAudio(formModel().front)) {
               <span class="material-symbols-outlined text-[20px] animate-pulse">pause_circle</span>
@@ -78,7 +78,7 @@
             [isPlayingAudio]="isPlayingAudio(block.data.enExample)"
             (meaningChange)="onMeaningChange(i, $event)"
             (deleteClick)="onDeleteMeaning(i)"
-            (playAudioClick)="onPlayAudio(block.data.enExample)"
+            (playAudioClick)="onPlaySentenceAudio(block.data.enExample)"
             [testId]="'card-editor-meaning-' + i"
           ></fm-meaning-editor-card>
         }

@@ -129,4 +129,81 @@ describe('TtsService', () => {
       expect(body).toContain('Hello &amp; goodbye &lt;world&gt;');
     });
   });
+
+  describe('synthesizeWord', () => {
+    it('應該回傳 Buffer 音訊資料', async () => {
+      const mockAudioBuffer = Buffer.from('mock audio data');
+      const mockResponse = {
+        ok: true,
+        arrayBuffer: jest.fn().mockResolvedValue(mockAudioBuffer),
+      };
+
+      global.fetch = jest.fn().mockResolvedValue(mockResponse);
+
+      const result = await service.synthesizeWord('hello');
+
+      expect(result).toBeInstanceOf(Buffer);
+    });
+
+    it('應該正確呼叫 Google Translate TTS', async () => {
+      const mockAudioBuffer = Buffer.from('mock audio data');
+      const mockResponse = {
+        ok: true,
+        arrayBuffer: jest.fn().mockResolvedValue(mockAudioBuffer),
+      };
+
+      global.fetch = jest.fn().mockResolvedValue(mockResponse);
+
+      await service.synthesizeWord('hello');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('translate.google.com/translate_tts'),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'User-Agent': expect.any(String),
+          }),
+        }),
+      );
+    });
+
+    it('應該正確編碼文字參數', async () => {
+      const mockAudioBuffer = Buffer.from('mock audio data');
+      const mockResponse = {
+        ok: true,
+        arrayBuffer: jest.fn().mockResolvedValue(mockAudioBuffer),
+      };
+
+      global.fetch = jest.fn().mockResolvedValue(mockResponse);
+
+      await service.synthesizeWord('hello');
+
+      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
+      const url = fetchCall[0];
+
+      expect(url).toContain('q=hello');
+      expect(url).toContain('tl=en');
+      expect(url).toContain('textlen=5');
+    });
+
+    it('API 回應非 ok 時應該拋出 InternalServerErrorException', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 500,
+      };
+
+      global.fetch = jest.fn().mockResolvedValue(mockResponse);
+
+      await expect(service.synthesizeWord('hello')).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+
+    it('網路錯誤時應該拋出 InternalServerErrorException', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+      await expect(service.synthesizeWord('hello')).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+  });
 });

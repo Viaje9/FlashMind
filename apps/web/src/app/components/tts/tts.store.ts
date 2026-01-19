@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { TTSService } from '@flashmind/api-client';
 import { firstValueFrom } from 'rxjs';
-import { createAudioCacheKey } from './tts.domain';
+import { createAudioCacheKey, createWordAudioCacheKey } from './tts.domain';
 
 export interface TtsStoreState {
   playingText: string | null;
@@ -46,7 +46,38 @@ export class TtsStore {
     }));
 
     try {
-      const audioUrl = await this.getAudioUrl(trimmedText);
+      const audioUrl = await this.getSentenceAudioUrl(trimmedText);
+      await this.playAudio(audioUrl, trimmedText);
+    } catch (err) {
+      this.state.update((s) => ({
+        ...s,
+        playingText: null,
+        error: '語音播放失敗',
+      }));
+    }
+  }
+
+  async playWord(text: string): Promise<void> {
+    const trimmedText = text.trim();
+    if (!trimmedText) return;
+
+    // 如果正在播放相同的文字，停止播放
+    if (this.state().playingText === trimmedText) {
+      this.stop();
+      return;
+    }
+
+    // 停止目前的播放
+    this.stop();
+
+    this.state.update((s) => ({
+      ...s,
+      playingText: trimmedText,
+      error: null,
+    }));
+
+    try {
+      const audioUrl = await this.getWordAudioUrl(trimmedText);
       await this.playAudio(audioUrl, trimmedText);
     } catch (err) {
       this.state.update((s) => ({
@@ -70,7 +101,7 @@ export class TtsStore {
     this.state.update((s) => ({ ...s, error: null }));
   }
 
-  private async getAudioUrl(text: string): Promise<string> {
+  private async getSentenceAudioUrl(text: string): Promise<string> {
     const cacheKey = createAudioCacheKey(text);
 
     // 檢查快取
@@ -79,9 +110,30 @@ export class TtsStore {
       return cached;
     }
 
-    // 從 API 取得音訊
+    // 從 API 取得音訊（Azure TTS）
     const blob = await firstValueFrom(
       this.ttsService.synthesizeSpeech({ text }),
+    );
+    const url = URL.createObjectURL(blob);
+
+    // 存入快取
+    this.audioCache.set(cacheKey, url);
+
+    return url;
+  }
+
+  private async getWordAudioUrl(text: string): Promise<string> {
+    const cacheKey = createWordAudioCacheKey(text);
+
+    // 檢查快取
+    const cached = this.audioCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // 從 API 取得音訊（Google Translate TTS）
+    const blob = await firstValueFrom(
+      this.ttsService.synthesizeWord({ text }),
     );
     const url = URL.createObjectURL(blob);
 

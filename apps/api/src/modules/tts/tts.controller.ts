@@ -7,7 +7,7 @@ import {
   Header,
 } from '@nestjs/common';
 import { TtsService } from './tts.service';
-import { SynthesizeSpeechDto } from './dto';
+import { SynthesizeSpeechDto, SynthesizeWordDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('tts')
@@ -21,6 +21,15 @@ export class TtsController {
     @Body() dto: SynthesizeSpeechDto,
   ): Promise<StreamableFile> {
     const audioBuffer = await this.ttsService.synthesize(dto.text);
+    return new StreamableFile(audioBuffer);
+  }
+
+  @Post('word')
+  @Header('Content-Type', 'audio/mpeg')
+  async synthesizeWord(
+    @Body() dto: SynthesizeWordDto,
+  ): Promise<StreamableFile> {
+    const audioBuffer = await this.ttsService.synthesizeWord(dto.text);
     return new StreamableFile(audioBuffer);
   }
 }

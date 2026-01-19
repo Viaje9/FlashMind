@@ -860,6 +860,61 @@ paths:
                   code: TTS_SERVICE_ERROR
                   message: 語音服務暫時無法使用，請稍後再試
 
+  /tts/word:
+    post:
+      operationId: synthesizeWord
+      tags:
+        - TTS
+      summary: 單字轉語音
+      description: 將英文單字轉換為語音，使用 Google Translate TTS，回傳 MP3 音訊。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SynthesizeWordRequest"
+      responses:
+        "200":
+          description: 合成成功
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+                description: MP3 音訊資料
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 請輸入要合成的文字
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
+        "500":
+          description: TTS 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: TTS_SERVICE_ERROR
+                  message: 語音服務暫時無法使用，請稍後再試
+
 components:
   securitySchemes:
     cookieAuth:
@@ -1520,13 +1575,26 @@ components:
     # ============================================================
     SynthesizeSpeechRequest:
       type: object
-      description: TTS 語音合成請求
+      description: TTS 語音合成請求（句子用，使用 Azure TTS）
       required:
         - text
       properties:
         text:
           type: string
-          description: 要合成的英文文字
+          description: 要合成的英文句子
           minLength: 1
           maxLength: 500
           example: Hello, how are you?
+
+    SynthesizeWordRequest:
+      type: object
+      description: TTS 單字合成請求（單字用，使用 Google Translate TTS）
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: 要合成的英文單字
+          minLength: 1
+          maxLength: 100
+          example: hello

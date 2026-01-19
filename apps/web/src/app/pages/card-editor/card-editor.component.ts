@@ -136,7 +136,12 @@ export class CardEditorComponent implements OnInit {
     }
   }
 
-  onPlayAudio(text: string) {
+  onPlayWordAudio(text: string) {
+    if (!text.trim()) return;
+    void this.ttsStore.playWord(text);
+  }
+
+  onPlaySentenceAudio(text: string) {
     if (!text.trim()) return;
     void this.ttsStore.play(text);
   }

@@ -20,6 +20,8 @@ import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 import { ErrorResponse } from '../model/errorResponse';
 // @ts-ignore
 import { SynthesizeSpeechRequest } from '../model/synthesizeSpeechRequest';
+// @ts-ignore
+import { SynthesizeWordRequest } from '../model/synthesizeWordRequest';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -86,6 +88,65 @@ export class TTSService extends BaseService {
             {
                 context: localVarHttpContext,
                 body: synthesizeSpeechRequest,
+                responseType: "blob",
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * 單字轉語音
+     * 將英文單字轉換為語音，使用 Google Translate TTS，回傳 MP3 音訊。
+     * @endpoint post /tts/word
+     * @param synthesizeWordRequest 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public synthesizeWord(synthesizeWordRequest: SynthesizeWordRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'audio/mpeg' | 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Blob>;
+    public synthesizeWord(synthesizeWordRequest: SynthesizeWordRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'audio/mpeg' | 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Blob>>;
+    public synthesizeWord(synthesizeWordRequest: SynthesizeWordRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'audio/mpeg' | 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Blob>>;
+    public synthesizeWord(synthesizeWordRequest: SynthesizeWordRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'audio/mpeg' | 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (synthesizeWordRequest === null || synthesizeWordRequest === undefined) {
+            throw new Error('Required parameter synthesizeWordRequest was null or undefined when calling synthesizeWord.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (cookieAuth) required
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'audio/mpeg',
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let localVarPath = `/tts/word`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                body: synthesizeWordRequest,
                 responseType: "blob",
                 ...(withCredentials ? { withCredentials } : {}),
                 headers: localVarHeaders,

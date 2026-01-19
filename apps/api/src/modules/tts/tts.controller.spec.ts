@@ -10,6 +10,7 @@ describe('TtsController', () => {
 
   const mockTtsService = {
     synthesize: jest.fn(),
+    synthesizeWord: jest.fn(),
   };
 
   const mockAuthGuard = {
@@ -48,6 +49,26 @@ describe('TtsController', () => {
       await controller.synthesizeSpeech({ text: 'Hello world' });
 
       expect(ttsService.synthesize).toHaveBeenCalledWith('Hello world');
+    });
+  });
+
+  describe('synthesizeWord', () => {
+    it('應該回傳 StreamableFile', async () => {
+      const mockAudioBuffer = Buffer.from('mock audio data');
+      mockTtsService.synthesizeWord.mockResolvedValue(mockAudioBuffer);
+
+      const result = await controller.synthesizeWord({ text: 'hello' });
+
+      expect(result).toBeInstanceOf(StreamableFile);
+    });
+
+    it('應該正確傳遞文字參數給 service', async () => {
+      const mockAudioBuffer = Buffer.from('mock audio data');
+      mockTtsService.synthesizeWord.mockResolvedValue(mockAudioBuffer);
+
+      await controller.synthesizeWord({ text: 'hello' });
+
+      expect(ttsService.synthesizeWord).toHaveBeenCalledWith('hello');
     });
   });
 });

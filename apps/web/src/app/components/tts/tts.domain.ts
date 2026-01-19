@@ -3,5 +3,9 @@ export function canPlaySpeech(text: string): boolean {
 }
 
 export function createAudioCacheKey(text: string): string {
-  return `tts:${text.trim()}`;
+  return `tts:sentence:${text.trim()}`;
+}
+
+export function createWordAudioCacheKey(text: string): string {
+  return `tts:word:${text.trim()}`;
 }

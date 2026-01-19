@@ -27,6 +27,7 @@ export * from './loginRequest';
 export * from './paginationMeta';
 export * from './registerRequest';
 export * from './synthesizeSpeechRequest';
+export * from './synthesizeWordRequest';
 export * from './updateCardMeaningRequest';
 export * from './updateCardRequest';
 export * from './updateDeckRequest';

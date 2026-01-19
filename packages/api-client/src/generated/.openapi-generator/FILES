@@ -42,6 +42,7 @@ model/models.ts
 model/paginationMeta.ts
 model/registerRequest.ts
 model/synthesizeSpeechRequest.ts
+model/synthesizeWordRequest.ts
 model/updateCardMeaningRequest.ts
 model/updateCardRequest.ts
 model/updateDeckRequest.ts
