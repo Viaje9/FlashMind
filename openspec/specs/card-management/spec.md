@@ -51,6 +51,13 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **THEN** 正面為必填欄位
 - **AND** 正面可輸入單字、片語或問題
 
+#### Scenario: AI 生成按鈕
+
+- **WHEN** 使用者在卡片編輯器中
+- **AND** 正面欄位已填寫
+- **THEN** 顯示「AI 生成」按鈕
+- **AND** 點擊後觸發 AI 生成詞義與例句
+
 #### Scenario: 填寫詞義區塊
 
 - **WHEN** 使用者填寫詞義區塊
@@ -79,6 +86,13 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 
 - **WHEN** 使用者檢視詞義區塊
 - **THEN** 英文例句欄位旁提供播放語音按鈕
+- **AND** 點擊後播放該例句的英文發音
+
+#### Scenario: 正面文字語音
+
+- **WHEN** 使用者在卡片編輯器中
+- **THEN** 正面欄位旁提供播放語音按鈕
+- **AND** 點擊後播放正面文字的英文發音
 
 #### Scenario: 頁首操作
 
@@ -106,8 +120,6 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **WHEN** 使用者點擊「取消」
 - **THEN** 返回牌組詳情頁
 - **AND** 不儲存任何資料
-
----
 
 ### Requirement: 編輯卡片
 
