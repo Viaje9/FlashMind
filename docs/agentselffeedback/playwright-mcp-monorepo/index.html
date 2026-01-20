@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="記錄 playwright-test MCP 工具在 monorepo 架構下的配置問題與解決方案"><meta name="generator" content="Astro v5.16.6"><title>Playwright MCP 在 Monorepo 中的使用問題｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>Playwright MCP 在 Monorepo 中的使用問題</h1> <p class="doc-summary">記錄 playwright-test MCP 工具在 monorepo 架構下的配置問題與解決方案</p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/agentSelfFeedback/playwright-mcp-monorepo.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/agentSelfFeedback/playwright-mcp-monorepo.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#問題描述">問題描述</a> </li><li class="toc-item depth-2"> <a href="#根本原因">根本原因</a> </li><li class="toc-item depth-2"> <a href="#解決方案">解決方案</a> </li><li class="toc-item depth-3"> <a href="#方案一指定-seedfile-參數推薦">方案一：指定 seedFile 參數（推薦）</a> </li><li class="toc-item depth-3"> <a href="#方案二修改-mcpjson-使用-e2e-的-playwright-cli">方案二：修改 .mcp.json 使用 e2e 的 Playwright CLI</a> </li><li class="toc-item depth-3"> <a href="#不推薦的方案">不推薦的方案</a> </li><li class="toc-item depth-2"> <a href="#相關配置">相關配置</a> </li><li class="toc-item depth-3"> <a href="#e2etestsseedspects">e2e/tests/seed.spec.ts</a> </li><li class="toc-item depth-3"> <a href="#專案結構">專案結構</a> </li><li class="toc-item depth-2"> <a href="#學習要點">學習要點</a> </li> </ul> </details> <div class="doc-content"> <h1 id="playwright-mcp-在-monorepo-中的使用問題">Playwright MCP 在 Monorepo 中的使用問題</h1>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>版本</th><th>日期</th><th>作者</th><th>變更說明</th></tr></thead><tbody><tr><td>1.0</td><td>2026-01-17</td><td>Claude</td><td>初版建立</td></tr></tbody></table>
+<hr>
+<h2 id="問題描述">問題描述</h2>
+<p>在使用 <code>playwright-test</code> MCP 工具時，若專案為 monorepo 架構（Playwright 安裝在子目錄如 <code>e2e/</code> 而非根目錄），會遇到以下錯誤：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Error: Cannot find module '@playwright/test'</span></span>
+<span class="line"><span>Require stack:</span></span>
+<span class="line"><span>- /path/to/project/seed.spec.ts</span></span></code></pre>
+<h2 id="根本原因">根本原因</h2>
+<ol>
+<li><strong>MCP 預設行為</strong>：<code>playwright-test</code> MCP 會在**工作目錄（通常是專案根目錄）**尋找 <code>seed.spec.ts</code> 並執行</li>
+<li><strong>Monorepo 結構</strong>：<code>@playwright/test</code> 安裝在 <code>e2e/node_modules/</code>，根目錄的 <code>node_modules/</code> 沒有這個套件</li>
+<li><strong>模組解析失敗</strong>：根目錄的 <code>seed.spec.ts</code> 嘗試 <code>import { test } from '@playwright/test'</code> 時找不到模組</li>
+</ol>
+<h2 id="解決方案">解決方案</h2>
+<h3 id="方案一指定-seedfile-參數推薦">方案一：指定 seedFile 參數（推薦）</h3>
+<p>在呼叫 MCP 工具時，使用 <code>seedFile</code> 參數指定 e2e 目錄下的 seed 檔案：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// ✅ 正確用法</span></span>
+<span class="line"><span style="color:#E1E4E8">mcp__playwright</span><span style="color:#F97583">-</span><span style="color:#B392F0">test__generator_setup_page</span><span style="color:#E1E4E8">({</span></span>
+<span class="line"><span style="color:#E1E4E8">  plan: </span><span style="color:#9ECBFF">"測試計畫描述"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">  seedFile: </span><span style="color:#9ECBFF">"e2e/tests/seed.spec.ts"</span><span style="color:#6A737D">  // 指定 e2e 目錄的 seed</span></span>
+<span class="line"><span style="color:#E1E4E8">})</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">mcp__playwright</span><span style="color:#F97583">-</span><span style="color:#B392F0">test__planner_setup_page</span><span style="color:#E1E4E8">({</span></span>
+<span class="line"><span style="color:#E1E4E8">  seedFile: </span><span style="color:#9ECBFF">"e2e/tests/seed.spec.ts"</span></span>
+<span class="line"><span style="color:#E1E4E8">})</span></span></code></pre>
+<h3 id="方案二修改-mcpjson-使用-e2e-的-playwright-cli">方案二：修改 .mcp.json 使用 e2e 的 Playwright CLI</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "mcpServers"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">    "playwright-test"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#79B8FF">      "type"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"stdio"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "command"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"node"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">      "args"</span><span style="color:#E1E4E8">: [</span></span>
+<span class="line"><span style="color:#9ECBFF">        "e2e/node_modules/@playwright/test/cli.js"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">        "run-test-mcp-server"</span></span>
+<span class="line"><span style="color:#E1E4E8">      ]</span></span>
+<span class="line"><span style="color:#E1E4E8">    }</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="不推薦的方案">不推薦的方案</h3>
+<ul>
+<li>❌ 在根目錄安裝 <code>@playwright/test</code>（違反 monorepo 原則）</li>
+<li>❌ 在根目錄的 <code>seed.spec.ts</code> 使用相對路徑 import（不穩定）</li>
+<li>❌ 使用 symlink 連結 node_modules（容易出錯）</li>
+</ul>
+<h2 id="相關配置">相關配置</h2>
+<h3 id="e2etestsseedspects">e2e/tests/seed.spec.ts</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { test } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@playwright/test'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">test</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'seed'</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">async</span><span style="color:#E1E4E8"> ({ </span><span style="color:#FFAB70">page</span><span style="color:#E1E4E8"> }) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  await</span><span style="color:#E1E4E8"> page.</span><span style="color:#B392F0">goto</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'http://localhost:4280'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
+<h3 id="專案結構">專案結構</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>flashmind/</span></span>
+<span class="line"><span>├── .mcp.json              # MCP 配置</span></span>
+<span class="line"><span>├── e2e/                   # Playwright E2E 測試（獨立 workspace）</span></span>
+<span class="line"><span>│   ├── node_modules/</span></span>
+<span class="line"><span>│   │   └── @playwright/   # Playwright 安裝在這裡</span></span>
+<span class="line"><span>│   ├── tests/</span></span>
+<span class="line"><span>│   │   └── seed.spec.ts   # seed 檔案放這裡</span></span>
+<span class="line"><span>│   └── playwright.config.ts</span></span>
+<span class="line"><span>└── node_modules/          # 根目錄沒有 @playwright/test</span></span></code></pre>
+<h2 id="學習要點">學習要點</h2>
+<ol>
+<li><strong>MCP 工具的工作目錄</strong>：MCP 工具從專案根目錄執行，需注意模組解析路徑</li>
+<li><strong>seedFile 參數的重要性</strong>：在 monorepo 中必須明確指定 seed 檔案位置</li>
+<li><strong>文件化配置</strong>：將此類配置記錄在 <code>CLAUDE.md</code> 和 <code>AGENTS.md</code> 中，避免重複踩坑</li>
+</ol> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>

@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="記錄 Angular Signal Forms 的 submit() 函數搭配 async (ngSubmit) 時會觸發瀏覽器預設表單提交行為的問題"><meta name="generator" content="Astro v5.16.6"><title>Angular Signal Forms 與 async ngSubmit 的問題｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>Angular Signal Forms 與 async ngSubmit 的問題</h1> <p class="doc-summary">記錄 Angular Signal Forms 的 submit() 函數搭配 async (ngSubmit) 時會觸發瀏覽器預設表單提交行為的問題</p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/agentSelfFeedback/angular-signal-forms-submit.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/agentSelfFeedback/angular-signal-forms-submit.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#問題描述">問題描述</a> </li><li class="toc-item depth-2"> <a href="#重現步驟">重現步驟</a> </li><li class="toc-item depth-2"> <a href="#根本原因推測">根本原因推測</a> </li><li class="toc-item depth-2"> <a href="#解決方案">解決方案</a> </li><li class="toc-item depth-3"> <a href="#方案一在-template-同步阻止預設行為推薦">方案一：在 template 同步阻止預設行為（推薦）</a> </li><li class="toc-item depth-3"> <a href="#方案二在-typescript-中同步阻止不可靠">方案二：在 TypeScript 中同步阻止（不可靠）</a> </li><li class="toc-item depth-3"> <a href="#不推薦的方案">不推薦的方案</a> </li><li class="toc-item depth-2"> <a href="#測試驗證">測試驗證</a> </li><li class="toc-item depth-2"> <a href="#相關檔案">相關檔案</a> </li><li class="toc-item depth-2"> <a href="#學習要點">學習要點</a> </li><li class="toc-item depth-2"> <a href="#後續追蹤">後續追蹤</a> </li> </ul> </details> <div class="doc-content"> <h1 id="angular-signal-forms-與-async-ngsubmit-的問題">Angular Signal Forms 與 async ngSubmit 的問題</h1>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>版本</th><th>日期</th><th>作者</th><th>變更說明</th></tr></thead><tbody><tr><td>1.0</td><td>2026-01-18</td><td>Claude</td><td>初版建立</td></tr></tbody></table>
+<hr>
+<h2 id="問題描述">問題描述</h2>
+<p>在使用 Angular Signal Forms（<code>@angular/forms/signals</code>）的 <code>submit()</code> 函數搭配 <code>&#x3C;form (ngSubmit)></code> 時，若 <code>onSubmit()</code> 是 async 函數，會觸發瀏覽器預設的表單提交行為，導致：</p>
+<ol>
+<li>頁面重載</li>
+<li>HTTP POST 請求未發送</li>
+<li>URL 變成 <code>/login?</code>（帶有空的 query string）</li>
+<li>表單欄位被清空</li>
+</ol>
+<h2 id="重現步驟">重現步驟</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#6A737D">&#x3C;!-- 問題寫法 --></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">form</span><span style="color:#B392F0"> (ngSubmit)</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"onSubmit()"</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">  &#x3C;</span><span style="color:#85E89D">input</span><span style="color:#B392F0"> [formField]</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"loginForm.email"</span><span style="color:#E1E4E8"> /></span></span>
+<span class="line"><span style="color:#E1E4E8">  &#x3C;</span><span style="color:#85E89D">button</span><span style="color:#B392F0"> type</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"submit"</span><span style="color:#E1E4E8">>登入&#x3C;/</span><span style="color:#85E89D">button</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;/</span><span style="color:#85E89D">form</span><span style="color:#E1E4E8">></span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// login.component.ts</span></span>
+<span class="line"><span style="color:#E1E4E8">async </span><span style="color:#B392F0">onSubmit</span><span style="color:#E1E4E8">(): </span><span style="color:#79B8FF">Promise</span><span style="color:#F97583">&#x3C;void></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">  await </span><span style="color:#B392F0">submit</span><span style="color:#E1E4E8">(this.loginForm, </span><span style="color:#FFAB70">async</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">    // 這裡的 API 呼叫永遠不會執行</span></span>
+<span class="line"><span style="color:#6A737D">    // 因為瀏覽器已經觸發預設表單提交</span></span>
+<span class="line"><span style="color:#B392F0">    return</span><span style="color:#B392F0"> this</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">authService</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">login</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">email</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">password</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">  });</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h2 id="根本原因推測">根本原因推測</h2>
+<ol>
+<li><strong>async 函數的非同步特性</strong>：<code>(ngSubmit)</code> 觸發 <code>onSubmit()</code> 時，由於函數是 async，Angular 不會等待它完成</li>
+<li><strong>事件處理時序</strong>：<code>submit()</code> 函數內部可能有 <code>event.preventDefault()</code> 的邏輯，但因為 async 導致執行太晚</li>
+<li><strong>瀏覽器競爭條件</strong>：瀏覽器的預設表單提交行為先於 <code>preventDefault()</code> 執行</li>
+</ol>
+<p>這可能是 Angular Signal Forms 的 bug 或設計限制，因為傳統的 Reactive Forms 搭配 async <code>(ngSubmit)</code> 不會有此問題。</p>
+<h2 id="解決方案">解決方案</h2>
+<h3 id="方案一在-template-同步阻止預設行為推薦">方案一：在 template 同步阻止預設行為（推薦）</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#6A737D">&#x3C;!-- ✅ 正確寫法 --></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">form</span><span style="color:#B392F0"> (submit)</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"$event.preventDefault(); onSubmit()"</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">  &#x3C;</span><span style="color:#85E89D">input</span><span style="color:#B392F0"> [formField]</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"loginForm.email"</span><span style="color:#E1E4E8"> /></span></span>
+<span class="line"><span style="color:#E1E4E8">  &#x3C;</span><span style="color:#85E89D">button</span><span style="color:#B392F0"> type</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"submit"</span><span style="color:#E1E4E8">>登入&#x3C;/</span><span style="color:#85E89D">button</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;/</span><span style="color:#85E89D">form</span><span style="color:#E1E4E8">></span></span></code></pre>
+<p><strong>關鍵點</strong>：</p>
+<ul>
+<li>使用原生 <code>(submit)</code> 而非 <code>(ngSubmit)</code></li>
+<li><code>$event.preventDefault()</code> 在同一個同步表達式中執行，確保在瀏覽器處理事件前完成</li>
+</ul>
+<h3 id="方案二在-typescript-中同步阻止不可靠">方案二：在 TypeScript 中同步阻止（不可靠）</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// ❌ 這個方法不可靠</span></span>
+<span class="line"><span style="color:#E1E4E8">async </span><span style="color:#B392F0">onSubmit</span><span style="color:#E1E4E8">(event</span><span style="color:#F97583">?:</span><span style="color:#E1E4E8"> Event): </span><span style="color:#79B8FF">Promise</span><span style="color:#F97583">&#x3C;void></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">  event?.preventDefault();  </span><span style="color:#6A737D">// 可能執行太晚</span></span>
+<span class="line"><span style="color:#E1E4E8">  await </span><span style="color:#B392F0">submit</span><span style="color:#E1E4E8">(this.loginForm, </span><span style="color:#FFAB70">async</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> { </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>即使在函數第一行呼叫 <code>preventDefault()</code>，由於 async 函數的特性，瀏覽器可能已經開始處理預設行為。</p>
+<h3 id="不推薦的方案">不推薦的方案</h3>
+<ul>
+<li>❌ 移除 <code>&#x3C;form></code> 改用 <code>&#x3C;div></code>（喪失表單語義化和無障礙特性）</li>
+<li>❌ 使用 <code>(click)</code> 取代表單提交（無法用 Enter 鍵提交）</li>
+</ul>
+<h2 id="測試驗證">測試驗證</h2>
+<p>修改前後的 E2E 測試結果：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>測試</th><th>修改前</th><th>修改後</th></tr></thead><tbody><tr><td>登入表單點擊提交</td><td>❌ 頁面重載</td><td>✅ 通過</td></tr><tr><td>登入表單 Enter 提交</td><td>❌ 頁面重載</td><td>✅ 通過</td></tr><tr><td>註冊表單點擊提交</td><td>❌ 頁面重載</td><td>✅ 通過</td></tr><tr><td>註冊表單 Enter 提交</td><td>❌ 頁面重載</td><td>✅ 通過</td></tr></tbody></table>
+<h2 id="相關檔案">相關檔案</h2>
+<ul>
+<li><code>apps/web/src/app/pages/login/login.component.html</code></li>
+<li><code>apps/web/src/app/pages/login/login.component.ts</code></li>
+<li><code>apps/web/src/app/pages/register/register.component.html</code></li>
+<li><code>apps/web/src/app/pages/register/register.component.ts</code></li>
+</ul>
+<h2 id="學習要點">學習要點</h2>
+<ol>
+<li><strong>Signal Forms 是實驗性功能</strong>：<code>@angular/forms/signals</code> 仍在開發中，可能有未預期的行為</li>
+<li><strong>事件處理的同步性</strong>：阻止瀏覽器預設行為必須是同步的，不能依賴 async 函數</li>
+<li><strong>Template 優先於 TypeScript</strong>：在 template 中處理 <code>preventDefault()</code> 比在 TypeScript 中更可靠</li>
+<li><strong>保持表單語義化</strong>：即使遇到問題，也應優先尋找保留 <code>&#x3C;form></code> 元素的解法</li>
+</ol>
+<h2 id="後續追蹤">後續追蹤</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 確認這是否為 Angular Signal Forms 的已知 issue</li>
+<li class="task-list-item"><input type="checkbox" disabled> 向 Angular 團隊回報此問題（如果是 bug）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 追蹤 Angular 版本更新是否修復此問題</li>
+</ul> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>

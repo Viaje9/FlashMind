@@ -1,0 +1,2036 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="記錄 FlashMind 專案的關鍵技術架構決策及其背景與理由。"><meta name="generator" content="Astro v5.16.6"><title>架構決策紀錄 (ADR)｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>架構決策紀錄 (ADR)</h1> <p class="doc-summary">記錄 FlashMind 專案的關鍵技術架構決策及其背景與理由。</p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/ADR.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/ADR.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#adr-001採用-monorepo-架構搭配-pnpm-workspace">ADR-001：採用 Monorepo 架構搭配 pnpm Workspace</a> </li><li class="toc-item depth-3"> <a href="#狀態">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景">背景</a> </li><li class="toc-item depth-3"> <a href="#決策">決策</a> </li><li class="toc-item depth-3"> <a href="#理由">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-002前端框架選用-angular-21">ADR-002：前端框架選用 Angular 21</a> </li><li class="toc-item depth-3"> <a href="#狀態-1">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-1">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-1">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-1">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-1">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-003後端框架選用-nestjs">ADR-003：後端框架選用 NestJS</a> </li><li class="toc-item depth-3"> <a href="#狀態-2">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-2">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-2">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-2">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-2">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-004資料庫-orm-選用-prisma">ADR-004：資料庫 ORM 選用 Prisma</a> </li><li class="toc-item depth-3"> <a href="#狀態-3">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-3">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-3">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-3">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-3">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-005間隔重複演算法選用-fsrs">ADR-005：間隔重複演算法選用 FSRS</a> </li><li class="toc-item depth-3"> <a href="#狀態-4">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-4">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-4">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-4">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-4">替代方案</a> </li><li class="toc-item depth-3"> <a href="#參考資料">參考資料</a> </li><li class="toc-item depth-2"> <a href="#adr-006應用形態選用-pwa">ADR-006：應用形態選用 PWA</a> </li><li class="toc-item depth-3"> <a href="#狀態-5">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-5">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-5">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-5">理由</a> </li><li class="toc-item depth-3"> <a href="#缺點與緩解">缺點與緩解</a> </li><li class="toc-item depth-3"> <a href="#替代方案-5">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-007api-契約驅動開發-contract-first">ADR-007：API 契約驅動開發 (Contract-First)</a> </li><li class="toc-item depth-3"> <a href="#狀態-6">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-6">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-6">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-6">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-6">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-008ai-內容生成服務整合">ADR-008：AI 內容生成服務整合</a> </li><li class="toc-item depth-3"> <a href="#狀態-7">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-7">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-7">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-7">理由</a> </li><li class="toc-item depth-3"> <a href="#技術細節">技術細節</a> </li><li class="toc-item depth-3"> <a href="#風險與緩解">風險與緩解</a> </li><li class="toc-item depth-2"> <a href="#adr-009樣式框架選用-tailwind-css-v4">ADR-009：樣式框架選用 Tailwind CSS v4</a> </li><li class="toc-item depth-3"> <a href="#狀態-8">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-8">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-8">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-8">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-7">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-010元件開發採用-storybook">ADR-010：元件開發採用 Storybook</a> </li><li class="toc-item depth-3"> <a href="#狀態-9">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-9">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-9">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-9">理由</a> </li><li class="toc-item depth-2"> <a href="#adr-011前端狀態管理選用-angular-signal-stores">ADR-011：前端狀態管理選用 Angular Signal Stores</a> </li><li class="toc-item depth-3"> <a href="#狀態-10">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-10">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-10">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-10">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-8">替代方案</a> </li><li class="toc-item depth-3"> <a href="#注意事項">注意事項</a> </li><li class="toc-item depth-2"> <a href="#adr-012前端元件按領域分組與共置原則">ADR-012：前端元件按領域分組與共置原則</a> </li><li class="toc-item depth-3"> <a href="#狀態-11">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-11">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-11">決策</a> </li><li class="toc-item depth-3"> <a href="#分層架構">分層架構</a> </li><li class="toc-item depth-3"> <a href="#domain-層設計原則">Domain 層設計原則</a> </li><li class="toc-item depth-3"> <a href="#domain-層範例">Domain 層範例</a> </li><li class="toc-item depth-3"> <a href="#form-層範例signal-forms">Form 層範例（Signal Forms）</a> </li><li class="toc-item depth-3"> <a href="#檔案命名規範">檔案命名規範</a> </li><li class="toc-item depth-3"> <a href="#理由-11">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-9">替代方案</a> </li><li class="toc-item depth-3"> <a href="#業務元件放置規則">業務元件放置規則</a> </li><li class="toc-item depth-3"> <a href="#注意事項-1">注意事項</a> </li><li class="toc-item depth-2"> <a href="#adr-013專案目錄結構規範">ADR-013：專案目錄結構規範</a> </li><li class="toc-item depth-3"> <a href="#狀態-12">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-12">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-12">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-12">理由</a> </li><li class="toc-item depth-3"> <a href="#目錄說明">目錄說明</a> </li><li class="toc-item depth-2"> <a href="#adr-014ui-元件庫設計packagesui">ADR-014：UI 元件庫設計（packages/ui）</a> </li><li class="toc-item depth-3"> <a href="#狀態-13">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-13">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-13">決策</a> </li><li class="toc-item depth-3"> <a href="#元件分類">元件分類</a> </li><li class="toc-item depth-3"> <a href="#分類說明">分類說明</a> </li><li class="toc-item depth-3"> <a href="#overlays-使用方式">Overlays 使用方式</a> </li><li class="toc-item depth-3"> <a href="#理由-13">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-10">替代方案</a> </li><li class="toc-item depth-3"> <a href="#注意事項-2">注意事項</a> </li><li class="toc-item depth-2"> <a href="#adr-015tts-語音合成服務整合">ADR-015：TTS 語音合成服務整合</a> </li><li class="toc-item depth-3"> <a href="#狀態-14">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-14">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-14">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-14">理由</a> </li><li class="toc-item depth-3"> <a href="#技術細節-1">技術細節</a> </li><li class="toc-item depth-3"> <a href="#風險與緩解-1">風險與緩解</a> </li><li class="toc-item depth-2"> <a href="#adr-016api-設計規範">ADR-016：API 設計規範</a> </li><li class="toc-item depth-3"> <a href="#狀態-15">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-15">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-15">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-15">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-11">替代方案</a> </li><li class="toc-item depth-2"> <a href="#adr-017e2e-測試框架與目錄結構">ADR-017：E2E 測試框架與目錄結構</a> </li><li class="toc-item depth-3"> <a href="#狀態-16">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-16">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-16">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-16">理由</a> </li><li class="toc-item depth-3"> <a href="#測試命名規範">測試命名規範</a> </li><li class="toc-item depth-3"> <a href="#替代方案-12">替代方案</a> </li><li class="toc-item depth-3"> <a href="#執行指令">執行指令</a> </li><li class="toc-item depth-2"> <a href="#adr-018測試驅動開發tdd">ADR-018：測試驅動開發（TDD）</a> </li><li class="toc-item depth-3"> <a href="#狀態-17">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-17">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-17">決策</a> </li><li class="toc-item depth-3"> <a href="#tdd-流程">TDD 流程</a> </li><li class="toc-item depth-3"> <a href="#適用範圍">適用範圍</a> </li><li class="toc-item depth-3"> <a href="#tdd-實踐指南">TDD 實踐指南</a> </li><li class="toc-item depth-3"> <a href="#e2e-測試的-tdd">E2E 測試的 TDD</a> </li><li class="toc-item depth-3"> <a href="#理由-17">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-13">替代方案</a> </li><li class="toc-item depth-3"> <a href="#注意事項-3">注意事項</a> </li><li class="toc-item depth-2"> <a href="#adr-019前端-testid-規範">ADR-019：前端 testId 規範</a> </li><li class="toc-item depth-3"> <a href="#狀態-18">狀態</a> </li><li class="toc-item depth-3"> <a href="#背景-18">背景</a> </li><li class="toc-item depth-3"> <a href="#決策-18">決策</a> </li><li class="toc-item depth-3"> <a href="#理由-18">理由</a> </li><li class="toc-item depth-3"> <a href="#替代方案-14">替代方案</a> </li><li class="toc-item depth-3"> <a href="#注意事項-4">注意事項</a> </li><li class="toc-item depth-2"> <a href="#附錄技術棧總覽">附錄：技術棧總覽</a> </li><li class="toc-item depth-2"> <a href="#附錄決策狀態說明">附錄：決策狀態說明</a> </li> </ul> </details> <div class="doc-content"> <h1 id="架構決策紀錄-adr">架構決策紀錄 (ADR)</h1>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>版本</th><th>日期</th><th>作者</th><th>變更說明</th></tr></thead><tbody><tr><td>1.0</td><td>2026-01-16</td><td>—</td><td>初版建立</td></tr><tr><td>1.1</td><td>2026-01-17</td><td>—</td><td>新增 ADR-011~013：狀態管理、元件組織、目錄結構</td></tr><tr><td>1.2</td><td>2026-01-17</td><td>—</td><td>ADR-011 改為 Signal Stores；ADR-012 加入共置原則</td></tr><tr><td>1.3</td><td>2026-01-17</td><td>—</td><td>ADR-012 加入 Domain 層（Pure Function 商業邏輯）</td></tr><tr><td>1.4</td><td>2026-01-17</td><td>—</td><td>ADR-012 加入業務元件放置規則；新增 ADR-014 UI 元件庫設計</td></tr><tr><td>1.5</td><td>2026-01-17</td><td>—</td><td>ADR-008 改為 Azure OpenAI；新增 ADR-015 TTS 語音合成服務</td></tr><tr><td>1.6</td><td>2026-01-17</td><td>—</td><td>新增 ADR-016 API 設計規範</td></tr><tr><td>1.7</td><td>2026-01-17</td><td>—</td><td>新增 ADR-017 E2E 測試框架與目錄結構</td></tr><tr><td>1.8</td><td>2026-01-17</td><td>—</td><td>新增 ADR-018 測試驅動開發（TDD）</td></tr><tr><td>1.9</td><td>2026-01-18</td><td>—</td><td>新增 ADR-019 前端 testId 規範</td></tr><tr><td>1.10</td><td>2026-01-18</td><td>—</td><td>ADR-012、ADR-014 改用 Signal Forms 取代 Reactive Forms</td></tr></tbody></table>
+<hr>
+<h2 id="adr-001採用-monorepo-架構搭配-pnpm-workspace">ADR-001：採用 Monorepo 架構搭配 pnpm Workspace</h2>
+<h3 id="狀態">狀態</h3>
+<p>已採用</p>
+<h3 id="背景">背景</h3>
+<p>FlashMind 需要同時維護前端 (Web App)、後端 (API Server)、共用套件 (API Client) 以及文件站台。需要一種專案結構能有效管理這些子專案間的依賴關係與程式碼共享。</p>
+<h3 id="決策">決策</h3>
+<p>採用 pnpm workspace 管理 Monorepo 架構：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>flashmind/</span></span>
+<span class="line"><span>├── apps/</span></span>
+<span class="line"><span>│   ├── web/          # Angular PWA 前端</span></span>
+<span class="line"><span>│   ├── api/          # NestJS 後端</span></span>
+<span class="line"><span>│   └── docs-viewer/  # 文件站台</span></span>
+<span class="line"><span>├── packages/</span></span>
+<span class="line"><span>│   └── api-client/   # 自動生成的 API Client</span></span>
+<span class="line"><span>└── openapi/          # OpenAPI 契約定義</span></span></code></pre>
+<h3 id="理由">理由</h3>
+<ul>
+<li><strong>程式碼共享</strong>：<code>@flashmind/api-client</code> 可由前端直接引用</li>
+<li><strong>版本一致性</strong>：共用依賴統一管理，避免版本衝突</li>
+<li><strong>開發效率</strong>：單一 repo 便於跨專案重構與原子性提交</li>
+<li><strong>pnpm 優勢</strong>：硬連結節省磁碟空間，安裝速度快</li>
+</ul>
+<h3 id="替代方案">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>多 Repo 分離</td><td>維護成本高，跨專案變更需協調多個 PR</td></tr><tr><td>npm/yarn workspace</td><td>功能相當，但 pnpm 在效能與磁碟使用上更優</td></tr></tbody></table>
+<hr>
+<h2 id="adr-002前端框架選用-angular-21">ADR-002：前端框架選用 Angular 21</h2>
+<h3 id="狀態-1">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-1">背景</h3>
+<p>需要選擇一個適合建構企業級 PWA 應用的前端框架，要求：</p>
+<ul>
+<li>良好的 TypeScript 支援</li>
+<li>成熟的生態系統</li>
+<li>適合長期維護</li>
+</ul>
+<h3 id="決策-1">決策</h3>
+<p>採用 Angular 21 作為前端框架，搭配：</p>
+<ul>
+<li>Tailwind CSS v4：實用優先的 CSS 框架</li>
+<li>Storybook：元件開發與文件化</li>
+</ul>
+<h3 id="理由-1">理由</h3>
+<ul>
+<li><strong>完整性</strong>：Angular 內建路由、表單、HTTP Client，減少技術選型決策</li>
+<li><strong>TypeScript 原生</strong>：從設計之初即以 TypeScript 為核心</li>
+<li><strong>Signals</strong>：Angular 21 的 Signals API 提供更直覺的反應式狀態管理</li>
+<li><strong>長期支援</strong>：Google 維護，有明確的 LTS 政策</li>
+</ul>
+<h3 id="替代方案-1">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>React</td><td>生態豐富但需額外選擇路由、狀態管理等工具</td></tr><tr><td>Vue</td><td>學習曲線平緩，但企業級專案經驗較少</td></tr><tr><td>SvelteKit</td><td>效能優異，但生態系統仍在成熟中</td></tr></tbody></table>
+<hr>
+<h2 id="adr-003後端框架選用-nestjs">ADR-003：後端框架選用 NestJS</h2>
+<h3 id="狀態-2">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-2">背景</h3>
+<p>需要一個結構化、可擴展的 Node.js 後端框架，支援：</p>
+<ul>
+<li>依賴注入</li>
+<li>模組化架構</li>
+<li>良好的 TypeScript 支援</li>
+</ul>
+<h3 id="決策-2">決策</h3>
+<p>採用 NestJS 作為後端框架。</p>
+<h3 id="理由-2">理由</h3>
+<ul>
+<li><strong>架構一致性</strong>：模組/控制器/服務的結構與 Angular 類似，降低學習成本</li>
+<li><strong>依賴注入</strong>：內建 DI 容器，便於測試與解耦</li>
+<li><strong>豐富生態</strong>：官方支援 TypeORM、Prisma、GraphQL 等整合</li>
+<li><strong>企業級設計</strong>：適合建構可維護的中大型應用</li>
+</ul>
+<h3 id="替代方案-2">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>Express</td><td>輕量但缺乏結構，大型專案難以維護</td></tr><tr><td>Fastify</td><td>效能優異，但架構支援不如 NestJS 完整</td></tr><tr><td>tRPC</td><td>適合全端 TypeScript，但彈性較低</td></tr></tbody></table>
+<hr>
+<h2 id="adr-004資料庫-orm-選用-prisma">ADR-004：資料庫 ORM 選用 Prisma</h2>
+<h3 id="狀態-3">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-3">背景</h3>
+<p>需要一個類型安全的 ORM 工具，提供：</p>
+<ul>
+<li>自動產生 TypeScript 類型</li>
+<li>直覺的查詢 API</li>
+<li>資料庫遷移管理</li>
+</ul>
+<h3 id="決策-3">決策</h3>
+<p>採用 Prisma 作為 ORM。</p>
+<h3 id="理由-3">理由</h3>
+<ul>
+<li><strong>類型安全</strong>：根據 schema 自動產生 TypeScript 類型</li>
+<li><strong>直覺的 API</strong>：<code>prisma.user.findMany()</code> 比原生 SQL 更易讀</li>
+<li><strong>遷移管理</strong>：<code>prisma migrate</code> 提供版本化的 schema 變更</li>
+<li><strong>開發體驗</strong>：Prisma Studio 提供視覺化資料瀏覽</li>
+</ul>
+<h3 id="替代方案-3">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>TypeORM</td><td>功能完整，但類型推導不如 Prisma 直覺</td></tr><tr><td>Drizzle</td><td>更輕量且效能好，但生態較新</td></tr><tr><td>Knex</td><td>靈活但缺乏自動類型產生</td></tr></tbody></table>
+<hr>
+<h2 id="adr-005間隔重複演算法選用-fsrs">ADR-005：間隔重複演算法選用 FSRS</h2>
+<h3 id="狀態-4">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-4">背景</h3>
+<p>FlashMind 的核心功能是間隔重複學習。需要選擇一個高效的排程演算法：</p>
+<ul>
+<li>比傳統 SM-2 更高的記憶效率</li>
+<li>開源可用</li>
+<li>有 TypeScript 實作</li>
+</ul>
+<h3 id="決策-4">決策</h3>
+<p>採用 FSRS（Free Spaced Repetition Scheduler）演算法，使用 <a href="https://github.com/open-spaced-repetition/ts-fsrs">ts-fsrs</a> 套件。</p>
+<h3 id="理由-4">理由</h3>
+<ul>
+<li><strong>科學基礎</strong>：基於記憶研究的數學模型，經過實證驗證</li>
+<li><strong>效率更高</strong>：相比 SM-2，能以更少的複習次數達到相同的記憶效果</li>
+<li><strong>開源實作</strong>：ts-fsrs 提供完整的 TypeScript 支援</li>
+<li><strong>差異化</strong>：這是與 Anki (SM-2) 的核心差異點</li>
+</ul>
+<h3 id="替代方案-4">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>SM-2</td><td>經典演算法，但已有 30 年歷史，效率不如 FSRS</td></tr><tr><td>Leitner System</td><td>實作簡單，但排程精確度較低</td></tr><tr><td>自行設計</td><td>開發成本高，缺乏實證基礎</td></tr></tbody></table>
+<h3 id="參考資料">參考資料</h3>
+<ul>
+<li><a href="https://github.com/open-spaced-repetition/fsrs4anki">FSRS 演算法說明</a></li>
+<li><a href="https://github.com/open-spaced-repetition/ts-fsrs">ts-fsrs GitHub</a></li>
+</ul>
+<hr>
+<h2 id="adr-006應用形態選用-pwa">ADR-006：應用形態選用 PWA</h2>
+<h3 id="狀態-5">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-5">背景</h3>
+<p>FlashMind 定位為行動優先的應用，目標用戶主要在通勤等碎片時間使用手機學習。需要決定應用的發布形態。</p>
+<h3 id="決策-5">決策</h3>
+<p>採用 Progressive Web App (PWA) 架構，而非原生 App。</p>
+<h3 id="理由-5">理由</h3>
+<ul>
+<li><strong>跨平台</strong>：單一程式碼庫支援 iOS、Android、桌面瀏覽器</li>
+<li><strong>免安裝</strong>：用戶可直接透過瀏覽器使用，降低使用門檻</li>
+<li><strong>可安裝</strong>：支援 Add to Home Screen，接近原生體驗</li>
+<li><strong>離線支援</strong>：Service Worker 快取核心功能</li>
+<li><strong>開發效率</strong>：無需維護多個原生專案</li>
+<li><strong>更新即時</strong>：無需經過 App Store 審核</li>
+</ul>
+<h3 id="缺點與緩解">缺點與緩解</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>缺點</th><th>緩解措施</th></tr></thead><tbody><tr><td>iOS PWA 功能受限</td><td>聚焦核心功能，避免依賴 iOS 不支援的 API</td></tr><tr><td>無法上架 App Store</td><td>未來可考慮 Capacitor 包裝</td></tr><tr><td>推播通知需授權</td><td>提供清楚的授權引導</td></tr></tbody></table>
+<h3 id="替代方案-5">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>React Native</td><td>跨平台但開發成本較高</td></tr><tr><td>Flutter</td><td>效能好但團隊需學習 Dart</td></tr><tr><td>原生 App</td><td>體驗最佳但維護成本高</td></tr></tbody></table>
+<hr>
+<h2 id="adr-007api-契約驅動開發-contract-first">ADR-007：API 契約驅動開發 (Contract-First)</h2>
+<h3 id="狀態-6">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-6">背景</h3>
+<p>前後端分離開發時，需要確保 API 介面的一致性，避免溝通成本與整合問題。</p>
+<h3 id="決策-6">決策</h3>
+<p>採用 OpenAPI 3.0 規範定義 API 契約，並使用 openapi-generator-cli 自動產生 TypeScript Angular Client。</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>openapi/api.yaml</span></span>
+<span class="line"><span>    ↓ openapi-generator-cli</span></span>
+<span class="line"><span>packages/api-client/src/generated/</span></span></code></pre>
+<h3 id="理由-6">理由</h3>
+<ul>
+<li><strong>單一真相來源</strong>：OpenAPI 規範作為前後端溝通的唯一依據</li>
+<li><strong>自動化</strong>：減少手動撰寫 API Client 的錯誤</li>
+<li><strong>文件即程式碼</strong>：API 規範本身就是文件</li>
+<li><strong>並行開發</strong>：前後端可根據契約同時開發</li>
+</ul>
+<h3 id="替代方案-6">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>Code-First</td><td>後端先實作再產生文件，容易不同步</td></tr><tr><td>GraphQL</td><td>類型安全但增加複雜度</td></tr><tr><td>tRPC</td><td>需要全端 TypeScript，限制後端技術選擇</td></tr></tbody></table>
+<hr>
+<h2 id="adr-008ai-內容生成服務整合">ADR-008：AI 內容生成服務整合</h2>
+<h3 id="狀態-7">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-7">背景</h3>
+<p>FlashMind 的核心差異化功能之一是 AI 自動生成卡片內容（詞義、例句）。需要選擇合適的 AI 服務。</p>
+<h3 id="決策-7">決策</h3>
+<p>採用 <strong>Azure OpenAI Service</strong> 作為 AI 內容生成服務：</p>
+<ul>
+<li>不限定特定模型，可根據需求部署 GPT-4o、GPT-4、GPT-3.5 Turbo 等</li>
+<li>初期不實作多服務提供者抽象，但設計時預留擴展空間</li>
+</ul>
+<h3 id="理由-7">理由</h3>
+<ul>
+<li><strong>品質</strong>：GPT-4 系列模型在語言生成任務上表現優異</li>
+<li><strong>企業級保障</strong>：Azure 提供 SLA、合規性認證、資料落地保證</li>
+<li><strong>彈性</strong>：可根據需求部署不同模型，控制成本與效能平衡</li>
+<li><strong>整合便利</strong>：未來可與其他 Azure 服務（如 Azure AD、Application Insights）整合</li>
+</ul>
+<h3 id="技術細節">技術細節</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>說明</th></tr></thead><tbody><tr><td>端點格式</td><td><code>https://{resource}.openai.azure.com/</code></td></tr><tr><td>認證方式</td><td>API Key 或 Azure AD（建議生產環境用 Azure AD）</td></tr><tr><td>模型指定</td><td>透過 deployment name，非直接指定模型名稱</td></tr></tbody></table>
+<h3 id="風險與緩解">風險與緩解</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>風險</th><th>緩解措施</th></tr></thead><tbody><tr><td>生成品質不佳</td><td>用戶可編輯生成內容；持續優化 prompt</td></tr><tr><td>API 成本過高</td><td>設定每日生成上限；監控用量</td></tr><tr><td>服務中斷</td><td>Azure 提供 SLA；未來可擴展支援其他服務提供者</td></tr></tbody></table>
+<hr>
+<h2 id="adr-009樣式框架選用-tailwind-css-v4">ADR-009：樣式框架選用 Tailwind CSS v4</h2>
+<h3 id="狀態-8">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-8">背景</h3>
+<p>需要一個高效的 CSS 解決方案，支援：</p>
+<ul>
+<li>快速原型開發</li>
+<li>一致的設計系統</li>
+<li>良好的維護性</li>
+</ul>
+<h3 id="決策-8">決策</h3>
+<p>採用 Tailwind CSS v4 作為樣式框架。</p>
+<h3 id="理由-8">理由</h3>
+<ul>
+<li><strong>實用優先</strong>：直接在 HTML 中使用 utility class，減少 CSS 檔案切換</li>
+<li><strong>設計系統</strong>：內建的 spacing、color、typography 系統確保一致性</li>
+<li><strong>效能</strong>：JIT 編譯只產生使用到的樣式</li>
+<li><strong>行動優先</strong>：響應式斷點設計直覺</li>
+</ul>
+<h3 id="替代方案-7">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>Angular Material</td><td>元件豐富但客製化困難</td></tr><tr><td>SCSS 手寫</td><td>靈活但維護成本高</td></tr><tr><td>CSS-in-JS</td><td>與 Angular 整合不如 React 生態自然</td></tr></tbody></table>
+<hr>
+<h2 id="adr-010元件開發採用-storybook">ADR-010：元件開發採用 Storybook</h2>
+<h3 id="狀態-9">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-9">背景</h3>
+<p>需要一個工具來：</p>
+<ul>
+<li>獨立開發 UI 元件</li>
+<li>建立元件文件</li>
+<li>進行視覺測試</li>
+</ul>
+<h3 id="決策-9">決策</h3>
+<p>採用 Storybook 作為元件開發與文件工具。</p>
+<h3 id="理由-9">理由</h3>
+<ul>
+<li><strong>隔離開發</strong>：不需執行整個應用即可開發元件</li>
+<li><strong>自動文件</strong>：根據元件的 props 自動產生文件</li>
+<li><strong>視覺回歸測試</strong>：搭配 Chromatic 可進行視覺差異測試</li>
+<li><strong>無障礙測試</strong>：@storybook/addon-a11y 協助檢測無障礙問題</li>
+</ul>
+<hr>
+<h2 id="adr-011前端狀態管理選用-angular-signal-stores">ADR-011：前端狀態管理選用 Angular Signal Stores</h2>
+<h3 id="狀態-10">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-10">背景</h3>
+<p>FlashMind 前端需要管理多種狀態：</p>
+<ul>
+<li>用戶認證狀態</li>
+<li>牌組與卡片資料</li>
+<li>學習進度與 FSRS 排程</li>
+<li>UI 狀態（載入中、錯誤、表單）</li>
+</ul>
+<p>需要選擇一個可擴展、可預測的狀態管理方案。</p>
+<h3 id="決策-10">決策</h3>
+<p>採用 Angular 原生 Signals 搭配 Signal Store 模式作為狀態管理解決方案。</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// apps/web/src/app/state/auth.store.ts</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { signal, computed } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@angular/core'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> const</span><span style="color:#79B8FF"> authStore</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">  // State</span></span>
+<span class="line"><span style="color:#E1E4E8">  user: </span><span style="color:#B392F0">signal</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">User</span><span style="color:#F97583"> |</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">>(</span><span style="color:#79B8FF">null</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"><span style="color:#E1E4E8">  isLoading: </span><span style="color:#B392F0">signal</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">false</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"><span style="color:#E1E4E8">  error: </span><span style="color:#B392F0">signal</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#79B8FF">string</span><span style="color:#F97583"> |</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">>(</span><span style="color:#79B8FF">null</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">  // Computed</span></span>
+<span class="line"><span style="color:#E1E4E8">  isAuthenticated: </span><span style="color:#B392F0">computed</span><span style="color:#E1E4E8">(() </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> authStore.</span><span style="color:#B392F0">user</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">!==</span><span style="color:#79B8FF"> null</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">  // Actions</span></span>
+<span class="line"><span style="color:#B392F0">  login</span><span style="color:#E1E4E8">: </span><span style="color:#F97583">async</span><span style="color:#E1E4E8"> (</span><span style="color:#FFAB70">credentials</span><span style="color:#F97583">:</span><span style="color:#B392F0"> LoginDto</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> { </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> },</span></span>
+<span class="line"><span style="color:#B392F0">  logout</span><span style="color:#E1E4E8">: () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> { </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> },</span></span>
+<span class="line"><span style="color:#E1E4E8">};</span></span></code></pre>
+<p>目錄結構：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>apps/web/src/app/</span></span>
+<span class="line"><span>├── state/</span></span>
+<span class="line"><span>│   ├── auth.store.ts</span></span>
+<span class="line"><span>│   ├── deck.store.ts</span></span>
+<span class="line"><span>│   ├── card.store.ts</span></span>
+<span class="line"><span>│   └── study.store.ts</span></span></code></pre>
+<h3 id="理由-10">理由</h3>
+<ul>
+<li><strong>原生整合</strong>：Signals 是 Angular 21 的核心功能，與框架深度整合</li>
+<li><strong>輕量簡潔</strong>：無需額外套件，零樣板程式碼</li>
+<li><strong>效能優異</strong>：細粒度反應式更新，減少不必要的變更檢測</li>
+<li><strong>學習曲線低</strong>：直覺的 API，團隊容易上手</li>
+<li><strong>未來導向</strong>：Angular 官方推薦的狀態管理方向</li>
+</ul>
+<h3 id="替代方案-8">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>NgRx</td><td>功能完整但樣板程式碼多，對此專案規模過重</td></tr><tr><td>@ngrx/signals</td><td>結合 NgRx 與 Signals，但增加依賴</td></tr><tr><td>Services + BehaviorSubject</td><td>傳統做法，但 Signals 更直覺</td></tr><tr><td>NGXS</td><td>較簡潔的 Redux，但仍有額外學習成本</td></tr></tbody></table>
+<h3 id="注意事項">注意事項</h3>
+<ul>
+<li>對於複雜的非同步流程，可搭配 RxJS 的 <code>toSignal()</code> / <code>toObservable()</code></li>
+<li>Store 檔案與對應的領域元件共置（見 ADR-012），而非集中在獨立的 <code>state/</code> 目錄</li>
+</ul>
+<hr>
+<h2 id="adr-012前端元件按領域分組與共置原則">ADR-012：前端元件按領域分組與共置原則</h2>
+<h3 id="狀態-11">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-11">背景</h3>
+<p>隨著專案成長，需要一個清晰的元件組織策略：</p>
+<ul>
+<li>便於找到相關元件</li>
+<li>降低耦合</li>
+<li>支援團隊分工</li>
+<li>狀態管理、表單邏輯、商業邏輯需要有明確的放置位置</li>
+</ul>
+<h3 id="決策-11">決策</h3>
+<p>採用 <strong>Colocation（共置）</strong> 原則，按業務領域組織元件，並將 Domain、Store、Form 放在對應的領域目錄中：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>apps/web/src/app/components/</span></span>
+<span class="line"><span>├── auth/                       # 登入/註冊領域</span></span>
+<span class="line"><span>│   ├── auth.domain.ts          # 商業邏輯（驗證規則、權限判斷）</span></span>
+<span class="line"><span>│   ├── auth.store.ts           # 狀態管理（用戶、登入狀態）</span></span>
+<span class="line"><span>│   ├── auth.form.ts            # 表單定義（登入、註冊表單）</span></span>
+<span class="line"><span>│   ├── login/</span></span>
+<span class="line"><span>│   │   └── login.component.ts</span></span>
+<span class="line"><span>│   └── register/</span></span>
+<span class="line"><span>│       └── register.component.ts</span></span>
+<span class="line"><span>├── deck/                       # 牌組領域</span></span>
+<span class="line"><span>│   ├── deck.domain.ts          # 商業邏輯（統計計算、進度計算）</span></span>
+<span class="line"><span>│   ├── deck.store.ts           # 牌組狀態</span></span>
+<span class="line"><span>│   ├── deck.form.ts            # 牌組表單（新增、編輯）</span></span>
+<span class="line"><span>│   ├── deck-list/</span></span>
+<span class="line"><span>│   ├── deck-create/</span></span>
+<span class="line"><span>│   └── deck-detail/</span></span>
+<span class="line"><span>├── card/                       # 卡片領域</span></span>
+<span class="line"><span>│   ├── card.domain.ts          # 商業邏輯（卡片驗證、詞義處理）</span></span>
+<span class="line"><span>│   ├── card.store.ts           # 卡片狀態</span></span>
+<span class="line"><span>│   ├── card.form.ts            # 卡片表單（含動態詞義區塊）</span></span>
+<span class="line"><span>│   ├── card-editor/</span></span>
+<span class="line"><span>│   └── card-list/</span></span>
+<span class="line"><span>├── study/                      # 學習領域</span></span>
+<span class="line"><span>│   ├── study.domain.ts         # 商業邏輯（FSRS 計算、排程規則）</span></span>
+<span class="line"><span>│   ├── study.store.ts          # 學習進度狀態</span></span>
+<span class="line"><span>│   ├── study-session/</span></span>
+<span class="line"><span>│   └── study-complete/</span></span>
+<span class="line"><span>├── settings/                   # 設定領域</span></span>
+<span class="line"><span>│   └── settings.form.ts</span></span>
+<span class="line"><span>└── shared/                     # 跨領域共用</span></span>
+<span class="line"><span>    ├── ui/                     # 共用 UI 元件</span></span>
+<span class="line"><span>    │   ├── button/</span></span>
+<span class="line"><span>    │   ├── input/</span></span>
+<span class="line"><span>    │   └── dialog/</span></span>
+<span class="line"><span>    └── layouts/                # 版面配置</span></span></code></pre>
+<h3 id="分層架構">分層架構</h3>
+<p>每個領域包含四種檔案類型，各有明確職責：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>層級</th><th>檔案</th><th>職責</th><th>特性</th></tr></thead><tbody><tr><td>Domain</td><td><code>*.domain.ts</code></td><td>商業邏輯、規則判斷</td><td>Pure function、可 throw error、無框架依賴</td></tr><tr><td>Store</td><td><code>*.store.ts</code></td><td>狀態管理、API 呼叫</td><td>使用 Angular Signals、呼叫 Domain</td></tr><tr><td>Form</td><td><code>*.form.ts</code></td><td>表單結構、欄位驗證</td><td>使用 Signal Forms</td></tr><tr><td>Component</td><td><code>*.component.ts</code></td><td>UI 渲染、使用者互動</td><td>使用 Store 與 Form</td></tr></tbody></table>
+<h3 id="domain-層設計原則">Domain 層設計原則</h3>
+<p>Domain 層專注於純商業邏輯，遵循以下原則：</p>
+<ul>
+<li><strong>Pure Function</strong>：相同輸入必定產生相同輸出</li>
+<li><strong>可 throw error</strong>：用於表達商業規則違反</li>
+<li><strong>無框架依賴</strong>：不使用 Angular、RxJS 等框架 API</li>
+<li><strong>無 utility 依賴</strong>：不直接使用時間套件等工具（由呼叫端傳入）</li>
+<li><strong>易於測試</strong>：不需 mock，直接單元測試</li>
+</ul>
+<h3 id="domain-層範例">Domain 層範例</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// study.domain.ts</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#F97583"> type</span><span style="color:#E1E4E8"> { Card, Rating, SchedulingResult } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> './study.types'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 計算下次複習時間（FSRS 核心邏輯） */</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> function</span><span style="color:#B392F0"> calculateNextReview</span><span style="color:#E1E4E8">(</span></span>
+<span class="line"><span style="color:#FFAB70">  card</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Card</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#FFAB70">  rating</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Rating</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#FFAB70">  now</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Date</span></span>
+<span class="line"><span style="color:#E1E4E8">)</span><span style="color:#F97583">:</span><span style="color:#B392F0"> SchedulingResult</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  if</span><span style="color:#E1E4E8"> (rating </span><span style="color:#F97583">&#x3C;</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> ||</span><span style="color:#E1E4E8"> rating </span><span style="color:#F97583">></span><span style="color:#79B8FF"> 4</span><span style="color:#E1E4E8">) {</span></span>
+<span class="line"><span style="color:#F97583">    throw</span><span style="color:#F97583"> new</span><span style="color:#B392F0"> Error</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Rating must be between 1 and 4'</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#6A737D">  // FSRS 計算邏輯...</span></span>
+<span class="line"><span style="color:#F97583">  return</span><span style="color:#E1E4E8"> { nextDue, interval, stability };</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 判斷卡片是否需要今日複習 */</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> function</span><span style="color:#B392F0"> isDueToday</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">card</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Card</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">today</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Date</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> boolean</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  return</span><span style="color:#E1E4E8"> card.nextDue </span><span style="color:#F97583">&#x3C;=</span><span style="color:#E1E4E8"> today;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 計算本次學習的卡片順序（待複習優先） */</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> function</span><span style="color:#B392F0"> sortCardsForStudy</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">cards</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Card</span><span style="color:#E1E4E8">[])</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Card</span><span style="color:#E1E4E8">[] {</span></span>
+<span class="line"><span style="color:#F97583">  return</span><span style="color:#E1E4E8"> [</span><span style="color:#F97583">...</span><span style="color:#E1E4E8">cards].</span><span style="color:#B392F0">sort</span><span style="color:#E1E4E8">((</span><span style="color:#FFAB70">a</span><span style="color:#E1E4E8">, </span><span style="color:#FFAB70">b</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (a.isNew </span><span style="color:#F97583">!==</span><span style="color:#E1E4E8"> b.isNew) </span><span style="color:#F97583">return</span><span style="color:#E1E4E8"> a.isNew </span><span style="color:#F97583">?</span><span style="color:#79B8FF"> 1</span><span style="color:#F97583"> :</span><span style="color:#F97583"> -</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> a.stability </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> b.stability;</span></span>
+<span class="line"><span style="color:#E1E4E8">  });</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// study.store.ts</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { signal } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@angular/core'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { calculateNextReview, sortCardsForStudy } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> './study.domain'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> const</span><span style="color:#79B8FF"> studyStore</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#E1E4E8">  cards: </span><span style="color:#B392F0">signal</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">Card</span><span style="color:#E1E4E8">[]>([]),</span></span>
+<span class="line"><span style="color:#E1E4E8">  currentIndex: </span><span style="color:#B392F0">signal</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">),</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">  startSession</span><span style="color:#E1E4E8">: (</span><span style="color:#FFAB70">cards</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Card</span><span style="color:#E1E4E8">[]) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> sorted</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> sortCardsForStudy</span><span style="color:#E1E4E8">(cards);  </span><span style="color:#6A737D">// 呼叫 Domain</span></span>
+<span class="line"><span style="color:#E1E4E8">    studyStore.cards.</span><span style="color:#B392F0">set</span><span style="color:#E1E4E8">(sorted);</span></span>
+<span class="line"><span style="color:#E1E4E8">    studyStore.currentIndex.</span><span style="color:#B392F0">set</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">  },</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">  submitRating</span><span style="color:#E1E4E8">: </span><span style="color:#F97583">async</span><span style="color:#E1E4E8"> (</span><span style="color:#FFAB70">rating</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Rating</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> card</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> studyStore.</span><span style="color:#B392F0">cards</span><span style="color:#E1E4E8">()[studyStore.</span><span style="color:#B392F0">currentIndex</span><span style="color:#E1E4E8">()];</span></span>
+<span class="line"><span style="color:#F97583">    const</span><span style="color:#79B8FF"> result</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> calculateNextReview</span><span style="color:#E1E4E8">(card, rating, </span><span style="color:#F97583">new</span><span style="color:#B392F0"> Date</span><span style="color:#E1E4E8">());  </span><span style="color:#6A737D">// 呼叫 Domain</span></span>
+<span class="line"><span style="color:#F97583">    await</span><span style="color:#E1E4E8"> api.</span><span style="color:#B392F0">updateCardSchedule</span><span style="color:#E1E4E8">(card.id, result);</span></span>
+<span class="line"><span style="color:#6A737D">    // 更新狀態...</span></span>
+<span class="line"><span style="color:#E1E4E8">  },</span></span>
+<span class="line"><span style="color:#E1E4E8">};</span></span></code></pre>
+<h3 id="form-層範例signal-forms">Form 層範例（Signal Forms）</h3>
+<p>Form 層使用 Angular Signal Forms（<code>@angular/forms/signals</code>）建立表單：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// auth.form.ts</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { signal } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@angular/core'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { form, required, email, minLength, validate } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@angular/forms/signals'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">interface</span><span style="color:#B392F0"> RegisterFormData</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#FFAB70">  email</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> string</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#FFAB70">  password</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> string</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#FFAB70">  confirmPassword</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> string</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> function</span><span style="color:#B392F0"> createRegisterForm</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#F97583">  const</span><span style="color:#79B8FF"> formModel</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> signal</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">RegisterFormData</span><span style="color:#E1E4E8">>({</span></span>
+<span class="line"><span style="color:#E1E4E8">    email: </span><span style="color:#9ECBFF">''</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">    password: </span><span style="color:#9ECBFF">''</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">    confirmPassword: </span><span style="color:#9ECBFF">''</span></span>
+<span class="line"><span style="color:#E1E4E8">  });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">  const</span><span style="color:#79B8FF"> registerForm</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> form</span><span style="color:#E1E4E8">(formModel, (</span><span style="color:#FFAB70">f</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">    required</span><span style="color:#E1E4E8">(f.email, { message: </span><span style="color:#9ECBFF">'請輸入 Email'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#B392F0">    email</span><span style="color:#E1E4E8">(f.email, { message: </span><span style="color:#9ECBFF">'請輸入有效的 Email 格式'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#B392F0">    required</span><span style="color:#E1E4E8">(f.password, { message: </span><span style="color:#9ECBFF">'請輸入密碼'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#B392F0">    minLength</span><span style="color:#E1E4E8">(f.password, </span><span style="color:#79B8FF">8</span><span style="color:#E1E4E8">, { message: </span><span style="color:#9ECBFF">'密碼至少需要 8 個字元'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#B392F0">    required</span><span style="color:#E1E4E8">(f.confirmPassword, { message: </span><span style="color:#9ECBFF">'請再次輸入密碼'</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#B392F0">    validate</span><span style="color:#E1E4E8">(f.confirmPassword, ({ </span><span style="color:#FFAB70">value</span><span style="color:#E1E4E8"> }) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">      if</span><span style="color:#E1E4E8"> (</span><span style="color:#B392F0">value</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#B392F0"> formModel</span><span style="color:#E1E4E8">().password </span><span style="color:#F97583">&#x26;&#x26;</span><span style="color:#B392F0"> value</span><span style="color:#E1E4E8">() </span><span style="color:#F97583">!==</span><span style="color:#B392F0"> formModel</span><span style="color:#E1E4E8">().password) {</span></span>
+<span class="line"><span style="color:#F97583">        return</span><span style="color:#E1E4E8"> { kind: </span><span style="color:#9ECBFF">'passwordMismatch'</span><span style="color:#E1E4E8">, message: </span><span style="color:#9ECBFF">'密碼與確認密碼不一致'</span><span style="color:#E1E4E8"> };</span></span>
+<span class="line"><span style="color:#E1E4E8">      }</span></span>
+<span class="line"><span style="color:#F97583">      return</span><span style="color:#79B8FF"> undefined</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">    });</span></span>
+<span class="line"><span style="color:#E1E4E8">  });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">  return</span><span style="color:#E1E4E8"> { formModel, registerForm };</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>在 Component 中使用：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// register.component.ts</span></span>
+<span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { form, FormField, submit } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@angular/forms/signals'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">@</span><span style="color:#B392F0">Component</span><span style="color:#E1E4E8">({</span></span>
+<span class="line"><span style="color:#E1E4E8">  imports: [FormField, FmLabeledInputComponent],</span></span>
+<span class="line"><span style="color:#6A737D">  // ...</span></span>
+<span class="line"><span style="color:#E1E4E8">})</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> RegisterComponent</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  readonly</span><span style="color:#FFAB70"> formModel</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> signal</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#B392F0">RegisterFormData</span><span style="color:#E1E4E8">>({ </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"><span style="color:#F97583">  readonly</span><span style="color:#FFAB70"> registerForm</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> form</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.formModel, (</span><span style="color:#FFAB70">f</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> { </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">  async</span><span style="color:#B392F0"> onSubmit</span><span style="color:#E1E4E8">()</span><span style="color:#F97583">:</span><span style="color:#B392F0"> Promise</span><span style="color:#E1E4E8">&#x3C;</span><span style="color:#79B8FF">void</span><span style="color:#E1E4E8">> {</span></span>
+<span class="line"><span style="color:#F97583">    await</span><span style="color:#B392F0"> submit</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">this</span><span style="color:#E1E4E8">.registerForm, </span><span style="color:#F97583">async</span><span style="color:#E1E4E8"> () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#6A737D">      // 表單驗證通過後執行</span></span>
+<span class="line"><span style="color:#F97583">      const</span><span style="color:#E1E4E8"> { </span><span style="color:#79B8FF">email</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">password</span><span style="color:#E1E4E8"> } </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> this</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">formModel</span><span style="color:#E1E4E8">();</span></span>
+<span class="line"><span style="color:#F97583">      await</span><span style="color:#79B8FF"> this</span><span style="color:#E1E4E8">.authService.</span><span style="color:#B392F0">register</span><span style="color:#E1E4E8">(email, password);</span></span>
+<span class="line"><span style="color:#E1E4E8">    });</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>Template 使用 <code>[formField]</code> 綁定：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">fm-labeled-input</span></span>
+<span class="line"><span style="color:#B392F0">  [formField]</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"registerForm.email"</span></span>
+<span class="line"><span style="color:#B392F0">  label</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"Email"</span></span>
+<span class="line"><span style="color:#B392F0">  placeholder</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"請輸入 Email"</span></span>
+<span class="line"><span style="color:#E1E4E8">/></span></span></code></pre>
+<h3 id="檔案命名規範">檔案命名規範</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>檔案類型</th><th>命名規則</th><th>範例</th></tr></thead><tbody><tr><td>Domain</td><td><code>{domain}.domain.ts</code></td><td><code>study.domain.ts</code></td></tr><tr><td>Store</td><td><code>{domain}.store.ts</code></td><td><code>auth.store.ts</code></td></tr><tr><td>Form</td><td><code>{domain}.form.ts</code></td><td><code>card.form.ts</code></td></tr><tr><td>Component</td><td><code>{name}.component.ts</code></td><td><code>login.component.ts</code></td></tr></tbody></table>
+<h3 id="理由-11">理由</h3>
+<ul>
+<li><strong>高內聚</strong>：一個領域的所有檔案（Domain、Store、Form、Component）都在同一目錄</li>
+<li><strong>易於測試</strong>：Domain 層為 pure function，可直接單元測試，無需 mock</li>
+<li><strong>易於導航</strong>：開發某功能時不需在多個目錄間切換</li>
+<li><strong>易於重構</strong>：刪除或搬移整個功能只需處理一個目錄</li>
+<li><strong>與後端對齊</strong>：前後端使用相同的領域切分（auth、deck、card、study）</li>
+<li><strong>可移植性</strong>：Domain 層不依賴框架，未來換框架時商業邏輯無需修改</li>
+<li><strong>職責清晰</strong>：每層有明確的單一職責</li>
+</ul>
+<h3 id="替代方案-9">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>集中式（state/、forms/ 獨立目錄）</td><td>需在多個目錄間跳轉，關聯性不明顯</td></tr><tr><td>按類型分組 (dialogs/, forms/)</td><td>跨領域元件混雜，難以判斷影響範圍</td></tr><tr><td>Atomic Design</td><td>適合 UI 元件庫，但業務邏輯切分不清</td></tr><tr><td>商業邏輯放 Store</td><td>Store 職責過重，且難以測試</td></tr></tbody></table>
+<h3 id="業務元件放置規則">業務元件放置規則</h3>
+<p>業務相關的元件依據是否共用，放置在不同位置：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>元件類型</th><th>放置位置</th><th>說明</th></tr></thead><tbody><tr><td>通用 UI 元件</td><td><code>packages/ui/</code></td><td>無業務邏輯，純 UI（見 ADR-014）</td></tr><tr><td>共用業務元件</td><td><code>components/{domain}/</code></td><td>多個頁面會用到</td></tr><tr><td>頁面專屬元件</td><td><code>pages/{page}/components/</code></td><td>只有該頁面用到</td></tr></tbody></table>
+<p><strong>共用業務元件</strong> - 多個頁面會用到，放在領域目錄下：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>apps/web/src/app/components/</span></span>
+<span class="line"><span>├── user/</span></span>
+<span class="line"><span>│   ├── user.store.ts</span></span>
+<span class="line"><span>│   ├── user-avatar/            # 共用：個人頁、評論區、排行榜都會顯示頭像</span></span>
+<span class="line"><span>│   └── user-badge/             # 共用：多處顯示用戶等級徽章</span></span></code></pre>
+<p><strong>頁面專屬元件</strong> - 只有該頁面使用，放在頁面自己的 components 資料夾：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>apps/web/src/app/pages/</span></span>
+<span class="line"><span>├── leaderboard/</span></span>
+<span class="line"><span>│   ├── leaderboard.component.ts</span></span>
+<span class="line"><span>│   └── components/</span></span>
+<span class="line"><span>│       └── rank-chart/         # 只有排行榜頁面用到的圖表</span></span>
+<span class="line"><span>├── profile/</span></span>
+<span class="line"><span>│   ├── profile.component.ts</span></span>
+<span class="line"><span>│   └── components/</span></span>
+<span class="line"><span>│       └── achievement-grid/   # 只有個人頁用到的成就牆</span></span></code></pre>
+<h3 id="注意事項-1">注意事項</h3>
+<ul>
+<li>若 Store 需跨領域使用（如 <code>auth.store</code> 在其他領域檢查登入狀態），直接 import 即可</li>
+<li>簡單表單可省略 <code>.form.ts</code>，直接在 component 中定義</li>
+<li>若 Domain 邏輯可跨前後端共用，可抽至 <code>packages/shared/</code></li>
+<li>當頁面專屬元件開始被其他頁面使用時，應重構至 <code>components/{domain}/</code></li>
+</ul>
+<hr>
+<h2 id="adr-013專案目錄結構規範">ADR-013：專案目錄結構規範</h2>
+<h3 id="狀態-12">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-12">背景</h3>
+<p>需要明確定義專案各目錄的用途與放置原則，確保團隊成員有一致的理解。</p>
+<h3 id="決策-12">決策</h3>
+<p>採用以下目錄結構：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>flashmind/</span></span>
+<span class="line"><span>├── apps/</span></span>
+<span class="line"><span>│   ├── web/                    # Angular PWA 前端</span></span>
+<span class="line"><span>│   │   └── src/app/</span></span>
+<span class="line"><span>│   │       ├── pages/          # 路由頁面元件（薄層，組合 components）</span></span>
+<span class="line"><span>│   │       ├── components/     # 按領域分組，含 domain、store、form（見 ADR-012）</span></span>
+<span class="line"><span>│   │       │   ├── auth/       # *.domain.ts, *.store.ts, *.form.ts, login/, ...</span></span>
+<span class="line"><span>│   │       │   ├── deck/       # *.domain.ts, *.store.ts, *.form.ts, deck-list/, ...</span></span>
+<span class="line"><span>│   │       │   ├── card/       # *.domain.ts, *.store.ts, *.form.ts, card-editor/, ...</span></span>
+<span class="line"><span>│   │       │   ├── study/      # *.domain.ts, *.store.ts, study-session/, ...</span></span>
+<span class="line"><span>│   │       │   └── shared/     # 跨領域共用 UI 元件</span></span>
+<span class="line"><span>│   │       ├── guards/         # 路由守衛</span></span>
+<span class="line"><span>│   │       └── services/       # 跨領域共用服務（HTTP interceptor 等）</span></span>
+<span class="line"><span>│   ├── api/                    # NestJS 後端</span></span>
+<span class="line"><span>│   │   └── src/</span></span>
+<span class="line"><span>│   │       ├── modules/        # 按領域分組的模組</span></span>
+<span class="line"><span>│   │       ├── common/         # 共用 guards、interceptors、pipes</span></span>
+<span class="line"><span>│   │       └── prisma/         # Prisma 服務</span></span>
+<span class="line"><span>│   └── docs-viewer/            # Astro 文件站台</span></span>
+<span class="line"><span>├── packages/</span></span>
+<span class="line"><span>│   ├── api-client/             # 自動生成的 API Client</span></span>
+<span class="line"><span>│   ├── shared/                 # 前後端共用類型與驗證</span></span>
+<span class="line"><span>│   ├── ui/                     # 共用 UI 元件庫（未來）</span></span>
+<span class="line"><span>│   └── config/                 # 共用設定（未來）</span></span>
+<span class="line"><span>├── openapi/                    # OpenAPI 契約定義</span></span>
+<span class="line"><span>│   └── api.yaml                # API 規格</span></span>
+<span class="line"><span>├── openspec/                   # 變更提案管理</span></span>
+<span class="line"><span>│   ├── changes/                # 進行中的變更</span></span>
+<span class="line"><span>│   └── specs/                  # 已歸檔的規格</span></span>
+<span class="line"><span>├── prototype/                  # Figma 匯出的設計稿</span></span>
+<span class="line"><span>└── docs/                       # 專案層級文件</span></span></code></pre>
+<h3 id="理由-12">理由</h3>
+<ul>
+<li><strong>職責分離</strong>：每個目錄有明確的單一職責</li>
+<li><strong>可擴展性</strong>：結構支援專案成長</li>
+<li><strong>一致性</strong>：前後端採用相似的模組化結構</li>
+<li><strong>契約集中</strong>：<code>openapi/</code> 存放所有 API 契約，便於管理</li>
+</ul>
+<h3 id="目錄說明">目錄說明</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>目錄</th><th>用途</th></tr></thead><tbody><tr><td><code>apps/</code></td><td>可獨立部署的應用程式</td></tr><tr><td><code>packages/</code></td><td>跨應用共用的套件</td></tr><tr><td><code>openapi/</code></td><td>OpenAPI 契約定義</td></tr><tr><td><code>openspec/</code></td><td>架構變更提案流程</td></tr><tr><td><code>prototype/</code></td><td>UI/UX 設計稿</td></tr></tbody></table>
+<hr>
+<h2 id="adr-014ui-元件庫設計packagesui">ADR-014：UI 元件庫設計（packages/ui）</h2>
+<h3 id="狀態-13">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-13">背景</h3>
+<p>FlashMind 需要一套統一的 UI 元件庫，提供：</p>
+<ul>
+<li>一致的視覺風格</li>
+<li>可重用的基礎元件</li>
+<li>浮層元件的統一呼叫方式（透過 Service）</li>
+</ul>
+<h3 id="決策-13">決策</h3>
+<p><code>packages/ui</code> 定位為 <strong>Angular UI 元件庫</strong>，採用功能導向分類，可包含元件（Component）與服務（Service）。</p>
+<h3 id="元件分類">元件分類</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>packages/ui/src/lib/</span></span>
+<span class="line"><span>├── primitives/       # 最基礎、不可再分割的元件</span></span>
+<span class="line"><span>│   ├── button/</span></span>
+<span class="line"><span>│   ├── icon-button/</span></span>
+<span class="line"><span>│   ├── badge/</span></span>
+<span class="line"><span>│   ├── divider/</span></span>
+<span class="line"><span>│   └── toggle/</span></span>
+<span class="line"><span>├── layouts/          # 版面配置元件</span></span>
+<span class="line"><span>│   ├── row/</span></span>
+<span class="line"><span>│   ├── column/</span></span>
+<span class="line"><span>│   ├── stack/</span></span>
+<span class="line"><span>│   ├── container/</span></span>
+<span class="line"><span>│   └── spacer/</span></span>
+<span class="line"><span>├── forms/            # 表單輸入相關</span></span>
+<span class="line"><span>│   ├── labeled-input/</span></span>
+<span class="line"><span>│   ├── textarea/</span></span>
+<span class="line"><span>│   ├── number-input/</span></span>
+<span class="line"><span>│   └── checkbox/</span></span>
+<span class="line"><span>├── navigation/       # 導航相關</span></span>
+<span class="line"><span>│   ├── navbar/</span></span>
+<span class="line"><span>│   ├── tabs/</span></span>
+<span class="line"><span>│   ├── breadcrumb/</span></span>
+<span class="line"><span>│   └── back-button/</span></span>
+<span class="line"><span>├── feedback/         # 使用者回饋</span></span>
+<span class="line"><span>│   ├── toast/</span></span>
+<span class="line"><span>│   ├── loading-spinner/</span></span>
+<span class="line"><span>│   └── skeleton/</span></span>
+<span class="line"><span>├── data-display/     # 資料展示</span></span>
+<span class="line"><span>│   ├── card/</span></span>
+<span class="line"><span>│   ├── list-item/</span></span>
+<span class="line"><span>│   ├── avatar/</span></span>
+<span class="line"><span>│   └── stat-card/</span></span>
+<span class="line"><span>└── overlays/         # 浮層元件（含 Service）</span></span>
+<span class="line"><span>    ├── dialog/</span></span>
+<span class="line"><span>    │   ├── dialog.component.ts</span></span>
+<span class="line"><span>    │   └── dialog.service.ts</span></span>
+<span class="line"><span>    ├── drawer/</span></span>
+<span class="line"><span>    ├── popover/</span></span>
+<span class="line"><span>    └── tooltip/</span></span></code></pre>
+<h3 id="分類說明">分類說明</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>分類</th><th>說明</th><th>特性</th></tr></thead><tbody><tr><td>primitives</td><td>最基礎的 UI 元素</td><td>無依賴其他元件</td></tr><tr><td>layouts</td><td>控制子元素排列方式</td><td>用於頁面結構</td></tr><tr><td>forms</td><td>表單輸入與控制項</td><td>支援 Signal Forms</td></tr><tr><td>navigation</td><td>頁面間或區塊間導航</td><td>可能依賴 Router</td></tr><tr><td>feedback</td><td>向用戶傳達狀態或結果</td><td>通常是非阻塞式</td></tr><tr><td>data-display</td><td>展示資料的容器</td><td>可搭配 primitives</td></tr><tr><td>overlays</td><td>浮於頁面之上的元件</td><td>透過 Service 呼叫</td></tr></tbody></table>
+<h3 id="overlays-使用方式">Overlays 使用方式</h3>
+<p>浮層元件透過 Service 呼叫，而非直接在 template 中使用：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#F97583">import</span><span style="color:#E1E4E8"> { DialogService } </span><span style="color:#F97583">from</span><span style="color:#9ECBFF"> '@flashmind/ui/overlays'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">@</span><span style="color:#B392F0">Component</span><span style="color:#E1E4E8">({ </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> })</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> MyComponent</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  private</span><span style="color:#FFAB70"> dialogService</span><span style="color:#F97583"> =</span><span style="color:#B392F0"> inject</span><span style="color:#E1E4E8">(DialogService);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">  openConfirm</span><span style="color:#E1E4E8">() {</span></span>
+<span class="line"><span style="color:#79B8FF">    this</span><span style="color:#E1E4E8">.dialogService.</span><span style="color:#B392F0">open</span><span style="color:#E1E4E8">(ConfirmDialogComponent, {</span></span>
+<span class="line"><span style="color:#E1E4E8">      title: </span><span style="color:#9ECBFF">'確認刪除？'</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">      message: </span><span style="color:#9ECBFF">'此操作無法復原'</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">    });</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="理由-13">理由</h3>
+<ul>
+<li><strong>功能導向分類</strong>：比 Atomic Design（atoms/molecules/organisms）更直覺，易於定位元件</li>
+<li><strong>Service 共置</strong>：浮層元件的 Component 與 Service 放在一起，import 時更方便</li>
+<li><strong>與業務分離</strong>：packages/ui 只放通用 UI，業務元件放在 apps/web/src/app/components/</li>
+</ul>
+<h3 id="替代方案-10">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>Atomic Design（atoms/molecules/organisms）</td><td>分類標準較主觀，難以判斷元件屬於哪一層</td></tr><tr><td>全部扁平結構</td><td>元件多時難以管理</td></tr><tr><td>Service 放 apps/web/services</td><td>元件與 Service 分離，維護不便</td></tr></tbody></table>
+<h3 id="注意事項-2">注意事項</h3>
+<ul>
+<li>packages/ui 可包含 Angular 相關程式碼（@Injectable、@Component）</li>
+<li>業務相關元件不放在 packages/ui，應放在 apps/web/src/app/components/（見 ADR-012）</li>
+<li>若元件需要跨多個 Angular 專案共用，才放入 packages/ui</li>
+</ul>
+<hr>
+<h2 id="adr-015tts-語音合成服務整合">ADR-015：TTS 語音合成服務整合</h2>
+<h3 id="狀態-14">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-14">背景</h3>
+<p>FlashMind 作為語言學習應用，需要提供單字與例句的語音朗讀功能，幫助用戶學習正確發音。</p>
+<h3 id="決策-14">決策</h3>
+<p>依據使用情境採用不同的 TTS 服務：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>用途</th><th>服務</th><th>說明</th></tr></thead><tbody><tr><td>單字發音</td><td>Google Cloud TTS</td><td>發音精準，適合短詞</td></tr><tr><td>例句朗讀</td><td>Azure Speech Service</td><td>語調自然，適合長句</td></tr></tbody></table>
+<h3 id="理由-14">理由</h3>
+<ul>
+<li><strong>單字用 Google TTS</strong>：發音清晰準確，支援多語言與多種口音</li>
+<li><strong>例句用 Azure TTS</strong>：Neural Voice 語調更自然流暢，長句朗讀體驗佳</li>
+<li><strong>分工互補</strong>：各取所長，提供最佳的學習體驗</li>
+</ul>
+<h3 id="技術細節-1">技術細節</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>服務</th><th>端點</th><th>認證方式</th></tr></thead><tbody><tr><td>Google Cloud TTS</td><td><code>texttospeech.googleapis.com</code></td><td>API Key 或 Service Account</td></tr><tr><td>Azure Speech</td><td><code>{region}.tts.speech.microsoft.com</code></td><td>API Key 或 Azure AD</td></tr></tbody></table>
+<h3 id="風險與緩解-1">風險與緩解</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>風險</th><th>緩解措施</th></tr></thead><tbody><tr><td>雙服務增加維護複雜度</td><td>封裝統一的 TTS Service 介面</td></tr><tr><td>API 成本</td><td>實作快取機制，相同內容不重複呼叫</td></tr><tr><td>服務中斷</td><td>可考慮互為備援（單字改用 Azure、例句改用 Google）</td></tr></tbody></table>
+<hr>
+<h2 id="adr-016api-設計規範">ADR-016：API 設計規範</h2>
+<h3 id="狀態-15">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-15">背景</h3>
+<p>ADR-007 決定採用 OpenAPI 契約驅動開發，但未定義 API 的格式規範。需要統一：</p>
+<ul>
+<li>Request / Response 格式</li>
+<li>錯誤處理結構</li>
+<li>分頁機制</li>
+<li>認證方式</li>
+<li>命名慣例</li>
+</ul>
+<h3 id="決策-15">決策</h3>
+<h4 id="1-url-命名">1. URL 命名</h4>
+<ul>
+<li>資源路徑使用 <strong>kebab-case</strong></li>
+<li>資源導向設計，CRUD 操作對應 HTTP Method</li>
+<li>非 CRUD 動作使用動詞（如 <code>/auth/login</code>）</li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>GET    /decks                  # 列表</span></span>
+<span class="line"><span>POST   /decks                  # 建立</span></span>
+<span class="line"><span>GET    /decks/:id              # 單一資源</span></span>
+<span class="line"><span>PATCH  /decks/:id              # 部分更新</span></span>
+<span class="line"><span>DELETE /decks/:id              # 刪除</span></span>
+<span class="line"><span>GET    /decks/:id/cards        # 子資源</span></span>
+<span class="line"><span>POST   /auth/login             # 動作</span></span></code></pre>
+<h4 id="2-request-格式">2. Request 格式</h4>
+<ul>
+<li>Body 與 Query 參數使用 <strong>camelCase</strong></li>
+</ul>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">POST /decks</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"日文 N3 單字"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "isPublic"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">false</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">GET /decks?sortBy=createdAt&#x26;sortOrder=desc</span></span></code></pre>
+<h4 id="3-response-格式">3. Response 格式</h4>
+<p>採用<strong>統一 Wrapper</strong> 結構，所有回應使用 <code>{ data, meta? }</code> 包裝：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// 單一資源</span></span>
+<span class="line"><span style="color:#79B8FF">GET</span><span style="color:#F97583"> /</span><span style="color:#E1E4E8">decks</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">abc123</span></span>
+<span class="line"><span style="color:#E1E4E8">→ </span><span style="color:#79B8FF">200</span><span style="color:#79B8FF"> OK</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#9ECBFF">  "data"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#9ECBFF">    "id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"abc123"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"日文 N3 單字"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "cardCount"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">42</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "createdAt"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"2026-01-17T10:30:00Z"</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// 列表（含分頁 meta）</span></span>
+<span class="line"><span style="color:#79B8FF">GET</span><span style="color:#F97583"> /</span><span style="color:#E1E4E8">decks</span><span style="color:#F97583">?</span><span style="color:#E1E4E8">limit</span><span style="color:#F97583">=</span><span style="color:#79B8FF">20</span></span>
+<span class="line"><span style="color:#E1E4E8">→ </span><span style="color:#79B8FF">200</span><span style="color:#79B8FF"> OK</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#9ECBFF">  "data"</span><span style="color:#E1E4E8">: [</span></span>
+<span class="line"><span style="color:#E1E4E8">    { </span><span style="color:#9ECBFF">"id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"abc123"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"日文 N3 單字"</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> },</span></span>
+<span class="line"><span style="color:#E1E4E8">    { </span><span style="color:#9ECBFF">"id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"def456"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"英文托福"</span><span style="color:#E1E4E8">, </span><span style="color:#F97583">...</span><span style="color:#E1E4E8"> }</span></span>
+<span class="line"><span style="color:#E1E4E8">  ],</span></span>
+<span class="line"><span style="color:#9ECBFF">  "meta"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#9ECBFF">    "nextCursor"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"eyJpZCI6ImRlZjQ1NiJ9"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "hasMore"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">true</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// 建立資源</span></span>
+<span class="line"><span style="color:#79B8FF">POST</span><span style="color:#F97583"> /</span><span style="color:#E1E4E8">decks</span></span>
+<span class="line"><span style="color:#E1E4E8">→ </span><span style="color:#79B8FF">201</span><span style="color:#E1E4E8"> Created</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#9ECBFF">  "data"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#9ECBFF">    "id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"abc123"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "name"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"日文 N3 單字"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#F97583">    ...</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// 無內容操作</span></span>
+<span class="line"><span style="color:#79B8FF">DELETE</span><span style="color:#F97583"> /</span><span style="color:#E1E4E8">decks</span><span style="color:#F97583">/</span><span style="color:#E1E4E8">abc123</span></span>
+<span class="line"><span style="color:#E1E4E8">→ </span><span style="color:#79B8FF">204</span><span style="color:#E1E4E8"> No Content</span></span></code></pre>
+<h4 id="4-error-格式">4. Error 格式</h4>
+<p>錯誤回應使用 <code>{ error: { code, message } }</code> 結構：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#9ECBFF">  "error"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#9ECBFF">    "code"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"AUTH_INVALID_CREDENTIALS"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "message"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"Email 或密碼錯誤"</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>Error Code 命名規範：</strong></p>
+<ul>
+<li>格式：<code>SCREAMING_SNAKE_CASE</code></li>
+<li>領域錯誤加前綴：<code>AUTH_</code>、<code>DECK_</code>、<code>CARD_</code></li>
+</ul>
+<p><strong>HTTP Status Code 對應：</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Status</th><th>用途</th><th>Error Code 範例</th></tr></thead><tbody><tr><td>400</td><td>請求格式錯誤、驗證失敗</td><td><code>VALIDATION_ERROR</code></td></tr><tr><td>401</td><td>未認證</td><td><code>UNAUTHORIZED</code>, <code>SESSION_EXPIRED</code></td></tr><tr><td>403</td><td>無權限</td><td><code>FORBIDDEN</code></td></tr><tr><td>404</td><td>資源不存在</td><td><code>NOT_FOUND</code>, <code>DECK_NOT_FOUND</code></td></tr><tr><td>409</td><td>資源衝突</td><td><code>EMAIL_ALREADY_EXISTS</code></td></tr><tr><td>422</td><td>商業邏輯錯誤</td><td><code>DECK_LIMIT_EXCEEDED</code></td></tr><tr><td>500</td><td>伺服器錯誤</td><td><code>INTERNAL_ERROR</code></td></tr></tbody></table>
+<h4 id="5-分頁機制">5. 分頁機制</h4>
+<p>採用 <strong>cursor-based</strong> 分頁：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// 第一頁</span></span>
+<span class="line"><span style="color:#79B8FF">GET</span><span style="color:#F97583"> /</span><span style="color:#E1E4E8">decks</span><span style="color:#F97583">?</span><span style="color:#E1E4E8">limit</span><span style="color:#F97583">=</span><span style="color:#79B8FF">20</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">→ </span><span style="color:#79B8FF">200</span><span style="color:#79B8FF"> OK</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#9ECBFF">  "data"</span><span style="color:#E1E4E8">: [</span><span style="color:#F97583">...</span><span style="color:#E1E4E8">],</span></span>
+<span class="line"><span style="color:#9ECBFF">  "meta"</span><span style="color:#E1E4E8">: {</span></span>
+<span class="line"><span style="color:#9ECBFF">    "nextCursor"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"eyJpZCI6ImNsaDEyMzQ1In0="</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">    "hasMore"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">true</span></span>
+<span class="line"><span style="color:#E1E4E8">  }</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">// 下一頁</span></span>
+<span class="line"><span style="color:#79B8FF">GET</span><span style="color:#F97583"> /</span><span style="color:#E1E4E8">decks</span><span style="color:#F97583">?</span><span style="color:#E1E4E8">limit</span><span style="color:#F97583">=</span><span style="color:#79B8FF">20</span><span style="color:#F97583">&#x26;</span><span style="color:#E1E4E8">cursor</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">eyJpZCI6ImNsaDEyMzQ1In0</span><span style="color:#F97583">=</span></span></code></pre>
+<ul>
+<li><code>cursor</code>：Base64 編碼的識別資訊（通常是 id 或 createdAt）</li>
+<li><code>hasMore</code>：是否還有更多資料</li>
+<li><code>nextCursor</code>：下一頁的 cursor（無更多資料時為 null）</li>
+</ul>
+<h4 id="6-認證機制">6. 認證機制</h4>
+<p>採用 <strong>HttpOnly Cookie</strong> 儲存 Session：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Set-Cookie: session=&#x3C;token>; HttpOnly; Secure; SameSite=Strict; Path=/</span></span></code></pre>
+<ul>
+<li>前端不需手動處理 token，瀏覽器自動帶上</li>
+<li>防止 XSS 攻擊竊取 token</li>
+<li>後端可隨時撤銷 session</li>
+</ul>
+<h4 id="7-時間與-id-格式">7. 時間與 ID 格式</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">  "id"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"clh1234567890abcdef"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "createdAt"</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">"2026-01-17T10:30:00Z"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#79B8FF">  "lastLoginAt"</span><span style="color:#E1E4E8">: </span><span style="color:#79B8FF">null</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<ul>
+<li><strong>ID</strong>：cuid 格式（由 Prisma 生成）</li>
+<li><strong>時間</strong>：ISO 8601 UTC 格式</li>
+<li><strong>可選時間欄位</strong>：允許 <code>null</code></li>
+</ul>
+<h4 id="8-刪除策略">8. 刪除策略</h4>
+<p>採用<strong>硬刪除</strong>（Hard Delete），不保留 <code>deletedAt</code> 欄位。</p>
+<h4 id="9-openapi-operationid">9. OpenAPI operationId</h4>
+<p>每個 endpoint <strong>必須</strong>定義 <code>operationId</code>，它決定自動生成的 API client 方法名稱：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#85E89D">paths</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">  /auth/me</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">    get</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#85E89D">      operationId</span><span style="color:#E1E4E8">: </span><span style="color:#9ECBFF">getCurrentUser</span><span style="color:#6A737D">  # → authService.getCurrentUser()</span></span></code></pre>
+<p><strong>命名規範：</strong></p>
+<ul>
+<li>格式：camelCase</li>
+<li>動詞開頭：<code>get</code>、<code>create</code>、<code>update</code>、<code>delete</code>、<code>list</code></li>
+<li>清楚描述動作：<code>getCurrentUser</code>、<code>initiateGoogleOAuth</code></li>
+<li>避免重複路徑資訊：用 <code>login</code> 而非 <code>authLogin</code></li>
+</ul>
+<h3 id="理由-15">理由</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>決策</th><th>理由</th></tr></thead><tbody><tr><td>統一 Wrapper</td><td>所有回應結構一致，前端處理邏輯統一</td></tr><tr><td>簡化 Error</td><td>MVP 階段不需要欄位級錯誤，簡化實作</td></tr><tr><td>cursor-based 分頁</td><td>效能穩定，適合未來資料量成長</td></tr><tr><td>HttpOnly Cookie</td><td>比 localStorage 更安全，防止 XSS</td></tr><tr><td>硬刪除</td><td>簡化實作，MVP 階段無需資料還原功能</td></tr></tbody></table>
+<h3 id="替代方案-11">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>直接回傳資料（無 Wrapper）</td><td>結構不一致，單一資源與列表處理方式不同</td></tr><tr><td>Error 含 details 陣列</td><td>增加複雜度，MVP 階段不需要</td></tr><tr><td>offset/limit 分頁</td><td>大量資料時效能差，資料變動時不穩定</td></tr><tr><td>Bearer Token in localStorage</td><td>有 XSS 風險</td></tr><tr><td>軟刪除</td><td>增加查詢複雜度，MVP 階段不需要</td></tr></tbody></table>
+<hr>
+<h2 id="adr-017e2e-測試框架與目錄結構">ADR-017：E2E 測試框架與目錄結構</h2>
+<h3 id="狀態-16">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-16">背景</h3>
+<p>FlashMind 需要端對端測試來驗證完整的用戶流程，包括：</p>
+<ul>
+<li>帳號註冊與登入</li>
+<li>牌組與卡片管理</li>
+<li>學習流程</li>
+<li>前後端整合</li>
+</ul>
+<p>需要決定測試框架與測試檔案的放置位置。</p>
+<h3 id="決策-16">決策</h3>
+<p>採用 <strong>Playwright</strong> 作為 E2E 測試框架，測試檔案放置於根目錄的 <code>e2e/</code> 目錄，作為獨立的 workspace package。</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>flashmind/</span></span>
+<span class="line"><span>├── e2e/                        # E2E 測試（獨立 workspace package）</span></span>
+<span class="line"><span>│   ├── package.json            # 獨立的 dependencies</span></span>
+<span class="line"><span>│   ├── playwright.config.ts    # Playwright 配置</span></span>
+<span class="line"><span>│   ├── fixtures/               # 測試 fixtures</span></span>
+<span class="line"><span>│   └── auth/                   # 認證相關測試</span></span>
+<span class="line"><span>│       ├── register/           # 註冊流程</span></span>
+<span class="line"><span>│       ├── login/              # 登入流程</span></span>
+<span class="line"><span>│       ├── logout/             # 登出流程</span></span>
+<span class="line"><span>│       ├── oauth/              # OAuth 流程</span></span>
+<span class="line"><span>│       └── session/            # Session 管理</span></span>
+<span class="line"><span>├── apps/</span></span>
+<span class="line"><span>├── packages/</span></span>
+<span class="line"><span>└── ...</span></span></code></pre>
+<h3 id="理由-16">理由</h3>
+<p><strong>選擇 Playwright：</strong></p>
+<ul>
+<li><strong>跨瀏覽器支援</strong>：支援 Chromium、Firefox、WebKit</li>
+<li><strong>自動等待</strong>：內建智慧等待機制，減少 flaky tests</li>
+<li><strong>測試產生器</strong>：Codegen 工具加速測試撰寫</li>
+<li><strong>偵錯工具</strong>：Trace Viewer 提供詳細的測試執行記錄</li>
+<li><strong>現代化 API</strong>：async/await 語法，易於維護</li>
+</ul>
+<p><strong>放置於根目錄 <code>e2e/</code> 作為獨立 package：</strong></p>
+<ul>
+<li><strong>跨應用測試</strong>：E2E 測試需同時啟動前後端，不屬於單一應用</li>
+<li><strong>獨立依賴</strong>：Playwright 只安裝在 e2e package，根目錄 package.json 保持乾淨</li>
+<li><strong>Monorepo 慣例</strong>：與 <code>apps/</code>、<code>packages/</code>、<code>openapi/</code> 同層，職責清晰</li>
+</ul>
+<h3 id="測試命名規範">測試命名規範</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>類型</th><th>命名規則</th><th>範例</th></tr></thead><tbody><tr><td>測試檔案</td><td><code>{描述}.spec.ts</code></td><td><code>successful-login.spec.ts</code></td></tr><tr><td>測試目錄</td><td>kebab-case</td><td><code>tests/e2e/auth/login/</code></td></tr></tbody></table>
+<h3 id="替代方案-12">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>Cypress</td><td>功能相當，但跨瀏覽器支援較弱</td></tr><tr><td><code>apps/web/e2e/</code></td><td>限制為前端專案，不適合跨應用測試</td></tr><tr><td><code>apps/e2e/</code> 獨立應用</td><td>增加複雜度，MVP 階段不需要</td></tr></tbody></table>
+<h3 id="執行指令">執行指令</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 從根目錄執行</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#9ECBFF"> test:e2e</span><span style="color:#6A737D">                    # 執行所有 E2E 測試</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#9ECBFF"> test:e2e:ui</span><span style="color:#6A737D">                 # 使用 UI 模式</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 從 e2e 目錄執行</span></span>
+<span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> e2e</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#9ECBFF"> test</span><span style="color:#6A737D">                        # 執行所有測試</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#9ECBFF"> test</span><span style="color:#9ECBFF"> auth/</span><span style="color:#6A737D">                  # 執行特定目錄</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#9ECBFF"> test:ui</span><span style="color:#6A737D">                     # UI 模式</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#9ECBFF"> codegen</span><span style="color:#6A737D">                     # 產生測試程式碼</span></span></code></pre>
+<hr>
+<h2 id="adr-018測試驅動開發tdd">ADR-018：測試驅動開發（TDD）</h2>
+<h3 id="狀態-17">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-17">背景</h3>
+<p>FlashMind 需要建立穩固的測試文化，確保：</p>
+<ul>
+<li>功能符合需求規格</li>
+<li>重構時不破壞現有功能</li>
+<li>新功能開發有明確的完成標準</li>
+<li>程式碼品質可維護</li>
+</ul>
+<h3 id="決策-17">決策</h3>
+<p>採用 <strong>測試驅動開發（Test-Driven Development, TDD）</strong> 作為開發流程的核心實踐。</p>
+<h3 id="tdd-流程">TDD 流程</h3>
+<p>遵循 <strong>Red-Green-Refactor</strong> 循環：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>1. Red    → 先寫測試，確認測試失敗（紅燈）</span></span>
+<span class="line"><span>2. Green  → 寫最少的程式碼讓測試通過（綠燈）</span></span>
+<span class="line"><span>3. Refactor → 重構程式碼，保持測試通過</span></span></code></pre>
+<h3 id="適用範圍">適用範圍</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>層級</th><th>測試類型</th><th>工具</th><th>TDD 強制程度</th></tr></thead><tbody><tr><td>前端元件</td><td>單元測試</td><td>Vitest</td><td>建議</td></tr><tr><td>前端 Domain</td><td>單元測試</td><td>Vitest</td><td><strong>強制</strong></td></tr><tr><td>後端 Service</td><td>單元測試</td><td>Jest</td><td><strong>強制</strong></td></tr><tr><td>後端 Controller</td><td>整合測試</td><td>Jest + Supertest</td><td>建議</td></tr><tr><td>端對端</td><td>E2E 測試</td><td>Playwright</td><td>功能規格明確時強制</td></tr></tbody></table>
+<h3 id="tdd-實踐指南">TDD 實踐指南</h3>
+<p><strong>1. 先寫測試案例</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// auth.domain.spec.ts</span></span>
+<span class="line"><span style="color:#B392F0">describe</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'validatePassword'</span><span style="color:#E1E4E8">, () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">  it</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'should return true for password with 8+ characters'</span><span style="color:#E1E4E8">, () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">    expect</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">validatePassword</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Password123'</span><span style="color:#E1E4E8">)).</span><span style="color:#B392F0">toBe</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">true</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">  });</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#B392F0">  it</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'should return false for password with less than 8 characters'</span><span style="color:#E1E4E8">, () </span><span style="color:#F97583">=></span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#B392F0">    expect</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">validatePassword</span><span style="color:#E1E4E8">(</span><span style="color:#9ECBFF">'Pass1'</span><span style="color:#E1E4E8">)).</span><span style="color:#B392F0">toBe</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">false</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"><span style="color:#E1E4E8">  });</span></span>
+<span class="line"><span style="color:#E1E4E8">});</span></span></code></pre>
+<p><strong>2. 實作最小程式碼</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// auth.domain.ts</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> function</span><span style="color:#B392F0"> validatePassword</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">password</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> string</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> boolean</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  return</span><span style="color:#E1E4E8"> password.</span><span style="color:#79B8FF">length</span><span style="color:#F97583"> >=</span><span style="color:#79B8FF"> 8</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p><strong>3. 重構與擴充</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="typescript"><code><span class="line"><span style="color:#6A737D">// 加入更多驗證規則</span></span>
+<span class="line"><span style="color:#F97583">export</span><span style="color:#F97583"> function</span><span style="color:#B392F0"> validatePassword</span><span style="color:#E1E4E8">(</span><span style="color:#FFAB70">password</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> string</span><span style="color:#E1E4E8">)</span><span style="color:#F97583">:</span><span style="color:#79B8FF"> boolean</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#F97583">  if</span><span style="color:#E1E4E8"> (password.</span><span style="color:#79B8FF">length</span><span style="color:#F97583"> &#x3C;</span><span style="color:#79B8FF"> 8</span><span style="color:#E1E4E8">) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">  if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#9ECBFF">/</span><span style="color:#79B8FF">[A-Z]</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">test</span><span style="color:#E1E4E8">(password)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">  if</span><span style="color:#E1E4E8"> (</span><span style="color:#F97583">!</span><span style="color:#9ECBFF">/</span><span style="color:#79B8FF">[0-9]</span><span style="color:#9ECBFF">/</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">test</span><span style="color:#E1E4E8">(password)) </span><span style="color:#F97583">return</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#F97583">  return</span><span style="color:#79B8FF"> true</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<h3 id="e2e-測試的-tdd">E2E 測試的 TDD</h3>
+<p>對於 E2E 測試，採用 <strong>Specification-First</strong> 方式：</p>
+<ol>
+<li>根據功能規格撰寫測試計劃</li>
+<li>撰寫 E2E 測試案例（此時測試會失敗）</li>
+<li>實作前後端功能</li>
+<li>確認 E2E 測試通過</li>
+</ol>
+<h3 id="理由-17">理由</h3>
+<ul>
+<li><strong>需求明確</strong>：測試即文件，強迫開發者先思考需求</li>
+<li><strong>設計驅動</strong>：先寫測試促使更好的 API 設計</li>
+<li><strong>信心重構</strong>：有測試覆蓋才敢大膽重構</li>
+<li><strong>減少 Bug</strong>：早期發現問題，修復成本低</li>
+<li><strong>持續整合</strong>：測試套件是 CI/CD 的基石</li>
+</ul>
+<h3 id="替代方案-13">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>先寫程式碼再補測試</td><td>容易遺漏邊界案例，測試淪為形式</td></tr><tr><td>只寫 E2E 測試</td><td>回饋慢，難以定位問題</td></tr><tr><td>不寫測試</td><td>技術債累積，重構困難</td></tr></tbody></table>
+<h3 id="注意事項-3">注意事項</h3>
+<ul>
+<li>UI 樣式測試不適用 TDD，使用 Storybook 視覺測試</li>
+<li>原型開發階段可暫緩 TDD，但正式實作時需補上</li>
+<li>測試覆蓋率目標：Domain 層 90%+，Service 層 80%+</li>
+</ul>
+<hr>
+<h2 id="adr-019前端-testid-規範">ADR-019：前端 testId 規範</h2>
+<h3 id="狀態-18">狀態</h3>
+<p>已採用</p>
+<h3 id="背景-18">背景</h3>
+<p>E2E 測試需要穩定的選擇器來定位頁面元素。相較於 CSS class 或 DOM 結構，<code>data-testid</code> 屬性：</p>
+<ul>
+<li>不受樣式重構影響</li>
+<li>語意明確，易於維護</li>
+<li>與業務邏輯解耦</li>
+</ul>
+<p>需要建立統一的 testId 規範，確保：</p>
+<ul>
+<li>前端開發時一致地埋設 testId</li>
+<li>E2E 測試能可靠地選取元素</li>
+<li>命名有跡可循，易於查找</li>
+</ul>
+<h3 id="決策-18">決策</h3>
+<h4 id="1-何時需要添加-testid">1. 何時需要添加 testId</h4>
+<p><strong>必須添加 testId 的元素：</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>元素類型</th><th>說明</th><th>範例</th></tr></thead><tbody><tr><td>表單輸入</td><td>input、textarea、select</td><td><code>login-email</code>、<code>deck-name</code></td></tr><tr><td>按鈕</td><td>提交、取消、操作按鈕</td><td><code>login-submit</code>、<code>deck-delete</code></td></tr><tr><td>連結/導航</td><td>重要的路由連結</td><td><code>nav-home</code>、<code>deck-settings-link</code></td></tr><tr><td>錯誤訊息</td><td>表單驗證、API 錯誤</td><td><code>login-error</code>、<code>deck-create-error</code></td></tr><tr><td>列表項目</td><td>可點擊的列表項</td><td><code>deck-item-{id}</code>、<code>card-item-{id}</code></td></tr><tr><td>對話框</td><td>dialog、modal</td><td><code>confirm-dialog</code>、<code>delete-dialog</code></td></tr><tr><td>開關/切換</td><td>toggle、checkbox</td><td><code>login-remember-me</code>、<code>deck-public</code></td></tr></tbody></table>
+<p><strong>可省略 testId 的元素：</strong></p>
+<ul>
+<li>純裝飾性元素（icon、分隔線）</li>
+<li>靜態文字（標題、說明文字）</li>
+<li>不需要測試互動的元素</li>
+</ul>
+<h4 id="2-命名規範">2. 命名規範</h4>
+<p><strong>格式：<code>{page/context}-{element}[-{qualifier}]</code></strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>部分</th><th>說明</th><th>範例</th></tr></thead><tbody><tr><td>page/context</td><td>頁面或功能區塊</td><td><code>login</code>、<code>deck-create</code>、<code>card-editor</code></td></tr><tr><td>element</td><td>元素類型或用途</td><td><code>email</code>、<code>submit</code>、<code>error</code>、<code>cancel</code></td></tr><tr><td>qualifier</td><td>可選，用於區分相似元素</td><td><code>deck-item-{id}</code>、<code>card-field-front</code></td></tr></tbody></table>
+<p><strong>命名規則：</strong></p>
+<ul>
+<li>使用 kebab-case</li>
+<li>動作按鈕用動詞：<code>submit</code>、<code>cancel</code>、<code>delete</code>、<code>save</code></li>
+<li>輸入欄位用名詞：<code>email</code>、<code>password</code>、<code>name</code></li>
+<li>避免過長，保持簡潔</li>
+</ul>
+<h4 id="3-範例登入頁">3. 範例：登入頁</h4>
+<p>以登入頁為例，展示 testId 的應用：</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>元素</th><th>testId</th></tr></thead><tbody><tr><td>Email 輸入框</td><td><code>login-email</code></td></tr><tr><td>密碼輸入框</td><td><code>login-password</code></td></tr><tr><td>記住我開關</td><td><code>login-remember-me</code></td></tr><tr><td>登入按鈕</td><td><code>login-submit</code></td></tr><tr><td>錯誤訊息</td><td><code>login-error</code></td></tr></tbody></table>
+<p>其他頁面依此原則命名，如牌組列表的搜尋框為 <code>deck-list-search</code>、牌組詳情的返回按鈕為 <code>deck-detail-back</code>。</p>
+<h4 id="4-ui-元件庫支援">4. UI 元件庫支援</h4>
+<p><code>packages/ui</code> 的元件透過 <code>testId</code> 屬性接收值，渲染為 <code>data-testid</code>：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="html"><code><span class="line"><span style="color:#6A737D">&#x3C;!-- 使用方式 --></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">fm-button</span><span style="color:#B392F0"> testId</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"login-submit"</span><span style="color:#E1E4E8">>登入&#x3C;/</span><span style="color:#85E89D">fm-button</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">fm-labeled-input</span><span style="color:#B392F0"> testId</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"login-email"</span><span style="color:#B392F0"> ...</span><span style="color:#E1E4E8"> /></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">&#x3C;!-- 渲染結果 --></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">button</span><span style="color:#B392F0"> data-testid</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"login-submit"</span><span style="color:#E1E4E8">>登入&#x3C;/</span><span style="color:#85E89D">button</span><span style="color:#E1E4E8">></span></span>
+<span class="line"><span style="color:#E1E4E8">&#x3C;</span><span style="color:#85E89D">input</span><span style="color:#B392F0"> data-testid</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"login-email"</span><span style="color:#B392F0"> ...</span><span style="color:#E1E4E8"> /></span></span></code></pre>
+<h3 id="理由-18">理由</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>決策</th><th>理由</th></tr></thead><tbody><tr><td>必須為互動元素添加 testId</td><td>確保 E2E 測試穩定性，不受樣式重構影響</td></tr><tr><td>kebab-case 命名</td><td>與 HTML 屬性慣例一致，易於閱讀</td></tr><tr><td>{page}-{element} 格式</td><td>避免命名衝突，一眼識別元素所屬頁面</td></tr><tr><td>列表項含 ID</td><td>支援測試特定項目的操作</td></tr></tbody></table>
+<h3 id="替代方案-14">替代方案</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>方案</th><th>評估</th></tr></thead><tbody><tr><td>使用 CSS class</td><td>樣式重構時容易破壞測試</td></tr><tr><td>使用 DOM 結構</td><td>結構變更時容易破壞測試</td></tr><tr><td>使用 aria-label</td><td>語意正確但較冗長，且可能與 a11y 用途衝突</td></tr><tr><td>不統一命名</td><td>難以維護，測試難以查找對應元素</td></tr></tbody></table>
+<h3 id="注意事項-4">注意事項</h3>
+<ul>
+<li>新增頁面或元件時，應同步規劃 testId</li>
+<li>Code Review 時應檢查互動元素是否有 testId</li>
+<li>重構頁面時需同步更新對應的 E2E 測試</li>
+</ul>
+<hr>
+<h2 id="附錄技術棧總覽">附錄：技術棧總覽</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>層級</th><th>技術選擇</th></tr></thead><tbody><tr><td>前端框架</td><td>Angular 21</td></tr><tr><td>前端狀態管理</td><td>Angular Signal Stores</td></tr><tr><td>前端樣式</td><td>Tailwind CSS v4</td></tr><tr><td>元件開發</td><td>Storybook</td></tr><tr><td>後端框架</td><td>NestJS</td></tr><tr><td>資料庫 ORM</td><td>Prisma</td></tr><tr><td>套件管理</td><td>pnpm workspace</td></tr><tr><td>API 契約</td><td>OpenAPI 3.0</td></tr><tr><td>間隔重複</td><td>FSRS (ts-fsrs)</td></tr><tr><td>AI 內容生成</td><td>Azure OpenAI Service</td></tr><tr><td>TTS 語音合成</td><td>Google Cloud TTS / Azure Speech</td></tr><tr><td>應用形態</td><td>PWA</td></tr></tbody></table>
+<hr>
+<h2 id="附錄決策狀態說明">附錄：決策狀態說明</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>狀態</th><th>說明</th></tr></thead><tbody><tr><td>提議中</td><td>尚未決定，等待討論</td></tr><tr><td>已採用</td><td>已決定並實施</td></tr><tr><td>已棄用</td><td>曾採用但已更換為其他方案</td></tr><tr><td>已取代</td><td>被新的 ADR 取代</td></tr></tbody></table> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>

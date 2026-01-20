@@ -14,9 +14,9 @@
 </ul>
 <h2 id="驗收標準">驗收標準</h2>
 <ul class="contains-task-list">
-<li class="task-list-item"><input type="checkbox" disabled> 在新增/編輯卡片時，英文例句提供播放語音按鈕</li>
-<li class="task-list-item"><input type="checkbox" disabled> 在學習模式中，提供播放發音按鈕</li>
-<li class="task-list-item"><input type="checkbox" disabled> 點擊後播放正面文字的語音</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 在新增/編輯卡片時，英文例句提供播放語音按鈕</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 在學習模式中，提供播放發音按鈕</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 點擊後播放正面文字的語音</li>
 </ul> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
 回到頁首
 </button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>
