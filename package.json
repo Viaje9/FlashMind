@@ -8,6 +8,8 @@
     "dev:api": "pnpm --filter ./apps/api start:dev",
     "dev:docs": "pnpm --filter ./apps/docs-viewer dev",
     "build:docs": "pnpm --filter ./apps/docs-viewer build",
+    "build:web": "pnpm --filter ./apps/web build",
+    "build:api": "pnpm --filter ./apps/api build",
     "storybook:web": "pnpm --filter ./apps/web storybook",
     "build-storybook:web": "pnpm --filter ./apps/web build-storybook",
     "test:e2e": "pnpm --filter ./e2e test",
