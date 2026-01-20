@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build --configuration development",
+    "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "storybook": "ng run web:storybook",
@@ -27,7 +27,7 @@
   "packageManager": "pnpm@10.26.2",
   "dependencies": {
     "@flashmind/api-client": "workspace:*",
-    "@angular/cdk": "^21.0.6",
+    "@angular/cdk": "^21.1.0",
     "@angular/common": "^21.1.0",
     "@angular/compiler": "^21.1.0",
     "@angular/core": "^21.1.0",
