@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+**/dist
+**/build
+**/.angular
+**/storybook-static
+
+# Test
+**/coverage
+**/test-results
+e2e
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment files (should be injected at runtime)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Documentation and design
+docs
+prototype
+openspec
+*.md
+!README.md
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+*.tgz

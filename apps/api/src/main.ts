@@ -15,9 +15,21 @@ async function bootstrap() {
     }),
   );
 
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
+
   app.enableCors({
     origin: (origin, callback) => {
-      // 允許 localhost 和區網 IP（開發環境）
+      // 如果有設定 CORS_ORIGINS，使用明確的來源清單
+      if (corsOrigins && corsOrigins.length > 0) {
+        if (!origin || corsOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+        return;
+      }
+
+      // 開發環境：允許 localhost 和區網 IP
       const allowedPatterns = [
         /^http:\/\/localhost:\d+$/,
         /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
