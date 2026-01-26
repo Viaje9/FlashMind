@@ -47,10 +47,10 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/api/prisma ./apps/api/prisma/
 COPY packages/ ./packages/
 
-# 只安裝 production 依賴
-RUN pnpm install --frozen-lockfile --prod
+# 安裝所有依賴（包括 devDependencies，因為 postinstall 腳本需要 prisma CLI）
+RUN pnpm install --frozen-lockfile
 
-# 產生 Prisma Client (production 環境也需要)
+# 產生 Prisma Client
 RUN pnpm --filter api prisma:generate
 
 # 從 builder 複製建構產物

@@ -35,8 +35,11 @@ COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 # 從 builder 複製建構產物
 COPY --from=builder /app/apps/web/dist/web/browser /usr/share/nginx/html
 
+# 修改 Nginx 配置，監聽 8080 端口
+RUN sed -i 's/listen 80;/listen 8080;/' /etc/nginx/conf.d/default.conf
+
 # 暴露 HTTP 埠號
-EXPOSE 80
+EXPOSE 8080
 
 # 啟動 Nginx
 CMD ["nginx", "-g", "daemon off;"]
