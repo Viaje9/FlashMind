@@ -57,7 +57,7 @@ RUN pnpm --filter api prisma:generate
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 # 暴露 API 埠號
-EXPOSE 3000
+EXPOSE 3280
 
 # 啟動 API
 WORKDIR /app/apps/api
