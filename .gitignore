@@ -20,5 +20,3 @@ node_modules/
 # Logs
 *.log
 
-# Prisma
-/apps/api/prisma/migrations/
