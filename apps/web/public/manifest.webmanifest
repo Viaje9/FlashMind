@@ -4,8 +4,8 @@
   "description": "智慧單字卡學習應用",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "background_color": "#111d21",
+  "theme_color": "#111d21",
   "orientation": "portrait",
   "icons": [
     {
