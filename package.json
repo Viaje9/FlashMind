@@ -13,9 +13,11 @@
     "storybook:web": "pnpm --filter ./apps/web storybook",
     "build-storybook:web": "pnpm --filter ./apps/web build-storybook",
     "test:e2e": "pnpm --filter ./e2e test",
-    "test:e2e:ui": "pnpm --filter ./e2e test:ui"
+    "test:e2e:ui": "pnpm --filter ./e2e test:ui",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "typescript": "^5.9.3"
   }
 }

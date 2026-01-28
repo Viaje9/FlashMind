@@ -9,6 +9,7 @@ import {
   FmSettingRowComponent
 } from '../../../../../../packages/ui/src/index';
 import { AuthService } from '../../services/auth.service';
+import { VERSION } from '../../../version';
 
 @Component({
   selector: 'app-settings-page',
@@ -27,6 +28,8 @@ import { AuthService } from '../../services/auth.service';
 })
 export class SettingsComponent {
   private authService = inject(AuthService);
+
+  readonly version = VERSION;
 
   readonly user = this.authService.user;
   readonly loading = this.authService.loading;
