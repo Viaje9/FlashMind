@@ -16,7 +16,7 @@ function getApiBasePath(): string {
   // 開發環境：使用當前 hostname 搭配 API port（支援手機區網測試）
   const hostname = window.location.hostname;
   const apiPort = 3280;
-  return `http://${hostname}:${apiPort}`;
+  return `http://${hostname}:${apiPort}/api`;
 }
 
 export const appConfig: ApplicationConfig = {
