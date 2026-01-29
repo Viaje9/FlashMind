@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a262a"/>
+      <stop offset="100%" style="stop-color:#111d21"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a5f"/>
+      <stop offset="100%" style="stop-color:#1a2d45"/>
+    </linearGradient>
+    <linearGradient id="boltGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#19b3e6"/>
+      <stop offset="100%" style="stop-color:#0ea5e9"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="cardShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#bgGradient)"/>
+
+  <!-- Back card (slightly rotated) -->
+  <g transform="translate(256, 256) rotate(-8) translate(-256, -256)">
+    <rect x="120" y="100" width="260" height="340" rx="24" ry="24"
+          fill="#1a2d45" filter="url(#cardShadow)"/>
+  </g>
+
+  <!-- Front card -->
+  <g filter="url(#cardShadow)">
+    <rect x="132" y="86" width="260" height="340" rx="24" ry="24"
+          fill="url(#cardGradient)" stroke="#19b3e6" stroke-width="2"/>
+  </g>
+
+  <!-- Lightning bolt with glow effect -->
+  <g filter="url(#glow)">
+    <path d="M 290 140 L 220 260 L 270 260 L 220 380 L 330 230 L 270 230 L 310 140 Z"
+          fill="url(#boltGradient)"/>
+  </g>
+
+  <!-- Subtle highlight on bolt -->
+  <path d="M 290 140 L 265 200 L 295 145 Z" fill="#fff" opacity="0.3"/>
+</svg>
