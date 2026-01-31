@@ -41,3 +41,4 @@ export * from './lib/overlays/dialog/dialog.service';
 export * from './lib/overlays/dialog/dialog-ref';
 export * from './lib/overlays/dialog/dialog-config';
 export * from './lib/overlays/dialog/confirm-dialog.component';
+export * from './lib/overlays/dialog/alert-dialog.component';

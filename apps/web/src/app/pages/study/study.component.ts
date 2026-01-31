@@ -35,6 +35,7 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly progress = this.studyStore.progress;
   readonly isFlipped = this.studyStore.isFlipped;
   readonly canUndo = this.studyStore.canUndo;
+  readonly isSubmitting = this.studyStore.isSubmitting;
   readonly stats = this.studyStore.stats;
   readonly deckName = this.studyStore.deckName;
 
@@ -80,7 +81,7 @@ export class StudyComponent implements OnInit, OnDestroy {
   }
 
   onCardClick(): void {
-    if (!this.isFlipped()) {
+    if (!this.isFlipped() && !this.isSubmitting()) {
       this.studyStore.flipCard();
     }
   }

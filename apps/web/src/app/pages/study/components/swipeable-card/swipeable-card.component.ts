@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -27,14 +28,34 @@ const ROTATION_FACTOR = 12;
 export class FmSwipeableCardComponent {
   private readonly cardRef = viewChild<ElementRef<HTMLDivElement>>('cardElement');
   private readonly handleRef = viewChild<ElementRef<HTMLDivElement>>('handleElement');
+  private readonly handleAreaRef = viewChild<ElementRef<HTMLDivElement>>('handleArea');
 
   readonly swipeComplete = output<StudyRating>();
+
+  constructor() {
+    afterNextRender(() => {
+      const area = this.handleAreaRef()?.nativeElement;
+      if (!area) return;
+
+      // Non-passive listener 強制瀏覽器不將觸碰當作滾動手勢
+      // 解決 iOS Safari 在慣性滾動中 touch-action: none 不被尊重的問題
+      area.addEventListener(
+        'touchstart',
+        (e: TouchEvent) => {
+          e.preventDefault();
+          window.scrollTo(0, window.scrollY);
+        },
+        { passive: false },
+      );
+    });
+  }
 
   // 拖拽狀態
   private isDragging = false;
   private startX = 0;
   private startY = 0;
   private cardWidth = 0;
+  private savedScrollY = 0;
 
   // Signals 用於渲染
   readonly deltaX = signal(0);
@@ -121,6 +142,9 @@ export class FmSwipeableCardComponent {
     this.isActive.set(true);
     this.isAnimating.set(false);
 
+    // 拖動開始時鎖定 body 滾動，避免拖動過程中頁面跟著滾
+    this.lockBodyScroll();
+
     handle.setPointerCapture(event.pointerId);
   }
 
@@ -148,6 +172,7 @@ export class FmSwipeableCardComponent {
     }
 
     this.isDragging = false;
+    this.unlockBodyScroll();
 
     const direction = this.currentDirection();
     const triggered = this.isTriggered();
@@ -168,6 +193,7 @@ export class FmSwipeableCardComponent {
     }
 
     this.isDragging = false;
+    this.unlockBodyScroll();
     this.snapBack();
   }
 
@@ -213,6 +239,16 @@ export class FmSwipeableCardComponent {
     this.isActive.set(false);
     this.deltaX.set(0);
     this.deltaY.set(0);
+  }
+
+  private lockBodyScroll(): void {
+    this.savedScrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll(): void {
+    document.body.style.overflow = '';
+    window.scrollTo(0, this.savedScrollY);
   }
 
   private directionToRating(direction: SwipeDirection): StudyRating {

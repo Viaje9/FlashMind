@@ -43,6 +43,8 @@ export class StudyStore {
     history: [],
   });
 
+  readonly isSubmitting = signal(false);
+
   // Selectors
   readonly phase = computed(() => this.state().phase);
   readonly error = computed(() => this.state().error);
@@ -135,11 +137,13 @@ export class StudyStore {
     const card = this.currentCard();
     if (!card || !s.deckId) return;
 
-    // 記錄歷史
+    // 記錄歷史，並立即翻回正面顯示 loading
     this.state.update((state) => ({
       ...state,
       history: [...state.history, { card, rating }],
+      isFlipped: false,
     }));
+    this.isSubmitting.set(true);
 
     try {
       // 呼叫 API 更新排程
@@ -173,6 +177,8 @@ export class StudyStore {
         history: state.history.slice(0, -1),
         error: '評分提交失敗',
       }));
+    } finally {
+      this.isSubmitting.set(false);
     }
   }
 

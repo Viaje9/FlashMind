@@ -1,10 +1,36 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { ApiError } from '../models/api-error';
+import { DialogService, FmAlertDialogComponent } from '@flashmind/ui';
+
+let isHandling401 = false;
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
+      if (err.status === 401 && !isHandling401 && !req.url.includes('/auth/me')) {
+        isHandling401 = true;
+        const router = inject(Router);
+        const dialogService = inject(DialogService);
+
+        const dialogRef = dialogService.open(FmAlertDialogComponent, {
+          data: {
+            title: '登入已過期',
+            message: '您的登入已過期，請重新登入。',
+            buttonText: '前往登入',
+          },
+          closeOnBackdropClick: false,
+          closeOnEsc: false,
+        });
+
+        dialogRef.afterClosed().subscribe(() => {
+          isHandling401 = false;
+          router.navigate(['/login']);
+        });
+      }
+
       const message = err.error?.error?.message || getDefaultMessage(err.status);
       const code = err.error?.error?.code;
 

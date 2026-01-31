@@ -7,7 +7,8 @@ export const SKIP_LOADING = new HttpContextToken<boolean>(() => false);
 
 // 不顯示全螢幕 Loading 的 URL 模式
 const SKIP_LOADING_PATTERNS = [
-  /\/tts\//,  // TTS 相關請求
+  /\/tts\//,    // TTS 相關請求
+  /\/study\//,  // 學習頁面自行處理 loading 狀態
 ];
 
 export const loadingInterceptor: HttpInterceptorFn = (req, next) => {
