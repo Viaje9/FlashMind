@@ -16,6 +16,8 @@ export interface CardListItem {
   id: string;
   front: string;
   summary: string;
+  state: string;
+  due: string | null;
 }
 
 export interface CardMeaning {
@@ -80,6 +82,8 @@ export class CardService {
       id: card.id,
       front: card.front,
       summary: card.meanings[0]?.zhMeaning ?? '',
+      state: card.state,
+      due: card.due?.toISOString() ?? null,
     }));
   }
 

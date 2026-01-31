@@ -6,7 +6,12 @@ type HeaderLayout = 'start' | 'center';
   selector: 'fm-page-header',
   templateUrl: './page-header.component.html',
   styleUrl: './page-header.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.sticky]': 'sticky()',
+    '[class.top-0]': 'sticky()',
+    '[class.z-30]': 'sticky()',
+  },
 })
 export class FmPageHeaderComponent {
   readonly title = input('');
@@ -22,9 +27,7 @@ export class FmPageHeaderComponent {
     const spacing = this.dense()
       ? 'px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)]'
       : 'px-4 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]';
-    const sticky = this.sticky() ? 'sticky top-0 z-30' : '';
-
-    return [base, spacing, sticky].filter(Boolean).join(' ');
+    return [base, spacing].join(' ');
   });
 
   readonly titleClass = computed(() => {

@@ -25,5 +25,23 @@ export interface CardListItem {
      * 摘要（第一筆詞義的中文解釋）
      */
     summary: string;
+    /**
+     * 卡片學習狀態
+     */
+    state: CardListItem.StateEnum;
+    /**
+     * 下次複習時間（ISO 8601 UTC），新卡片為 null
+     */
+    due?: string | null;
 }
+export namespace CardListItem {
+    export const StateEnum = {
+        New: 'NEW',
+        Learning: 'LEARNING',
+        Review: 'REVIEW',
+        Relearning: 'RELEARNING'
+    } as const;
+    export type StateEnum = typeof StateEnum[keyof typeof StateEnum];
+}
+
 

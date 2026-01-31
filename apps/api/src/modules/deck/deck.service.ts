@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { CardState } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDeckDto, UpdateDeckDto } from './dto';
 
@@ -40,15 +41,38 @@ export class DeckService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return decks.map((deck) => ({
-      id: deck.id,
-      name: deck.name,
-      newCount: 0,
-      reviewCount: 0,
-      totalCount: 0,
-      completedCount: 0,
-      progress: 0,
-    }));
+    const now = new Date();
+
+    return Promise.all(
+      decks.map(async (deck) => {
+        const [totalCount, newCount, reviewCount] = await Promise.all([
+          this.prisma.card.count({ where: { deckId: deck.id } }),
+          this.prisma.card.count({
+            where: { deckId: deck.id, state: CardState.NEW },
+          }),
+          this.prisma.card.count({
+            where: {
+              deckId: deck.id,
+              state: { not: CardState.NEW },
+              due: { lte: now },
+            },
+          }),
+        ]);
+
+        const completedCount = totalCount - newCount;
+        const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+        return {
+          id: deck.id,
+          name: deck.name,
+          newCount,
+          reviewCount,
+          totalCount,
+          completedCount,
+          progress,
+        };
+      }),
+    );
   }
 
   async findById(id: string, userId: string): Promise<DeckDetail> {
@@ -74,17 +98,38 @@ export class DeckService {
       });
     }
 
+    const now = new Date();
+
+    const [totalCount, newCount, reviewCount, lastReviewLog] =
+      await Promise.all([
+        this.prisma.card.count({ where: { deckId: id } }),
+        this.prisma.card.count({
+          where: { deckId: id, state: CardState.NEW },
+        }),
+        this.prisma.card.count({
+          where: {
+            deckId: id,
+            state: { not: CardState.NEW },
+            due: { lte: now },
+          },
+        }),
+        this.prisma.reviewLog.findFirst({
+          where: { card: { deckId: id } },
+          orderBy: { reviewedAt: 'desc' },
+        }),
+      ]);
+
     return {
       id: deck.id,
       name: deck.name,
       dailyNewCards: deck.dailyNewCards,
       dailyReviewCards: deck.dailyReviewCards,
       stats: {
-        newCount: 0,
-        reviewCount: 0,
-        totalCount: 0,
+        newCount,
+        reviewCount,
+        totalCount,
         createdAt: deck.createdAt.toISOString(),
-        lastStudiedAt: null,
+        lastStudiedAt: lastReviewLog?.reviewedAt.toISOString() ?? null,
       },
     };
   }

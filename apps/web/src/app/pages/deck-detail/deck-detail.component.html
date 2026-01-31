@@ -33,6 +33,8 @@
           <fm-card-list-item
             [title]="card.front"
             [description]="card.summary"
+            [state]="card.state"
+            [due]="card.due ?? null"
             (editClick)="onEditCard(card.id)"
             (deleteClick)="onDeleteCard(card)"
             [testId]="'deck-detail-card-' + card.id"

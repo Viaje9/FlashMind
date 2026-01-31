@@ -1484,6 +1484,7 @@ components:
         - id
         - front
         - summary
+        - state
       properties:
         id:
           type: string
@@ -1497,6 +1498,17 @@ components:
           type: string
           description: 摘要（第一筆詞義的中文解釋）
           example: 你好
+        state:
+          type: string
+          enum: [NEW, LEARNING, REVIEW, RELEARNING]
+          description: 卡片學習狀態
+          example: NEW
+        due:
+          type: string
+          format: date-time
+          nullable: true
+          description: 下次複習時間（ISO 8601 UTC），新卡片為 null
+          example: "2026-02-01T10:00:00Z"
 
     CreateCardMeaningRequest:
       type: object

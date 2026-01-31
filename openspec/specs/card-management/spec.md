@@ -19,6 +19,40 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **THEN** 顯示該牌組內所有卡片的列表
 - **AND** 每張卡片顯示正面文字
 - **AND** 每張卡片顯示第一筆詞義的中文解釋（作為摘要）
+- **AND** 每張卡片顯示複習時間資訊（行內式，位於摘要下方）
+
+#### Scenario: 卡片複習時間顯示 — 新卡片
+
+- **WHEN** 卡片學習狀態為 NEW
+- **THEN** 複習時間顯示「新卡片・尚未學習」
+- **AND** 文字顏色為主色（primary）
+
+#### Scenario: 卡片複習時間顯示 — 即將到期
+
+- **WHEN** 卡片學習狀態非 NEW
+- **AND** 下次複習時間在未來 24 小時內
+- **THEN** 複習時間顯示「X 小時後到期」或「X 分鐘後到期」
+- **AND** 文字顏色為綠色（emerald）
+
+#### Scenario: 卡片複習時間顯示 — 已逾期
+
+- **WHEN** 卡片學習狀態非 NEW
+- **AND** 下次複習時間已過
+- **THEN** 複習時間顯示「已逾期 X 天」或「今天到期」
+- **AND** 文字顏色為紅色（red）
+
+#### Scenario: 卡片複習時間顯示 — 未來複習
+
+- **WHEN** 卡片學習狀態非 NEW
+- **AND** 下次複習時間超過 24 小時
+- **THEN** 複習時間顯示「X 天後」
+- **AND** 文字顏色為灰色（slate）
+
+#### Scenario: 卡片列表 API 回傳學習狀態
+
+- **WHEN** 前端呼叫卡片列表 API（GET /api/decks/:deckId/cards）
+- **THEN** 每張卡片回傳 `state` 欄位（NEW、LEARNING、REVIEW、RELEARNING）
+- **AND** 每張卡片回傳 `due` 欄位（ISO 8601 UTC 時間戳，新卡片為 null）
 
 #### Scenario: 開始學習入口
 
