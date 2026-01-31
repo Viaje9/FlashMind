@@ -19,7 +19,9 @@ export class FmPageHeaderComponent {
   readonly containerClass = computed(() => {
     const base =
       'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm transition-colors duration-200';
-    const spacing = this.dense() ? 'px-4 py-2' : 'px-4 py-3';
+    const spacing = this.dense()
+      ? 'px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)]'
+      : 'px-4 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]';
     const sticky = this.sticky() ? 'sticky top-0 z-30' : '';
 
     return [base, spacing, sticky].filter(Boolean).join(' ');

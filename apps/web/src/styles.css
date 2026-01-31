@@ -4,7 +4,16 @@
 @source "./**/*.{html,ts}";
 @source "../../../packages/ui/**/*.{html,ts}";
 
-/* 可在此加入全域樣式，或引入其他樣式檔 */
+/* PWA safe-area：確保瀏海區域顯示正確背景色 */
+html {
+  background-color: var(--color-background-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: var(--color-background-dark);
+  }
+}
 
 /* 移除預設 focus outline，由各元件自行處理 focus 樣式 */
 *:focus-visible {
