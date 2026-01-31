@@ -252,12 +252,13 @@ export class CardService {
     await this.validateDeckAccess(deckId, userId);
 
     const errors: ImportCardError[] = [];
-    let successCount = 0;
+
+    // 先驗證所有卡片，分出有效與無效
+    const validCards: { index: number; front: string; meanings: typeof dto.cards[number]['meanings'] }[] = [];
 
     for (let i = 0; i < dto.cards.length; i++) {
       const cardData = dto.cards[i];
 
-      // 驗證每張卡片的必填欄位
       if (!cardData.front || cardData.front.trim() === '') {
         errors.push({ index: i, message: 'front 欄位為必填' });
         continue;
@@ -280,28 +281,53 @@ export class CardService {
         continue;
       }
 
-      try {
-        await this.prisma.card.create({
-          data: {
-            front: cardData.front.trim(),
-            deckId,
-            meanings: {
-              create: cardData.meanings
-                .filter((m) => m.zhMeaning && m.zhMeaning.trim() !== '')
-                .map((m, idx) => ({
-                  zhMeaning: m.zhMeaning.trim(),
-                  enExample: m.enExample?.trim() || null,
-                  zhExample: m.zhExample?.trim() || null,
-                  sortOrder: idx,
-                })),
-            },
-          },
-        });
-        successCount++;
-      } catch {
-        errors.push({ index: i, message: '卡片建立失敗' });
-      }
+      validCards.push({ index: i, front: cardData.front.trim(), meanings: cardData.meanings });
     }
+
+    if (validCards.length === 0) {
+      return {
+        total: dto.cards.length,
+        success: 0,
+        failed: dto.cards.length,
+        errors,
+      };
+    }
+
+    // 批次寫入：在同一個 transaction 中建立所有卡片和釋義
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const createdCards = await tx.card.createManyAndReturn({
+          data: validCards.map((c) => ({
+            front: c.front,
+            deckId,
+          })),
+          select: { id: true },
+        });
+
+        const meaningsData = createdCards.flatMap((card, idx) =>
+          validCards[idx].meanings
+            .filter((m) => m.zhMeaning && m.zhMeaning.trim() !== '')
+            .map((m, sortOrder) => ({
+              cardId: card.id,
+              zhMeaning: m.zhMeaning.trim(),
+              enExample: m.enExample?.trim() || null,
+              zhExample: m.zhExample?.trim() || null,
+              sortOrder,
+            })),
+        );
+
+        await tx.cardMeaning.createMany({ data: meaningsData });
+      });
+    } catch {
+      return {
+        total: dto.cards.length,
+        success: 0,
+        failed: dto.cards.length,
+        errors: [{ index: -1, message: '批次匯入失敗' }],
+      };
+    }
+
+    const successCount = validCards.length;
 
     return {
       total: dto.cards.length,
