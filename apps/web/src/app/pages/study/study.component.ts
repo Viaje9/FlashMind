@@ -60,16 +60,30 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly hasError = computed(() => this.phase() === 'error');
   readonly showDecisionBar = computed(() => this.isStudying() && this.isFlipped());
 
-  // 卡片正面自動播放音訊
-  private readonly autoPlayEffect = effect(() => {
+  // 正向卡：正面顯示時自動播放單字發音
+  private readonly forwardAutoPlayEffect = effect(() => {
     const phase = this.phase();
     const flipped = this.isFlipped();
     const submitting = this.isSubmitting();
+    const card = this.currentCard();
     const word = this.word();
 
-    if (phase === 'studying' && !flipped && !submitting && word) {
+    if (phase === 'studying' && !flipped && !submitting && word && card?.direction === 'FORWARD') {
       untracked(() => {
         void this.ttsStore.playWord(word);
+      });
+    }
+  });
+
+  // 反向卡：翻開時自動播放英文單字發音
+  private readonly reverseAutoPlayEffect = effect(() => {
+    const phase = this.phase();
+    const flipped = this.isFlipped();
+    const card = this.currentCard();
+
+    if (phase === 'studying' && flipped && card?.direction === 'REVERSE') {
+      untracked(() => {
+        void this.ttsStore.playWord(card.front);
       });
     }
   });
