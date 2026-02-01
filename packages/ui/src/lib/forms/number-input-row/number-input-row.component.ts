@@ -45,6 +45,11 @@ export class FmNumberInputRowComponent implements ControlValueAccessor {
 
   readonly ariaLabelValue = computed(() => this.ariaLabel() || this.label() || this.title() || null);
 
+  readonly inputMode = computed(() => {
+    const s = this.step();
+    return s !== null && s % 1 !== 0 ? 'decimal' : 'numeric';
+  });
+
   private onChange: (value: number) => void = () => {};
   private onTouched: () => void = () => {};
 

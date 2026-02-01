@@ -20,6 +20,7 @@ describe('DeckService', () => {
     },
     reviewLog: {
       findFirst: jest.fn().mockResolvedValue(null),
+      count: jest.fn().mockResolvedValue(0),
     },
   };
 
@@ -73,6 +74,11 @@ describe('DeckService', () => {
         totalCount: 0,
         completedCount: 0,
         progress: 0,
+        enableReverse: false,
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        todayNewStudied: 0,
+        todayReviewStudied: 0,
       });
     });
 
@@ -82,6 +88,27 @@ describe('DeckService', () => {
       const result = await service.findAllByUserId(mockUserId);
 
       expect(result).toEqual([]);
+    });
+
+    it('應回傳今日學習進度', async () => {
+      mockPrismaService.deck.findMany.mockResolvedValue([mockDeck]);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(50)   // totalCount
+        .mockResolvedValueOnce(20)   // newCount
+        .mockResolvedValueOnce(10);  // reviewCount
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(5)    // todayNewStudied
+        .mockResolvedValueOnce(8);   // todayReviewStudied
+
+      const result = await service.findAllByUserId(mockUserId);
+
+      expect(result[0]).toEqual(expect.objectContaining({
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        todayNewStudied: 5,
+        todayReviewStudied: 8,
+      }));
+      expect(mockPrismaService.reviewLog.count).toHaveBeenCalledTimes(2);
     });
 
     it('enableReverse 為 true 時統計應包含反向卡片', async () => {
@@ -105,6 +132,11 @@ describe('DeckService', () => {
         totalCount: 10,     // 不變
         completedCount: 7,  // 10 - 3
         progress: 70,       // (7/10) * 100
+        enableReverse: true,
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        todayNewStudied: 0,
+        todayReviewStudied: 0,
       });
     });
   });

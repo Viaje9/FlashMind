@@ -1,27 +1,44 @@
-<article class="group relative flex flex-col gap-4 rounded-2xl bg-white dark:bg-surface-dark p-5 shadow-sm ring-1 ring-slate-100 dark:ring-white/5 transition-all active:scale-[0.98] cursor-pointer hover:ring-primary/30" (click)="cardClick.emit()">
-  <div class="flex items-start justify-between">
-    <div class="flex flex-col gap-2">
-      <h3 class="text-lg font-bold leading-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-        {{ title() }}
-        @if (enableReverse()) {
-          <span class="material-symbols-outlined text-base text-purple-500" title="反向學習">swap_horiz</span>
-        }
-      </h3>
-      <div class="flex items-center gap-2">
-        @for (tag of tagList(); track tag.id) {
-          <fm-badge [tone]="tag.tone">{{ tag.text }}</fm-badge>
-        }
-      </div>
-    </div>
-    @if (showAction()) {
-      <fm-icon-button
-        variant="primary"
-        [ariaLabel]="actionLabel()"
-        (click)="actionClick.emit(); $event.stopPropagation()"
-      >
-        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-      </fm-icon-button>
+<article class="group relative flex flex-col gap-4 rounded-2xl bg-white dark:bg-surface-dark p-5 shadow-sm ring-1 ring-slate-100 dark:ring-white/5 transition-all active:scale-[0.98] cursor-pointer hover:ring-primary/30" [attr.data-testid]="testId() || null" (click)="cardClick.emit()">
+  <h3 class="text-lg font-bold leading-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+    {{ title() }}
+    @if (enableReverse()) {
+      <span class="material-symbols-outlined text-base text-purple-500 ml-auto" title="反向學習">swap_horiz</span>
     }
+  </h3>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div class="flex flex-col">
+      <span class="text-2xl font-bold text-blue-400">{{ newCount() }}</span>
+      <span class="text-xs font-medium text-slate-500 dark:text-slate-400">新卡片</span>
+      @if (dailyNewCards() > 0) {
+        <div class="mt-1.5 flex flex-col gap-1">
+          <div class="h-1.5 w-full rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
+            <div class="h-full rounded-full bg-blue-400 transition-all duration-300" [style.width.%]="newProgressPercent()"></div>
+          </div>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400">{{ todayNewStudied() }} / {{ dailyNewCards() }}</span>
+        </div>
+      }
+    </div>
+    <div class="flex flex-col border-l border-slate-200 dark:border-slate-700 pl-4">
+      <span class="text-2xl font-bold text-green-400">{{ reviewCount() }}</span>
+      <span class="text-xs font-medium text-slate-500 dark:text-slate-400">待複習</span>
+      @if (dailyReviewCards() > 0) {
+        <div class="mt-1.5 flex flex-col gap-1">
+          <div class="h-1.5 w-full rounded-full bg-green-100 dark:bg-green-900/30 overflow-hidden">
+            <div class="h-full rounded-full bg-green-400 transition-all duration-300" [style.width.%]="reviewProgressPercent()"></div>
+          </div>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400">{{ todayReviewStudied() }} / {{ dailyReviewCards() }}</span>
+        </div>
+      }
+    </div>
   </div>
+
   <fm-progress-bar [value]="progress()" [showLabel]="true" [tone]="completed() ? 'success' : 'primary'"></fm-progress-bar>
+
+  @if (showAction()) {
+    <fm-button variant="primary" size="sm" [fullWidth]="true" [disabled]="actionDisabled()" (click)="actionClick.emit(); $event.stopPropagation()">
+      <span class="material-symbols-outlined text-[20px]">play_arrow</span>
+      <span class="font-bold">{{ actionLabel() }}</span>
+    </fm-button>
+  }
 </article>

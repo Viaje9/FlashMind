@@ -21,8 +21,13 @@
           [enableReverse]="deck.enableReverse"
           [showAction]="deck.showAction"
           [actionLabel]="deck.actionLabel"
-          (cardClick)="onDeckAction(deck.id)"
-          (actionClick)="onDeckAction(deck.id)"
+          [actionDisabled]="deck.actionDisabled"
+          [dailyNewCards]="deck.dailyNewCards"
+          [dailyReviewCards]="deck.dailyReviewCards"
+          [todayNewStudied]="deck.todayNewStudied"
+          [todayReviewStudied]="deck.todayReviewStudied"
+          (cardClick)="onCardClick(deck.id)"
+          (actionClick)="onStartStudy(deck.id)"
         ></fm-deck-card>
       }
 

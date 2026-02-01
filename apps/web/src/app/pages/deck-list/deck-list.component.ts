@@ -14,7 +14,12 @@ interface DeckPreview {
   completed: boolean;
   showAction: boolean;
   actionLabel: string;
+  actionDisabled: boolean;
   enableReverse: boolean;
+  dailyNewCards: number;
+  dailyReviewCards: number;
+  todayNewStudied: number;
+  todayReviewStudied: number;
 }
 
 @Component({
@@ -85,13 +90,22 @@ export class DeckListComponent implements OnInit {
       reviewCount: deck.reviewCount,
       progress: deck.progress,
       completed,
-      showAction: hasStudyItems,
+      showAction: true,
       actionLabel: hasStudyItems ? '開始學習' : (completed ? '已完成' : '無待學習'),
-      enableReverse: deck.enableReverse ?? false
+      actionDisabled: !hasStudyItems,
+      enableReverse: deck.enableReverse ?? false,
+      dailyNewCards: deck.dailyNewCards,
+      dailyReviewCards: deck.dailyReviewCards,
+      todayNewStudied: deck.todayNewStudied,
+      todayReviewStudied: deck.todayReviewStudied,
     };
   }
 
-  onDeckAction(deckId: string) {
+  onCardClick(deckId: string) {
     void this.router.navigate(['/decks', deckId]);
+  }
+
+  onStartStudy(deckId: string) {
+    void this.router.navigate(['/decks', deckId, 'study']);
   }
 }

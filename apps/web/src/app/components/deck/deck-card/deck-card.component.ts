@@ -1,15 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { FmBadgeComponent, FmIconButtonComponent, FmProgressBarComponent } from '@flashmind/ui';
-
-export interface DeckTag {
-  id: string;
-  text: string;
-  tone: 'info' | 'warning' | 'success' | 'neutral';
-}
+import { FmButtonComponent, FmProgressBarComponent } from '@flashmind/ui';
 
 @Component({
   selector: 'fm-deck-card',
-  imports: [FmBadgeComponent, FmIconButtonComponent, FmProgressBarComponent],
+  imports: [FmButtonComponent, FmProgressBarComponent],
   templateUrl: './deck-card.component.html',
   styleUrl: './deck-card.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -21,39 +15,27 @@ export class FmDeckCardComponent {
   readonly progress = input(0);
   readonly completed = input(false);
   readonly enableReverse = input(false);
-  readonly tags = input<DeckTag[] | null>(null);
   readonly showAction = input(true);
   readonly actionLabel = input('開始學習');
+  readonly actionDisabled = input(false);
+  readonly testId = input<string>();
+  readonly dailyNewCards = input(0);
+  readonly dailyReviewCards = input(0);
+  readonly todayNewStudied = input(0);
+  readonly todayReviewStudied = input(0);
 
   readonly actionClick = output<void>();
   readonly cardClick = output<void>();
 
-  readonly tagList = computed<DeckTag[]>(() => {
-    const custom = this.tags();
-    if (custom && custom.length) {
-      return custom;
-    }
+  readonly newProgressPercent = computed(() => {
+    const limit = this.dailyNewCards();
+    if (limit <= 0) return 0;
+    return Math.min(100, (this.todayNewStudied() / limit) * 100);
+  });
 
-    if (this.completed()) {
-      return [{ id: 'completed', text: '已完成', tone: 'success' }];
-    }
-
-    const next: DeckTag[] = [];
-    const newCount = this.newCount();
-    const reviewCount = this.reviewCount();
-
-    next.push({
-      id: 'new',
-      text: `${newCount} 新卡片`,
-      tone: newCount > 0 ? 'info' : 'neutral'
-    });
-
-    next.push({
-      id: 'review',
-      text: `${reviewCount} 待複習`,
-      tone: reviewCount > 0 ? 'warning' : 'neutral'
-    });
-
-    return next;
+  readonly reviewProgressPercent = computed(() => {
+    const limit = this.dailyReviewCards();
+    if (limit <= 0) return 0;
+    return Math.min(100, (this.todayReviewStudied() / limit) * 100);
   });
 }

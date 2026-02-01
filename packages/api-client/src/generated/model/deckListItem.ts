@@ -45,5 +45,21 @@ export interface DeckListItem {
      * 是否啟用反向學習
      */
     enableReverse?: boolean;
+    /**
+     * 每日新卡上限
+     */
+    dailyNewCards: number;
+    /**
+     * 每日複習上限
+     */
+    dailyReviewCards: number;
+    /**
+     * 今日已學新卡數
+     */
+    todayNewStudied: number;
+    /**
+     * 今日已複習數
+     */
+    todayReviewStudied: number;
 }
 

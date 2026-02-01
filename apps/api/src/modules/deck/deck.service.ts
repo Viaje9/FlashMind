@@ -6,6 +6,7 @@ import {
 import { CardState } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDeckDto, UpdateDeckDto } from './dto';
+import { getStartOfStudyDay } from '../study/study-day';
 
 export interface DeckListItem {
   id: string;
@@ -16,6 +17,10 @@ export interface DeckListItem {
   completedCount: number;
   progress: number;
   enableReverse: boolean;
+  dailyNewCards: number;
+  dailyReviewCards: number;
+  todayNewStudied: number;
+  todayReviewStudied: number;
 }
 
 export interface DeckDetail {
@@ -52,6 +57,8 @@ export class DeckService {
 
     return Promise.all(
       decks.map(async (deck) => {
+        const startOfStudyDay = getStartOfStudyDay(now, deck.dailyResetHour);
+
         const queries: Promise<number>[] = [
           this.prisma.card.count({ where: { deckId: deck.id } }),
           this.prisma.card.count({
@@ -81,7 +88,24 @@ export class DeckService {
           );
         }
 
-        const counts = await Promise.all(queries);
+        const [counts, todayNewStudied, todayReviewStudied] = await Promise.all([
+          Promise.all(queries),
+          this.prisma.reviewLog.count({
+            where: {
+              card: { deckId: deck.id },
+              prevState: CardState.NEW,
+              reviewedAt: { gte: startOfStudyDay },
+            },
+          }),
+          this.prisma.reviewLog.count({
+            where: {
+              card: { deckId: deck.id },
+              prevState: { not: CardState.NEW },
+              reviewedAt: { gte: startOfStudyDay },
+            },
+          }),
+        ]);
+
         const [totalCount, newCount, reviewCount] = counts;
         const reverseNewCount = deck.enableReverse ? counts[3] : 0;
         const reverseReviewCount = deck.enableReverse ? counts[4] : 0;
@@ -98,6 +122,10 @@ export class DeckService {
           completedCount,
           progress,
           enableReverse: deck.enableReverse,
+          dailyNewCards: deck.dailyNewCards,
+          dailyReviewCards: deck.dailyReviewCards,
+          todayNewStudied,
+          todayReviewStudied,
         };
       }),
     );
