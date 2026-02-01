@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="zh-tw"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Prisma migration 的執行流程、部署策略，以及過去遇到的問題與排除方式。"><meta name="generator" content="Astro v5.16.6"><title>Database Migration 維運指南｜FlashMind 文件速覽</title><link rel="icon" type="image/svg+xml" href="/FlashMind/docs/favicon.svg"><link rel="stylesheet" href="/FlashMind/docs/_astro/_slug_.DEJltvy_.css"></head> <body> <a class="skip-link" href="#main">跳到主要內容</a> <header class="site-header"> <div class="brand"> <span class="brand-mark">FM</span> <div class="brand-text"> <span class="brand-title">FlashMind 文件速覽</span> <span class="brand-subtitle">手機優先 · 快速查閱</span> </div> </div> <nav class="header-actions"> <a class="ghost-link" href="/FlashMind/docs/">文件首頁</a> </nav> </header> <main id="main" class="site-main">  <article class="doc-page"> <div class="doc-top"> <a class="back-link" href="/FlashMind/docs/">← 回到文件列表</a> <span class="doc-id">文件</span> </div> <header class="doc-header"> <h1>Database Migration 維運指南</h1> <p class="doc-summary">Prisma migration 的執行流程、部署策略，以及過去遇到的問題與排除方式。</p> </header> <section class="doc-source" aria-label="GitHub 路徑"> <div class="doc-source__meta"> <h2>GitHub 檔案路徑</h2> <p>需要貼到 issue 或 PR 時可直接複製。</p> </div> <div class="doc-source__actions"> <button class="button button-primary" type="button" data-copy-url="https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/database-migration-guide.md">
+複製路徑
+</button> <span class="doc-source__status" data-copy-status aria-live="polite"></span> </div> <div class="doc-source__url"> <code>https://raw.githubusercontent.com/viaje9/FlashMind/main/apps/docs-viewer/src/content/docs/database-migration-guide.md</code> </div> </section> <details class="toc" open> <summary>目錄</summary> <ul> <li class="toc-item depth-2"> <a href="#事件紀錄2026-02-01-部署失敗">事件紀錄：2026-02-01 部署失敗</a> </li><li class="toc-item depth-3"> <a href="#發生了什麼事">發生了什麼事</a> </li><li class="toc-item depth-3"> <a href="#為什麼會這樣">為什麼會這樣</a> </li><li class="toc-item depth-3"> <a href="#怎麼解決的">怎麼解決的</a> </li><li class="toc-item depth-2"> <a href="#現行-sop">現行 SOP</a> </li><li class="toc-item depth-3"> <a href="#技術棧">技術棧</a> </li><li class="toc-item depth-3"> <a href="#開發階段本機">開發階段（本機）</a> </li><li class="toc-item depth-3"> <a href="#部署到正式環境">部署到正式環境</a> </li><li class="toc-item depth-3"> <a href="#注意事項">注意事項</a> </li><li class="toc-item depth-2"> <a href="#未來調整方向由-ci-全權控制部署">未來調整方向：由 CI 全權控制部署</a> </li><li class="toc-item depth-3"> <a href="#為什麼現在還沒這樣做">為什麼現在還沒這樣做</a> </li><li class="toc-item depth-2"> <a href="#故障排除">故障排除</a> </li><li class="toc-item depth-3"> <a href="#migration-卡在-advisory-lock">Migration 卡在 advisory lock</a> </li><li class="toc-item depth-3"> <a href="#確認-migration-狀態">確認 migration 狀態</a> </li><li class="toc-item depth-3"> <a href="#schema-與-migration-不一致">Schema 與 migration 不一致</a> </li> </ul> </details> <div class="doc-content"> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>版本</th><th>日期</th><th>變更說明</th></tr></thead><tbody><tr><td>1.0</td><td>2026-02-01</td><td>初版建立：記錄 migration 流程與 advisory lock 事件</td></tr></tbody></table>
+<hr>
+<h2 id="事件紀錄2026-02-01-部署失敗">事件紀錄：2026-02-01 部署失敗</h2>
+<h3 id="發生了什麼事">發生了什麼事</h3>
+<p>我們的 Dockerfile CMD 原本就會在 container 啟動時先執行 <code>prisma migrate deploy</code>，再啟動應用：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="dockerfile"><code><span class="line"><span style="color:#F97583">CMD</span><span style="color:#E1E4E8"> [</span><span style="color:#9ECBFF">"sh"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"-c"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"npx prisma migrate deploy &#x26;&#x26; node dist/main"</span><span style="color:#E1E4E8">]</span></span></code></pre>
+<p>這個做法過去一直正常運作。2026-02-01 因為有一筆新的 migration（<code>add_daily_reset_hour</code>）需要執行，部署後 container 在啟動階段持續失敗，陷入 Kubernetes CrashLoopBackOff 無限重啟迴圈，服務完全無法啟動。</p>
+<p>錯誤訊息如下：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>Error: P1002</span></span>
+<span class="line"><span>The database server was reached but timed out.</span></span>
+<span class="line"><span>Context: Timed out trying to acquire a postgres advisory lock</span></span>
+<span class="line"><span>(SELECT pg_advisory_lock(72707369)). Timeout: 10000ms.</span></span></code></pre>
+<p>container 共嘗試 6 次啟動，跨時約 4 分鐘，每次都在同一個地方逾時失敗：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>02:25:07  第 1 次啟動，偵測到 5 個 migration → 02:25:17 逾時崩潰</span></span>
+<span class="line"><span>02:25:21  第 2 次啟動 → 02:25:31 逾時崩潰</span></span>
+<span class="line"><span>02:25:47  第 3 次啟動 → 02:25:57 逾時崩潰，進入 BackOff</span></span>
+<span class="line"><span>02:26:25  第 4 次啟動 → 02:26:36 逾時崩潰</span></span>
+<span class="line"><span>02:27:20  第 5 次啟動 → 02:27:30 逾時崩潰</span></span>
+<span class="line"><span>02:29:05  第 6 次啟動 → 02:29:15 逾時崩潰</span></span>
+<span class="line"><span>02:29:28  持續 BackOff，服務完全中斷</span></span></code></pre>
+<h3 id="為什麼會這樣">為什麼會這樣</h3>
+<p><code>prisma migrate deploy</code> 在執行任何 migration 之前，會先透過 <code>SELECT pg_advisory_lock(72707369)</code> 取得一個 PostgreSQL advisory lock，用來確保同一時間只有一個 migration 程序在跑。這次的問題出在<strong>取鎖這一步就逾時了</strong>（預設 10 秒），migration 本身根本還沒開始執行。</p>
+<p>造成取鎖逾時的可能原因：</p>
+<ul>
+<li><strong>Zeabur 內部網路延遲</strong>：API container 與 PostgreSQL 之間的連線不穩定，10 秒內無法完成取鎖</li>
+<li><strong>殘留的 advisory lock</strong>：前一次 container 崩潰時，PostgreSQL 連線未正常關閉，舊 session 還持有這把鎖</li>
+<li><strong>惡性循環加劇問題</strong>：container 崩潰 → K8s 重啟新 container → 新 container 搶鎖 → 舊連線尚未被 PostgreSQL 回收 → 又逾時 → 又崩潰，形成無限迴圈</li>
+</ul>
+<p>而把 <code>prisma migrate deploy</code> 綁在 CMD 中的致命問題在於：<strong>migration 失敗就等於應用完全無法啟動</strong>。即使沒有任何 pending migration，這個指令每次都需要取得 advisory lock 來「檢查」，所以一旦取鎖出問題，服務就會持續中斷。</p>
+<h3 id="怎麼解決的">怎麼解決的</h3>
+<p>將 Dockerfile CMD 改為只啟動應用，不再在 container 啟動時跑 migration：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="dockerfile"><code><span class="line"><span style="color:#F97583">CMD</span><span style="color:#E1E4E8"> [</span><span style="color:#9ECBFF">"node"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"dist/main"</span><span style="color:#E1E4E8">]</span></span></code></pre>
+<p>Migration 改為<strong>部署前手動執行</strong>。具體流程如下：</p>
+<ol>
+<li>在本機連線到正式 DB，手動執行 migration</li>
+<li>確認執行成功</li>
+<li>再 push code，讓 Zeabur webhook 觸發部署</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 在 apps/api/ 目錄下，連線正式 DB 執行 migration</span></span>
+<span class="line"><span style="color:#E1E4E8">DATABASE_URL</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">"&#x3C;正式環境的連線字串>"</span><span style="color:#B392F0"> npx</span><span style="color:#9ECBFF"> prisma</span><span style="color:#9ECBFF"> migrate</span><span style="color:#9ECBFF"> deploy</span></span></code></pre>
+<p>這樣做的好處是：migration 失敗時不會影響正在運行的服務，部署順序也完全由自己掌控。</p>
+<hr>
+<h2 id="現行-sop">現行 SOP</h2>
+<h3 id="技術棧">技術棧</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>項目</th><th>技術</th></tr></thead><tbody><tr><td>ORM</td><td>Prisma v6</td></tr><tr><td>資料庫</td><td>PostgreSQL</td></tr><tr><td>部署平台</td><td>Zeabur（透過 GitHub webhook 自動部署）</td></tr><tr><td>Schema 位置</td><td><code>apps/api/prisma/schema.prisma</code></td></tr><tr><td>Migration 目錄</td><td><code>apps/api/prisma/migrations/</code></td></tr></tbody></table>
+<h3 id="開發階段本機">開發階段（本機）</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 1. 修改 schema</span></span>
+<span class="line"><span style="color:#6A737D">#    編輯 apps/api/prisma/schema.prisma</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 2. 產生 migration 檔</span></span>
+<span class="line"><span style="color:#B392F0">pnpm</span><span style="color:#79B8FF"> --filter</span><span style="color:#9ECBFF"> api</span><span style="color:#9ECBFF"> prisma:migrate</span><span style="color:#79B8FF"> --</span><span style="color:#79B8FF"> --name</span><span style="color:#F97583"> &#x3C;</span><span style="color:#9ECBFF">描</span><span style="color:#E1E4E8">述</span><span style="color:#F97583">></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 3. 檢視產生的 SQL</span></span>
+<span class="line"><span style="color:#6A737D">#    確認 apps/api/prisma/migrations/&#x3C;timestamp>_&#x3C;name>/migration.sql 內容合理</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 4. 將 migration 檔 commit 到版控</span></span>
+<span class="line"><span style="color:#B392F0">git</span><span style="color:#9ECBFF"> add</span><span style="color:#9ECBFF"> apps/api/prisma/</span></span>
+<span class="line"><span style="color:#B392F0">git</span><span style="color:#9ECBFF"> commit</span><span style="color:#79B8FF"> -m</span><span style="color:#9ECBFF"> "feat: add migration for &#x3C;描述>"</span></span></code></pre>
+<h3 id="部署到正式環境">部署到正式環境</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>步驟 1：本機連正式 DB 執行 migration</span></span>
+<span class="line"><span>步驟 2：確認 migration 成功</span></span>
+<span class="line"><span>步驟 3：push code → Zeabur webhook 自動部署新版</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 在 apps/api/ 目錄下執行</span></span>
+<span class="line"><span style="color:#E1E4E8">DATABASE_URL</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">"&#x3C;正式環境的連線字串>"</span><span style="color:#B392F0"> npx</span><span style="color:#9ECBFF"> prisma</span><span style="color:#9ECBFF"> migrate</span><span style="color:#9ECBFF"> deploy</span></span></code></pre>
+<h3 id="注意事項">注意事項</h3>
+<ul>
+<li><code>prisma migrate deploy</code> 只會執行尚未跑過的 migration，已執行過的不會重複跑</li>
+<li>正式環境絕對不要用 <code>prisma migrate dev</code>，它會嘗試重置資料庫</li>
+<li>破壞性變更（刪欄位、改欄位名稱）應拆成多次部署，避免新舊 code 不相容</li>
+</ul>
+<hr>
+<h2 id="未來調整方向由-ci-全權控制部署">未來調整方向：由 CI 全權控制部署</h2>
+<p>現行 SOP 依賴手動操作，如果未來需要自動化（多人協作、schema 變更頻繁），可以考慮將部署控制權從 Zeabur webhook 收回到 GitHub Actions：</p>
+<ol>
+<li><strong>拔掉 Zeabur 的 GitHub webhook</strong>，不讓它自動部署</li>
+<li><strong>在 GitHub Actions 中建立 pipeline</strong>：
+<ul>
+<li>Step 1：<code>prisma migrate deploy</code> 連正式 DB 執行 migration</li>
+<li>Step 2：migration 成功後，透過 Zeabur Upload API 上傳 build 產物觸發部署</li>
+<li>若 Step 1 失敗，直接擋住，不會部署有問題的版本</li>
+</ul>
+</li>
+<li>流程示意：</li>
+</ol>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>push to main</span></span>
+<span class="line"><span>  └→ GitHub Actions</span></span>
+<span class="line"><span>       ├── Step 1: prisma migrate deploy（連正式 DB）</span></span>
+<span class="line"><span>       │     ↓ 成功</span></span>
+<span class="line"><span>       └── Step 2: Zeabur Upload API 部署新版</span></span></code></pre>
+<h3 id="為什麼現在還沒這樣做">為什麼現在還沒這樣做</h3>
+<ul>
+<li>Zeabur 目前沒有公開的「從 Git 觸發部署」API，只有 Upload API（上傳 zip 部署），流程會比較複雜</li>
+<li>Zeabur 的 GitHub webhook 與 GitHub Actions 完全獨立，無法互相協調順序，所以要走這條路就必須完全拔掉 webhook</li>
+<li>以目前的專案規模，手動操作的成本尚可接受</li>
+</ul>
+<hr>
+<h2 id="故障排除">故障排除</h2>
+<h3 id="migration-卡在-advisory-lock">Migration 卡在 advisory lock</h3>
+<p>如果手動執行 <code>prisma migrate deploy</code> 也遇到 advisory lock 逾時：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="sql"><code><span class="line"><span style="color:#6A737D">-- 連進 PostgreSQL，查看誰持有 advisory lock</span></span>
+<span class="line"><span style="color:#F97583">SELECT</span><span style="color:#F97583"> *</span><span style="color:#F97583"> FROM</span><span style="color:#E1E4E8"> pg_locks </span><span style="color:#F97583">WHERE</span><span style="color:#E1E4E8"> locktype </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> 'advisory'</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">-- 找到對應的 pid 後終止該 session</span></span>
+<span class="line"><span style="color:#F97583">SELECT</span><span style="color:#E1E4E8"> pg_terminate_backend(</span><span style="color:#F97583">&#x3C;</span><span style="color:#E1E4E8">pid</span><span style="color:#F97583">></span><span style="color:#E1E4E8">);</span></span></code></pre>
+<h3 id="確認-migration-狀態">確認 migration 狀態</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 查看哪些 migration 已經執行過</span></span>
+<span class="line"><span style="color:#E1E4E8">DATABASE_URL</span><span style="color:#F97583">=</span><span style="color:#9ECBFF">"&#x3C;連線字串>"</span><span style="color:#B392F0"> npx</span><span style="color:#9ECBFF"> prisma</span><span style="color:#9ECBFF"> migrate</span><span style="color:#9ECBFF"> status</span></span></code></pre>
+<h3 id="schema-與-migration-不一致">Schema 與 migration 不一致</h3>
+<p>如果有人改了 <code>schema.prisma</code> 但忘了產生 migration：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 檢查 schema 與現有 migration 是否有 drift</span></span>
+<span class="line"><span style="color:#B392F0">npx</span><span style="color:#9ECBFF"> prisma</span><span style="color:#9ECBFF"> migrate</span><span style="color:#9ECBFF"> diff</span><span style="color:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#79B8FF">  --from-migrations</span><span style="color:#9ECBFF"> prisma/migrations</span><span style="color:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#79B8FF">  --to-schema-datamodel</span><span style="color:#9ECBFF"> prisma/schema.prisma</span></span></code></pre> </div> <footer class="doc-footer"> <a class="button button-ghost" href="/FlashMind/docs/">回到列表</a> </footer> </article>  </main> <button class="to-top" type="button" aria-label="回到頁首"> <span aria-hidden="true">↑</span>
+回到頁首
+</button> <footer class="site-footer"> <span>FlashMind 文件工具 · 輕量版</span> <span>以行動閱讀為核心設計</span> </footer> <script type="module">const o=document.querySelector(".to-top");if(o){const t=()=>{const s=window.scrollY>240;o.classList.toggle("is-visible",s)};t(),window.addEventListener("scroll",t,{passive:!0}),o.addEventListener("click",()=>{window.scrollTo({top:0,behavior:"smooth"})})}</script> </body> </html> <script type="module">const e=document.querySelector("[data-copy-url]"),n=document.querySelector("[data-copy-status]");if(e){const a=e.textContent?.trim()??"複製路徑",c=e.dataset.copyUrl??"";e.addEventListener("click",async()=>{let o=!1;try{await navigator.clipboard.writeText(c),o=!0}catch{const t=document.createElement("textarea");t.value=c,t.setAttribute("readonly",""),t.style.position="absolute",t.style.left="-9999px",document.body.appendChild(t),t.select(),o=document.execCommand("copy"),document.body.removeChild(t)}e.textContent=o?"已複製":"複製失敗",n&&(n.textContent=o?"已複製到剪貼簿":"複製失敗，請手動複製"),window.setTimeout(()=>{e.textContent=a,n&&(n.textContent="")},1600)})}</script>
