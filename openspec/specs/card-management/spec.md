@@ -139,7 +139,7 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **WHEN** 使用者填寫完畢並點擊「儲存」
 - **AND** 正面已填寫
 - **AND** 至少有一筆詞義的中文解釋已填寫
-- **THEN** 卡片建立成功
+- **THEN** 系統建立卡片（含正向與反向 FSRS 初始狀態）
 - **AND** 返回牌組詳情頁（卡片列表）
 
 #### Scenario: 儲存失敗（驗證錯誤）
@@ -205,7 +205,7 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 #### Scenario: 確認刪除
 
 - **WHEN** 使用者在確認對話框點擊「確認」
-- **THEN** 卡片刪除成功
+- **THEN** 系統刪除該卡片（含其正向與反向 FSRS 排程資料與 ReviewLog）
 - **AND** 卡片從列表移除
 - **AND** 對話框關閉
 

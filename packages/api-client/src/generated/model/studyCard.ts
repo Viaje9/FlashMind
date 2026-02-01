@@ -34,6 +34,10 @@ export interface StudyCard {
      * 是否為新卡
      */
     isNew: boolean;
+    /**
+     * 學習方向（FORWARD 正向、REVERSE 反向）
+     */
+    direction: StudyCard.DirectionEnum;
 }
 export namespace StudyCard {
     export const StateEnum = {
@@ -43,6 +47,11 @@ export namespace StudyCard {
         Relearning: 'RELEARNING'
     } as const;
     export type StateEnum = typeof StateEnum[keyof typeof StateEnum];
+    export const DirectionEnum = {
+        Forward: 'FORWARD',
+        Reverse: 'REVERSE'
+    } as const;
+    export type DirectionEnum = typeof DirectionEnum[keyof typeof DirectionEnum];
 }
 
 

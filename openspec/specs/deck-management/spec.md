@@ -84,6 +84,16 @@ TBD - created by archiving change add-deck-management. Update Purpose after arch
 - **THEN** `dailyResetHour` 預設值 SHALL 為 4
 - **AND** `dailyResetHour` 範圍 SHALL 為 0 至 23
 
+#### Scenario: FSRS 參數使用預設值
+
+- **WHEN** 使用者建立牌組
+- **THEN** FSRS 參數 SHALL 使用以下預設值：
+  - `learningSteps`: `"1m,10m"`
+  - `relearningSteps`: `"10m"`
+  - `requestRetention`: `0.9`
+  - `maximumInterval`: `36500`
+- **AND** 建立表單不顯示 FSRS 參數欄位
+
 #### Scenario: 顯示設定提示
 
 - **WHEN** 使用者瀏覽建立牌組表單
@@ -113,13 +123,13 @@ TBD - created by archiving change add-deck-management. Update Purpose after arch
 
 ### Requirement: 編輯牌組設定
 
-使用者 SHALL 能夠編輯現有牌組的設定，包含每日重置時間。
+使用者 SHALL 能夠編輯現有牌組的設定，包含每日重置時間與 FSRS 演算法參數。
 
 #### Scenario: 進入設定頁面
 
 - **WHEN** 使用者在牌組詳情頁點擊設定按鈕
 - **THEN** 導航至牌組設定頁面
-- **AND** 表單預填現有設定（含 `dailyResetHour`）
+- **AND** 表單預填現有設定（含 `dailyResetHour` 與 FSRS 參數）
 
 #### Scenario: 修改牌組名稱
 
@@ -141,10 +151,49 @@ TBD - created by archiving change add-deck-management. Update Purpose after arch
 - **AND** 步進為 1
 - **AND** 單位顯示為「時」
 
+#### Scenario: 修改目標保留率
+
+- **WHEN** 使用者在設定頁面修改目標保留率
+- **THEN** 可修改 `requestRetention`（0.70-0.97）
+- **AND** 步進為 0.01
+- **AND** 顯示為百分比格式（如「90%」）
+
+#### Scenario: 修改最大複習間隔
+
+- **WHEN** 使用者在設定頁面修改最大複習間隔
+- **THEN** 可修改 `maximumInterval`（30-36500）
+- **AND** 步進為 30
+- **AND** 單位顯示為「天」
+
+#### Scenario: 修改學習步驟
+
+- **WHEN** 使用者在設定頁面修改學習步驟
+- **THEN** 可修改 `learningSteps`
+- **AND** 格式提示為「如：1m, 10m」
+- **AND** 支援 m（分鐘）、h（小時）、d（天）單位
+
+#### Scenario: 修改重學步驟
+
+- **WHEN** 使用者在設定頁面修改重學步驟
+- **THEN** 可修改 `relearningSteps`
+- **AND** 格式提示為「如：10m」
+- **AND** 支援 m（分鐘）、h（小時）、d（天）單位
+
+#### Scenario: 重置 FSRS 參數為預設值
+
+- **WHEN** 使用者點擊「重置為預設值」按鈕
+- **THEN** 所有 FSRS 參數回復為預設值：
+  - `learningSteps`: `"1m,10m"`
+  - `relearningSteps`: `"10m"`
+  - `requestRetention`: `0.9`
+  - `maximumInterval`: `36500`
+- **AND** 表單欄位更新為預設值
+- **AND** 需點擊「儲存」才會生效
+
 #### Scenario: 儲存設定成功
 
 - **WHEN** 使用者修改完畢並點擊「儲存」
-- **THEN** 設定更新成功（含 `dailyResetHour`）
+- **THEN** 設定更新成功（含 `dailyResetHour` 與 FSRS 參數）
 - **AND** 新設定立即生效於下次學習
 - **AND** 導航回牌組詳情頁
 

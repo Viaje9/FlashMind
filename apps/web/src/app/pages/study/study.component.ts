@@ -6,7 +6,7 @@ import { FmStudyProgressComponent } from './components/study-progress/study-prog
 import { FmSwipeableCardComponent } from './components/swipeable-card/swipeable-card.component';
 import { StudyStore } from '../../components/study/study.store';
 import { TtsStore } from '../../components/tts/tts.store';
-import { mapMeaningsToExamples, getTranslations, StudyRating } from '../../components/study/study.domain';
+import { mapMeaningsToExamples, getStudyWord, getStudyTranslations, StudyRating } from '../../components/study/study.domain';
 
 @Component({
   selector: 'app-study-page',
@@ -39,15 +39,20 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly stats = this.studyStore.stats;
   readonly deckName = this.studyStore.deckName;
 
-  readonly word = computed(() => this.currentCard()?.front ?? '');
+  readonly word = computed(() => {
+    const card = this.currentCard();
+    return card ? getStudyWord(card) : '';
+  });
   readonly translations = computed(() => {
     const card = this.currentCard();
-    return card ? getTranslations(card) : [];
+    return card ? getStudyTranslations(card) : [];
   });
   readonly examples = computed((): StudyExample[] => {
     const card = this.currentCard();
     return card ? mapMeaningsToExamples(card) : [];
   });
+
+  readonly isReverse = computed(() => this.currentCard()?.direction === 'REVERSE');
 
   readonly isLoading = computed(() => this.phase() === 'loading');
   readonly isStudying = computed(() => this.phase() === 'studying');

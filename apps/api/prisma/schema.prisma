@@ -58,6 +58,15 @@ model Deck {
   dailyNewCards    Int      @default(20)
   dailyReviewCards Int      @default(100)
   dailyResetHour   Int      @default(4)
+
+  // FSRS 演算法參數（per-deck）
+  learningSteps    String   @default("1m,10m")
+  relearningSteps  String   @default("10m")
+  requestRetention Float    @default(0.9)
+  maximumInterval  Int      @default(36500)
+
+  enableReverse    Boolean  @default(false)
+
   userId           String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -81,7 +90,7 @@ model Card {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  // FSRS 排程欄位
+  // FSRS 排程欄位（正向）
   state         CardState   @default(NEW)
   due           DateTime?
   stability     Float?
@@ -91,6 +100,20 @@ model Card {
   reps          Int         @default(0)
   lapses        Int         @default(0)
   lastReview    DateTime?
+  learningStep  Int         @default(0)
+
+  // FSRS 排程欄位（反向）
+  reverseState         CardState   @default(NEW)
+  reverseDue           DateTime?
+  reverseStability     Float?
+  reverseDifficulty    Float?
+  reverseElapsedDays   Int         @default(0)
+  reverseScheduledDays Int         @default(0)
+  reverseReps          Int         @default(0)
+  reverseLapses        Int         @default(0)
+  reverseLastReview    DateTime?
+  reverseLearningStep  Int         @default(0)
+
   reviewLogs    ReviewLog[]
 }
 
@@ -129,4 +152,7 @@ model ReviewLog {
   newStability  Float?
   newDifficulty Float?
   scheduledDays Int
+
+  // 學習方向
+  direction     String    @default("FORWARD")
 }

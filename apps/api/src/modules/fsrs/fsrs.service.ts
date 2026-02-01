@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import {
   createEmptyCard,
   fsrs,
+  FSRS,
   Rating,
   Card as FsrsCard,
   RecordLogItem,
   State,
   Grade,
+  type Steps,
 } from 'ts-fsrs';
+import { createHash } from 'crypto';
 
 /**
  * 應用程式使用的評分類型
@@ -16,6 +19,16 @@ import {
  * - unknown: 不知道（左滑）
  */
 export type StudyRating = 'known' | 'unfamiliar' | 'unknown';
+
+/**
+ * 每牌組的 FSRS 參數
+ */
+export interface DeckFsrsParams {
+  requestRetention?: number;
+  maximumInterval?: number;
+  learningSteps?: Steps;
+  relearningSteps?: Steps;
+}
 
 /**
  * 卡片排程狀態
@@ -30,6 +43,7 @@ export interface CardScheduleState {
   reps: number;
   lapses: number;
   lastReview: Date | null;
+  learningStep: number;
 }
 
 /**
@@ -51,7 +65,46 @@ export interface ReviewResult {
 
 @Injectable()
 export class FsrsService {
-  private readonly scheduler = fsrs();
+  private readonly defaultScheduler: FSRS = fsrs();
+  private readonly schedulerCache = new Map<string, FSRS>();
+
+  /**
+   * 根據參數取得或建立 FSRS 排程器
+   * 使用參數 hash 作為快取 key
+   */
+  getScheduler(params?: DeckFsrsParams): FSRS {
+    if (!params) {
+      return this.defaultScheduler;
+    }
+
+    const key = this.computeParamsHash(params);
+    const cached = this.schedulerCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const scheduler = fsrs({
+      request_retention: params.requestRetention,
+      maximum_interval: params.maximumInterval,
+      learning_steps: params.learningSteps,
+      relearning_steps: params.relearningSteps,
+    });
+    this.schedulerCache.set(key, scheduler);
+    return scheduler;
+  }
+
+  /**
+   * 計算參數的 hash 值作為快取 key
+   */
+  private computeParamsHash(params: DeckFsrsParams): string {
+    const payload = JSON.stringify({
+      requestRetention: params.requestRetention,
+      maximumInterval: params.maximumInterval,
+      learningSteps: params.learningSteps,
+      relearningSteps: params.relearningSteps,
+    });
+    return createHash('md5').update(payload).digest('hex');
+  }
 
   /**
    * 將 StudyRating 對應到 FSRS Grade
@@ -114,6 +167,7 @@ export class FsrsService {
       reps: card.reps,
       lapses: card.lapses,
       lastReview: card.last_review ?? null,
+      learningStep: 0,
     };
   }
 
@@ -122,12 +176,14 @@ export class FsrsService {
    * @param currentState 卡片目前的排程狀態
    * @param rating 使用者評分
    * @param now 評分時間
+   * @param fsrsParams 可選的牌組 FSRS 參數
    * @returns 更新後的排程狀態和記錄
    */
   calculateNextReview(
     currentState: CardScheduleState,
     rating: StudyRating,
     now: Date = new Date(),
+    fsrsParams?: DeckFsrsParams,
   ): ReviewResult {
     // 將應用程式狀態轉換為 FSRS Card
     const fsrsCard: FsrsCard = {
@@ -136,16 +192,19 @@ export class FsrsService {
       difficulty: currentState.difficulty ?? 0,
       elapsed_days: currentState.elapsedDays,
       scheduled_days: currentState.scheduledDays,
-      learning_steps: 0,
+      learning_steps: currentState.learningStep,
       reps: currentState.reps,
       lapses: currentState.lapses,
       state: this.mapStateToFsrs(currentState.state),
       last_review: currentState.lastReview ?? undefined,
     };
 
+    // 取得排程器
+    const scheduler = this.getScheduler(fsrsParams);
+
     // 計算排程
     const fsrsRating = this.mapRatingToFsrs(rating);
-    const result: RecordLogItem = this.scheduler.next(fsrsCard, now, fsrsRating);
+    const result: RecordLogItem = scheduler.next(fsrsCard, now, fsrsRating);
 
     // 轉換結果
     return {
@@ -159,6 +218,7 @@ export class FsrsService {
         reps: result.card.reps,
         lapses: result.card.lapses,
         lastReview: result.card.last_review ?? null,
+        learningStep: result.card.learning_steps,
       },
       log: {
         rating,
@@ -171,6 +231,18 @@ export class FsrsService {
         review: result.log.review,
       },
     };
+  }
+
+  /**
+   * 將逗號分隔的步驟字串轉換為陣列
+   * @param stepsString 逗號分隔的步驟字串，例如 "1m,10m"
+   * @returns 步驟陣列，例如 ["1m", "10m"]
+   */
+  parseLearningSteps(stepsString: string): Steps {
+    return stepsString
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0) as unknown as Steps;
   }
 
   /**

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Deck" ADD COLUMN     "learningSteps" TEXT NOT NULL DEFAULT '1m,10m',
+ADD COLUMN     "relearningSteps" TEXT NOT NULL DEFAULT '10m',
+ADD COLUMN     "requestRetention" DOUBLE PRECISION NOT NULL DEFAULT 0.9,
+ADD COLUMN     "maximumInterval" INTEGER NOT NULL DEFAULT 36500;

@@ -20,6 +20,7 @@ export class FmDeckCardComponent {
   readonly reviewCount = input(0);
   readonly progress = input(0);
   readonly completed = input(false);
+  readonly enableReverse = input(false);
   readonly tags = input<DeckTag[] | null>(null);
   readonly showAction = input(true);
   readonly actionLabel = input('開始學習');

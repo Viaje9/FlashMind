@@ -1228,6 +1228,36 @@ components:
           maximum: 23
           default: 4
           example: 4
+        learningSteps:
+          type: string
+          description: 學習步驟（逗號分隔，例如 "1m,10m"）
+          default: "1m,10m"
+          example: "1m,10m"
+        relearningSteps:
+          type: string
+          description: 重學步驟（逗號分隔，例如 "10m"）
+          default: "10m"
+          example: "10m"
+        requestRetention:
+          type: number
+          format: float
+          description: 目標保留率（0.70 ~ 0.97）
+          minimum: 0.70
+          maximum: 0.97
+          default: 0.9
+          example: 0.9
+        maximumInterval:
+          type: integer
+          description: 最大複習間隔（天，30 ~ 36500）
+          minimum: 30
+          maximum: 36500
+          default: 36500
+          example: 36500
+        enableReverse:
+          type: boolean
+          description: 是否啟用反向學習
+          default: false
+          example: false
         createdAt:
           type: string
           format: date-time
@@ -1282,6 +1312,10 @@ components:
           minimum: 0
           maximum: 100
           example: 65.0
+        enableReverse:
+          type: boolean
+          description: 是否啟用反向學習
+          example: false
 
     DeckDetail:
       type: object
@@ -1317,6 +1351,36 @@ components:
           maximum: 23
           default: 4
           example: 4
+        learningSteps:
+          type: string
+          description: 學習步驟（逗號分隔）
+          default: "1m,10m"
+          example: "1m,10m"
+        relearningSteps:
+          type: string
+          description: 重學步驟（逗號分隔）
+          default: "10m"
+          example: "10m"
+        requestRetention:
+          type: number
+          format: float
+          description: 目標保留率
+          minimum: 0.70
+          maximum: 0.97
+          default: 0.9
+          example: 0.9
+        maximumInterval:
+          type: integer
+          description: 最大複習間隔（天）
+          minimum: 30
+          maximum: 36500
+          default: 36500
+          example: 36500
+        enableReverse:
+          type: boolean
+          description: 是否啟用反向學習
+          default: false
+          example: false
         stats:
           $ref: "#/components/schemas/DeckStats"
 
@@ -1385,6 +1449,36 @@ components:
           maximum: 23
           default: 4
           example: 4
+        learningSteps:
+          type: string
+          description: 學習步驟（逗號分隔，預設 "1m,10m"）
+          default: "1m,10m"
+          example: "1m,10m"
+        relearningSteps:
+          type: string
+          description: 重學步驟（逗號分隔，預設 "10m"）
+          default: "10m"
+          example: "10m"
+        requestRetention:
+          type: number
+          format: float
+          description: 目標保留率（0.70 ~ 0.97，預設 0.9）
+          minimum: 0.70
+          maximum: 0.97
+          default: 0.9
+          example: 0.9
+        maximumInterval:
+          type: integer
+          description: 最大複習間隔（天，30 ~ 36500，預設 36500）
+          minimum: 30
+          maximum: 36500
+          default: 36500
+          example: 36500
+        enableReverse:
+          type: boolean
+          description: 是否啟用反向學習（預設 false）
+          default: false
+          example: false
 
     UpdateDeckRequest:
       type: object
@@ -1413,6 +1507,31 @@ components:
           minimum: 0
           maximum: 23
           example: 4
+        learningSteps:
+          type: string
+          description: 學習步驟（逗號分隔）
+          example: "1m,10m"
+        relearningSteps:
+          type: string
+          description: 重學步驟（逗號分隔）
+          example: "10m"
+        requestRetention:
+          type: number
+          format: float
+          description: 目標保留率（0.70 ~ 0.97）
+          minimum: 0.70
+          maximum: 0.97
+          example: 0.9
+        maximumInterval:
+          type: integer
+          description: 最大複習間隔（天，30 ~ 36500）
+          minimum: 30
+          maximum: 36500
+          example: 36500
+        enableReverse:
+          type: boolean
+          description: 是否啟用反向學習
+          example: false
 
     DeckResponse:
       type: object
@@ -1575,7 +1694,6 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/CreateCardMeaningRequest"
-
     UpdateCardMeaningRequest:
       type: object
       description: 更新詞義請求
@@ -1645,7 +1763,6 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/CreateCardRequest"
-
     ImportCardError:
       type: object
       description: 單張卡片匯入錯誤
@@ -1764,6 +1881,7 @@ components:
         - meanings
         - state
         - isNew
+        - direction
       properties:
         id:
           type: string
@@ -1787,6 +1905,11 @@ components:
           type: boolean
           description: 是否為新卡
           example: true
+        direction:
+          type: string
+          enum: [FORWARD, REVERSE]
+          description: 學習方向（FORWARD 正向、REVERSE 反向）
+          example: FORWARD
 
     StudyCardsResponse:
       type: object
@@ -1819,6 +1942,12 @@ components:
             - unfamiliar: 不熟（上滑）
             - unknown: 不知道（左滑）
           example: known
+        direction:
+          type: string
+          enum: [FORWARD, REVERSE]
+          description: 學習方向（FORWARD 正向、REVERSE 反向）
+          default: FORWARD
+          example: FORWARD
 
     ReviewResult:
       type: object

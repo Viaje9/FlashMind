@@ -8,12 +8,14 @@ import { DialogService, FmAlertDialogComponent } from '@flashmind/ui';
 let isHandling401 = false;
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+  const router = inject(Router);
+  const dialogService = inject(DialogService);
+
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 && !isHandling401 && !req.url.includes('/auth/me')) {
+      const isAuthEndpoint = req.url.includes('/auth/');
+      if (err.status === 401 && !isHandling401 && !isAuthEndpoint) {
         isHandling401 = true;
-        const router = inject(Router);
-        const dialogService = inject(DialogService);
 
         const dialogRef = dialogService.open(FmAlertDialogComponent, {
           data: {

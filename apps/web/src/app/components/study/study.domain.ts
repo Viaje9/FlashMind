@@ -74,6 +74,30 @@ export function updateStats(stats: StudyStats, rating: StudyRating): StudyStats 
 }
 
 /**
+ * 根據卡片方向取得學習單字
+ * 正向卡：front 是英文單字（顯示在正面）
+ * 反向卡：所有中文翻譯用全形分號連結（顯示在正面，要求回答英文）
+ */
+export function getStudyWord(card: StudyCard): string {
+  if (card.direction === 'REVERSE') {
+    return card.meanings.map((m) => m.zhMeaning).join('\uFF1B');
+  }
+  return card.front;
+}
+
+/**
+ * 根據卡片方向取得翻譯
+ * 正向卡：所有 zhMeaning（中文翻譯）
+ * 反向卡：front（英文為答案）
+ */
+export function getStudyTranslations(card: StudyCard): string[] {
+  if (card.direction === 'REVERSE') {
+    return [card.front];
+  }
+  return card.meanings.map((m) => m.zhMeaning);
+}
+
+/**
  * 檢查是否為「不知道」評分
  */
 export function isUnknownRating(rating: StudyRating): boolean {

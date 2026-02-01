@@ -6,6 +6,8 @@ import {
   createInitialStats,
   updateStats,
   isUnknownRating,
+  getStudyWord,
+  getStudyTranslations,
   StudyStats,
 } from './study.domain';
 import { StudyCard } from '@flashmind/api-client';
@@ -30,6 +32,29 @@ describe('study.domain', () => {
     ],
     state: 'NEW',
     isNew: true,
+    direction: 'FORWARD',
+  };
+
+  const mockReverseCard: StudyCard = {
+    id: 'card-1',
+    front: 'Hello',
+    meanings: [
+      {
+        id: 'm1',
+        zhMeaning: '你好',
+        enExample: 'Hello, how are you?',
+        zhExample: '你好，你好嗎？',
+      },
+      {
+        id: 'm2',
+        zhMeaning: '喂',
+        enExample: 'Hello? Is anyone there?',
+        zhExample: '喂？有人在嗎？',
+      },
+    ],
+    state: 'NEW',
+    isNew: true,
+    direction: 'REVERSE',
   };
 
   describe('mapMeaningsToExamples', () => {
@@ -51,6 +76,7 @@ describe('study.domain', () => {
         meanings: [{ id: 'm1', zhMeaning: '世界', enExample: null, zhExample: null }],
         state: 'NEW',
         isNew: true,
+        direction: 'FORWARD',
       };
 
       const examples = mapMeaningsToExamples(cardWithoutExamples);
@@ -125,6 +151,44 @@ describe('study.domain', () => {
       updateStats(original, 'known');
 
       expect(original.knownCount).toBe(0);
+    });
+  });
+
+  describe('getStudyWord', () => {
+    it('正向卡應回傳 front 作為學習單字', () => {
+      const word = getStudyWord(mockCard);
+      expect(word).toBe('Hello');
+    });
+
+    it('反向卡應回傳所有 zhMeaning 用全形分號連結作為學習單字', () => {
+      const word = getStudyWord(mockReverseCard);
+      expect(word).toBe('你好\uFF1B喂');
+    });
+
+    it('正向卡沒有 direction 時預設回傳 front', () => {
+      const cardNoDirection = { ...mockCard };
+      delete (cardNoDirection as Record<string, unknown>)['direction'];
+      const word = getStudyWord(cardNoDirection);
+      expect(word).toBe('Hello');
+    });
+  });
+
+  describe('getStudyTranslations', () => {
+    it('正向卡應回傳所有 zhMeaning 作為翻譯', () => {
+      const translations = getStudyTranslations(mockCard);
+      expect(translations).toEqual(['你好', '喂']);
+    });
+
+    it('反向卡應回傳 front 作為翻譯', () => {
+      const translations = getStudyTranslations(mockReverseCard);
+      expect(translations).toEqual(['Hello']);
+    });
+
+    it('正向卡沒有 direction 時預設回傳 zhMeaning', () => {
+      const cardNoDirection = { ...mockCard };
+      delete (cardNoDirection as Record<string, unknown>)['direction'];
+      const translations = getStudyTranslations(cardNoDirection);
+      expect(translations).toEqual(['你好', '喂']);
     });
   });
 

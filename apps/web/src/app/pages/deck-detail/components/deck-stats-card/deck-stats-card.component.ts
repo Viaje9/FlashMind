@@ -11,6 +11,7 @@ import { FmButtonComponent } from '@flashmind/ui';
 export class FmDeckStatsCardComponent {
   readonly newCount = input(0);
   readonly reviewCount = input(0);
+  readonly enableReverse = input(false);
   readonly createdAtLabel = input('');
   readonly lastReviewLabel = input('');
   readonly actionLabel = input('開始學習');

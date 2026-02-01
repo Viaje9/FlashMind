@@ -38,6 +38,7 @@ export class StudyController {
       dto.cardId,
       dto.rating,
       req.user.id,
+      dto.direction,
     );
     return { data: result };
   }

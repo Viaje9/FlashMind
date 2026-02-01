@@ -104,6 +104,12 @@
               @if (isSubmitting()) {
                 <span class="material-symbols-outlined text-4xl animate-spin text-primary">progress_activity</span>
               } @else {
+                @if (isReverse()) {
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 mb-3" data-testid="study-reverse-badge">
+                    <span class="material-symbols-outlined text-[14px]">swap_horiz</span>
+                    反向卡
+                  </span>
+                }
                 <h2 class="card-title text-4xl font-bold text-slate-800 dark:text-white">{{ word() }}</h2>
                 <p class="text-primary/70 mt-4 font-medium">點擊查看答案</p>
               }

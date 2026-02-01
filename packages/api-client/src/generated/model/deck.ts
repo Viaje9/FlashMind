@@ -34,6 +34,26 @@ export interface Deck {
      */
     dailyResetHour: number;
     /**
+     * 學習步驟（逗號分隔，例如 \"1m,10m\"）
+     */
+    learningSteps?: string;
+    /**
+     * 重學步驟（逗號分隔，例如 \"10m\"）
+     */
+    relearningSteps?: string;
+    /**
+     * 目標保留率（0.70 ~ 0.97）
+     */
+    requestRetention?: number;
+    /**
+     * 最大複習間隔（天，30 ~ 36500）
+     */
+    maximumInterval?: number;
+    /**
+     * 是否啟用反向學習
+     */
+    enableReverse?: boolean;
+    /**
      * 建立時間（ISO 8601 UTC）
      */
     createdAt: string;

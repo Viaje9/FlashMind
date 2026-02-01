@@ -41,5 +41,9 @@ export interface DeckListItem {
      * 學習進度百分比（0-100）
      */
     progress: number;
+    /**
+     * 是否啟用反向學習
+     */
+    enableReverse?: boolean;
 }
 

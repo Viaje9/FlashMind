@@ -151,6 +151,7 @@ export class StudyStore {
         this.studyService.submitReview(s.deckId, {
           cardId: card.id,
           rating: rating as SubmitReviewRequest.RatingEnum,
+          direction: card.direction as SubmitReviewRequest.DirectionEnum,
         })
       );
 
@@ -210,7 +211,9 @@ export class StudyStore {
       // 如果是從 failedQueue 撤銷，移除該卡片
       let newFailedQueue = state.failedQueue;
       if (isUnknownRating(lastEntry.rating)) {
-        newFailedQueue = state.failedQueue.filter((c) => c.id !== lastEntry.card.id);
+        newFailedQueue = state.failedQueue.filter(
+          (c) => !(c.id === lastEntry.card.id && c.direction === lastEntry.card.direction)
+        );
       }
 
       // 判斷是否在 failedQueue 階段

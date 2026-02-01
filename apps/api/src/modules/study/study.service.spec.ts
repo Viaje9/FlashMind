@@ -31,6 +31,9 @@ describe('StudyService', () => {
     initializeCard: jest.fn(),
     isDue: jest.fn(),
     isNew: jest.fn(),
+    parseLearningSteps: jest.fn((s: string) =>
+      s.split(',').map((x: string) => x.trim()).filter((x: string) => x.length > 0),
+    ),
   };
 
   const mockUserId = 'user-123';
@@ -44,6 +47,11 @@ describe('StudyService', () => {
     dailyNewCards: 20,
     dailyReviewCards: 100,
     dailyResetHour: 4,
+    learningSteps: '1m,10m',
+    relearningSteps: '10m',
+    requestRetention: 0.9,
+    maximumInterval: 36500,
+    enableReverse: false,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
   };
@@ -70,6 +78,17 @@ describe('StudyService', () => {
     reps: 0,
     lapses: 0,
     lastReview: null,
+    learningStep: 0,
+    reverseState: CardState.NEW,
+    reverseDue: null,
+    reverseStability: null,
+    reverseDifficulty: null,
+    reverseElapsedDays: 0,
+    reverseScheduledDays: 0,
+    reverseReps: 0,
+    reverseLapses: 0,
+    reverseLastReview: null,
+    reverseLearningStep: 0,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
     meanings: [mockMeaning],
@@ -88,6 +107,17 @@ describe('StudyService', () => {
     reps: 5,
     lapses: 0,
     lastReview: new Date('2026-01-13T10:00:00Z'),
+    learningStep: 0,
+    reverseState: CardState.NEW,
+    reverseDue: null,
+    reverseStability: null,
+    reverseDifficulty: null,
+    reverseElapsedDays: 0,
+    reverseScheduledDays: 0,
+    reverseReps: 0,
+    reverseLapses: 0,
+    reverseLastReview: null,
+    reverseLearningStep: 0,
     createdAt: new Date('2026-01-10T10:00:00Z'),
     updatedAt: new Date('2026-01-18T10:00:00Z'),
     meanings: [{ ...mockMeaning, id: 'meaning-due-123', zhMeaning: '世界' }],
@@ -131,6 +161,21 @@ describe('StudyService', () => {
       expect(result[0].isNew).toBe(false);
       expect(result[1].id).toBe(mockCardId); // new card second
       expect(result[1].isNew).toBe(true);
+    });
+
+    it('學習卡片應包含 direction 欄位為 FORWARD', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([]) // no due cards
+        .mockResolvedValueOnce([mockNewCard]); // new cards
+
+      const result = await service.getStudyCards(mockDeckId, mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].direction).toBe('FORWARD');
     });
 
     it('沒有卡片時應該回傳空陣列', async () => {
@@ -226,6 +271,64 @@ describe('StudyService', () => {
         service.getStudyCards(mockDeckId, 'other-user'),
       ).rejects.toThrow(ForbiddenException);
     });
+
+    it('enableReverse 為 true 時應回傳正向和反向 StudyCard', async () => {
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0) // todayNewCardsStudied
+        .mockResolvedValueOnce(0); // todayReviewCardsStudied
+
+      const reverseNewCard = {
+        ...mockNewCard,
+        id: 'card-reverse-new',
+        reverseState: CardState.NEW,
+      };
+
+      const reverseDueCard = {
+        ...mockDueCard,
+        id: 'card-reverse-due',
+        reverseState: CardState.REVIEW,
+        reverseDue: new Date('2026-01-18T09:00:00Z'),
+      };
+
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard]) // 正向複習卡
+        .mockResolvedValueOnce([mockNewCard]) // 正向新卡
+        .mockResolvedValueOnce([reverseDueCard]) // 反向複習卡
+        .mockResolvedValueOnce([reverseNewCard]); // 反向新卡
+
+      const result = await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 4 張卡：正向複習 + 反向複習 + 正向新卡 + 反向新卡
+      expect(result).toHaveLength(4);
+      expect(result[0].direction).toBe('FORWARD');
+      expect(result[0].isNew).toBe(false);
+      expect(result[1].direction).toBe('REVERSE');
+      expect(result[1].isNew).toBe(false);
+      expect(result[1].state).toBe(CardState.REVIEW);
+      expect(result[2].direction).toBe('FORWARD');
+      expect(result[2].isNew).toBe(true);
+      expect(result[3].direction).toBe('REVERSE');
+      expect(result[3].isNew).toBe(true);
+    });
+
+    it('enableReverse 為 false 時不查詢反向卡片', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck); // enableReverse: false
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard]) // 正向複習卡
+        .mockResolvedValueOnce([mockNewCard]); // 正向新卡
+
+      const result = await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 只有 2 次 findMany 呼叫（正向複習 + 正向新卡）
+      expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(2);
+      expect(result).toHaveLength(2);
+      expect(result.every((c) => c.direction === 'FORWARD')).toBe(true);
+    });
   });
 
   describe('submitReview', () => {
@@ -247,6 +350,7 @@ describe('StudyService', () => {
           reps: 1,
           lapses: 0,
           lastReview: now,
+          learningStep: 1,
         },
         log: {
           rating: 'known',
@@ -286,6 +390,7 @@ describe('StudyService', () => {
         expect.objectContaining({ state: 'NEW' }),
         'known',
         now,
+        { requestRetention: 0.9, maximumInterval: 36500, learningSteps: ['1m', '10m'], relearningSteps: ['10m'] },
       );
       expect(prisma.card.update).toHaveBeenCalledWith({
         where: { id: mockCardId },
@@ -301,6 +406,7 @@ describe('StudyService', () => {
           rating: PrismaStudyRating.KNOWN,
           prevState: CardState.NEW,
           newState: CardState.LEARNING,
+          direction: 'FORWARD',
         }),
       });
       expect(result.cardId).toBe(mockCardId);
@@ -332,6 +438,223 @@ describe('StudyService', () => {
         service.submitReview(mockDeckId, mockCardId, 'known', 'other-user'),
       ).rejects.toThrow(ForbiddenException);
     });
+
+    it('應該將牌組的 FSRS 參數傳遞給 FsrsService', async () => {
+      const customDeck = {
+        ...mockDeck,
+        requestRetention: 0.85,
+        maximumInterval: 180,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(customDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockNewCard);
+      mockPrismaService.card.update.mockResolvedValue(mockNewCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId);
+
+      expect(fsrsService.calculateNextReview).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'NEW' }),
+        'known',
+        now,
+        { requestRetention: 0.85, maximumInterval: 180, learningSteps: ['1m', '10m'], relearningSteps: ['10m'] },
+      );
+    });
+
+    it('submitReview 帶 direction=REVERSE 時應更新 reverseState 等欄位', async () => {
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockNewCard);
+      mockPrismaService.card.update.mockResolvedValue({
+        ...mockNewCard,
+        reverseState: CardState.LEARNING,
+        reverseDue: nextDue,
+      });
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      const result = await service.submitReview(
+        mockDeckId,
+        mockCardId,
+        'known',
+        mockUserId,
+        'REVERSE',
+      );
+
+      // 應使用 reverse 欄位建立 currentState
+      expect(fsrsService.calculateNextReview).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'NEW',
+          due: null,
+          stability: null,
+          difficulty: null,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0,
+          lastReview: null,
+          learningStep: 0,
+        }),
+        'known',
+        now,
+        { requestRetention: 0.9, maximumInterval: 36500, learningSteps: ['1m', '10m'], relearningSteps: ['10m'] },
+      );
+
+      // 應更新 reverse 欄位
+      expect(prisma.card.update).toHaveBeenCalledWith({
+        where: { id: mockCardId },
+        data: {
+          reverseState: CardState.LEARNING,
+          reverseDue: nextDue,
+          reverseStability: 1.5,
+          reverseDifficulty: 5.5,
+          reverseElapsedDays: 0,
+          reverseScheduledDays: 1,
+          reverseReps: 1,
+          reverseLapses: 0,
+          reverseLastReview: now,
+          reverseLearningStep: 1,
+        },
+      });
+
+      // ReviewLog 應記錄 direction=REVERSE 且 prevState 為 reverseState
+      expect(prisma.reviewLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          cardId: mockCardId,
+          direction: 'REVERSE',
+          prevState: CardState.NEW, // mockNewCard.reverseState
+          prevStability: null, // mockNewCard.reverseStability
+          prevDifficulty: null, // mockNewCard.reverseDifficulty
+          newState: CardState.LEARNING,
+        }),
+      });
+
+      expect(result.cardId).toBe(mockCardId);
+      expect(result.newState).toBe(CardState.LEARNING);
+    });
+
+    it('應將牌組的 learningSteps 和 relearningSteps 解析後傳遞給 FsrsService', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockNewCard);
+      mockPrismaService.card.update.mockResolvedValue(mockNewCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId);
+
+      expect(fsrsService.calculateNextReview).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'NEW', learningStep: 0 }),
+        'known',
+        now,
+        {
+          requestRetention: 0.9,
+          maximumInterval: 36500,
+          learningSteps: ['1m', '10m'],
+          relearningSteps: ['10m'],
+        },
+      );
+    });
+
+    it('card update data 應包含 learningStep（正向）', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockNewCard);
+      mockPrismaService.card.update.mockResolvedValue(mockNewCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId);
+
+      expect(prisma.card.update).toHaveBeenCalledWith({
+        where: { id: mockCardId },
+        data: expect.objectContaining({
+          learningStep: 1,
+        }),
+      });
+    });
+
+    it('card update data 應包含 reverseLearningStep（反向）', async () => {
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockNewCard);
+      mockPrismaService.card.update.mockResolvedValue(mockNewCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId, 'REVERSE');
+
+      expect(prisma.card.update).toHaveBeenCalledWith({
+        where: { id: mockCardId },
+        data: expect.objectContaining({
+          reverseLearningStep: 1,
+        }),
+      });
+    });
+
+    it('currentState 應包含正確的 learningStep（正向）', async () => {
+      const learningCard = {
+        ...mockNewCard,
+        state: CardState.LEARNING,
+        learningStep: 1,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(learningCard);
+      mockPrismaService.card.update.mockResolvedValue(learningCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId);
+
+      expect(fsrsService.calculateNextReview).toHaveBeenCalledWith(
+        expect.objectContaining({ learningStep: 1 }),
+        'known',
+        now,
+        expect.any(Object),
+      );
+    });
+
+    it('currentState 應包含正確的 reverseLearningStep（反向）', async () => {
+      const reverseCard = {
+        ...mockNewCard,
+        reverseState: CardState.LEARNING,
+        reverseLearningStep: 2,
+      };
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(reverseCard);
+      mockPrismaService.card.update.mockResolvedValue(reverseCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId, 'REVERSE');
+
+      expect(fsrsService.calculateNextReview).toHaveBeenCalledWith(
+        expect.objectContaining({ learningStep: 2 }),
+        'known',
+        now,
+        expect.any(Object),
+      );
+    });
+
+    it('submitReview 預設 direction 為 FORWARD', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockNewCard);
+      mockPrismaService.card.update.mockResolvedValue(mockNewCard);
+      mockPrismaService.reviewLog.create.mockResolvedValue({});
+
+      await service.submitReview(mockDeckId, mockCardId, 'known', mockUserId);
+
+      // 應更新正向欄位（state, due 等）
+      expect(prisma.card.update).toHaveBeenCalledWith({
+        where: { id: mockCardId },
+        data: expect.objectContaining({
+          state: CardState.LEARNING,
+        }),
+      });
+
+      // 不應包含 reverse 欄位
+      const updateCall = mockPrismaService.card.update.mock.calls[0][0];
+      expect(updateCall.data).not.toHaveProperty('reverseState');
+
+      // ReviewLog 應記錄 direction=FORWARD
+      expect(prisma.reviewLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          direction: 'FORWARD',
+        }),
+      });
+    });
   });
 
   describe('getSummary', () => {
@@ -339,8 +662,8 @@ describe('StudyService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.card.count
         .mockResolvedValueOnce(100) // totalCards
-        .mockResolvedValueOnce(30) // newCount
-        .mockResolvedValueOnce(15); // reviewCount
+        .mockResolvedValueOnce(30) // forwardNewCount
+        .mockResolvedValueOnce(15); // forwardReviewCount
       mockPrismaService.reviewLog.count.mockResolvedValue(10); // todayStudied
 
       const result = await service.getSummary(mockDeckId, mockUserId);
@@ -367,6 +690,43 @@ describe('StudyService', () => {
       await expect(
         service.getSummary(mockDeckId, 'other-user'),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('getSummary 應在 enableReverse 時包含反向統計', async () => {
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(100) // totalCards
+        .mockResolvedValueOnce(30) // forwardNewCount
+        .mockResolvedValueOnce(15) // forwardReviewCount
+        .mockResolvedValueOnce(20) // reverseNewCount
+        .mockResolvedValueOnce(8); // reverseReviewCount
+      mockPrismaService.reviewLog.count.mockResolvedValue(10); // todayStudied
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result).toEqual({
+        totalCards: 100,
+        newCount: 50, // 30 + 20
+        reviewCount: 23, // 15 + 8
+        todayStudied: 10,
+      });
+    });
+
+    it('getSummary 在 enableReverse 為 false 時不查詢反向統計', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck); // enableReverse: false
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(100) // totalCards
+        .mockResolvedValueOnce(30) // forwardNewCount
+        .mockResolvedValueOnce(15); // forwardReviewCount
+      mockPrismaService.reviewLog.count.mockResolvedValue(10); // todayStudied
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      // 只呼叫 3 次 card.count（totalCards + forwardNewCount + forwardReviewCount）
+      expect(mockPrismaService.card.count).toHaveBeenCalledTimes(3);
+      expect(result.newCount).toBe(30);
+      expect(result.reviewCount).toBe(15);
     });
   });
 });

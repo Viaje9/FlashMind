@@ -14,6 +14,7 @@ interface DeckPreview {
   completed: boolean;
   showAction: boolean;
   actionLabel: string;
+  enableReverse: boolean;
 }
 
 @Component({
@@ -85,7 +86,8 @@ export class DeckListComponent implements OnInit {
       progress: deck.progress,
       completed,
       showAction: hasStudyItems,
-      actionLabel: hasStudyItems ? '開始學習' : (completed ? '已完成' : '無待學習')
+      actionLabel: hasStudyItems ? '開始學習' : (completed ? '已完成' : '無待學習'),
+      enableReverse: deck.enableReverse ?? false
     };
   }
 

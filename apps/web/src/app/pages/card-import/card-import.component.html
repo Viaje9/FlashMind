@@ -12,6 +12,61 @@
   </fm-page-header>
 
   <main class="mx-auto w-full max-w-md px-4 pt-4 space-y-4">
+    <!-- 步驟條 -->
+    <div class="flex items-center justify-center gap-0 py-2" data-testid="card-import-stepper">
+      <!-- 步驟 1：輸入 -->
+      <div class="flex items-center gap-2">
+        @if (currentStep() === 'input') {
+          <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+            <span class="text-xs font-bold text-white">1</span>
+          </div>
+          <span class="text-sm font-semibold text-white">輸入</span>
+        } @else {
+          <div class="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-white">check</span>
+          </div>
+          <span class="text-sm text-secondary-text">輸入</span>
+        }
+      </div>
+      <!-- 連接線 -->
+      <div class="w-10 h-px mx-1" [class]="currentStep() !== 'input' ? 'bg-green-600' : 'bg-slate-600'"></div>
+      <!-- 步驟 2：預覽 -->
+      <div class="flex items-center gap-2">
+        @if (currentStep() === 'preview') {
+          <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
+            <span class="text-xs font-bold text-white">2</span>
+          </div>
+          <span class="text-sm font-semibold text-white">預覽</span>
+        } @else if (currentStep() === 'result') {
+          <div class="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-white">check</span>
+          </div>
+          <span class="text-sm text-secondary-text">預覽</span>
+        } @else {
+          <div class="w-7 h-7 rounded-full border-2 border-slate-600 flex items-center justify-center">
+            <span class="text-xs text-slate-500">2</span>
+          </div>
+          <span class="text-sm text-secondary-text">預覽</span>
+        }
+      </div>
+      <!-- 連接線 -->
+      <div class="w-10 h-px mx-1" [class]="currentStep() === 'result' ? 'bg-green-600' : 'bg-slate-600'"></div>
+      <!-- 步驟 3：完成 -->
+      <div class="flex items-center gap-2">
+        @if (currentStep() === 'result') {
+          <div class="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[16px] text-white">check</span>
+          </div>
+          <span class="text-sm font-semibold text-white">完成</span>
+        } @else {
+          <div class="w-7 h-7 rounded-full border-2 border-slate-600 flex items-center justify-center">
+            <span class="text-xs text-slate-500">3</span>
+          </div>
+          <span class="text-sm text-secondary-text">完成</span>
+        }
+      </div>
+    </div>
+
     <!-- 輸入階段 -->
     @if (currentStep() === 'input') {
       <div class="space-y-4">
@@ -47,24 +102,6 @@
           ></textarea>
         </div>
 
-        <!-- 檔案上傳 -->
-        <div class="flex items-center gap-3">
-          <span class="text-sm text-secondary-text">或</span>
-          <label
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-dark text-white text-sm cursor-pointer hover:bg-slate-700 transition-colors"
-          >
-            <span class="material-symbols-outlined text-[18px]">upload_file</span>
-            選擇檔案
-            <input
-              type="file"
-              accept=".json"
-              class="hidden"
-              (change)="onFileSelect($event)"
-              data-testid="card-import-file-input"
-            />
-          </label>
-        </div>
-
         <!-- 錯誤訊息 -->
         @if (parseError()) {
           <div
@@ -75,6 +112,45 @@
             {{ parseError() }}
           </div>
         }
+
+        <!-- 解析成功提示 -->
+        @if (canProceedToPreview()) {
+          <div
+            class="flex items-center gap-2 p-3 rounded-lg bg-green-900/30 text-green-400 text-sm"
+            data-testid="card-import-parse-success"
+          >
+            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+            已解析 {{ parsedCards().length }} 張卡片
+          </div>
+        }
+
+        <!-- 檔案上傳 + 下一步 -->
+        <div class="flex items-center justify-between pt-4">
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-secondary-text">或</span>
+            <label
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-dark text-white text-sm cursor-pointer hover:bg-slate-700 transition-colors"
+            >
+              <span class="material-symbols-outlined text-[18px]">upload_file</span>
+              選擇檔案
+              <input
+                type="file"
+                accept=".json"
+                class="hidden"
+                (change)="onFileSelect($event)"
+                data-testid="card-import-file-input"
+              />
+            </label>
+          </div>
+          <fm-button
+            variant="primary"
+            [disabled]="!canProceedToPreview()"
+            (click)="onProceedToPreview()"
+            testId="card-import-next-step"
+          >
+            下一步
+          </fm-button>
+        </div>
       </div>
     }
 

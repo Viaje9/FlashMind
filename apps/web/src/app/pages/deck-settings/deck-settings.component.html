@@ -21,7 +21,7 @@
         ></fm-labeled-input>
 
         <div class="flex flex-col gap-4">
-          <fm-section-heading text="學習計畫設定"></fm-section-heading>
+          <fm-section-heading text="每日限制"></fm-section-heading>
 
           <fm-number-input-row
             [formControl]="dailyNewCardsControl"
@@ -68,6 +68,105 @@
 
         <p class="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
           提示：較高的每日新卡數可能會導致未來的複習量大幅增加。新設定將於下次學習時生效。
+        </p>
+
+        <!-- 反向學習設定 -->
+        <div class="flex flex-col gap-4">
+          <fm-section-heading text="反向學習"></fm-section-heading>
+
+          <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-card-dark">
+            <div class="flex-1 pr-3">
+              <div class="text-sm font-medium text-slate-900 dark:text-white">啟用反向學習</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">學習時也會出現中文翻譯作為提示，要求回答英文</div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              [attr.aria-checked]="enableReverse()"
+              class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+              [class]="enableReverse() ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'"
+              (click)="onToggleEnableReverse()"
+              data-testid="deck-settings-enable-reverse"
+            >
+              <span
+                class="inline-block h-4 w-4 rounded-full bg-white transition-transform"
+                [class]="enableReverse() ? 'translate-x-6' : 'translate-x-1'"
+              ></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- FSRS 演算法設定區塊 -->
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <fm-section-heading text="FSRS 演算法"></fm-section-heading>
+            <button
+              type="button"
+              class="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+              (click)="onResetFsrsDefaults()"
+              data-testid="fsrs-reset-defaults"
+            >
+              重置為預設值
+            </button>
+          </div>
+
+          <fm-number-input-row
+            [formControl]="requestRetentionControl"
+            label="目標保留率"
+            title="記憶保留"
+            description="較高保留率會縮短複習間隔"
+            icon="psychology"
+            iconClass="bg-purple-500/10 text-purple-500"
+            [min]="0.70"
+            [max]="0.97"
+            [step]="0.01"
+            ariaLabel="目標保留率"
+            data-testid="fsrs-request-retention"
+          ></fm-number-input-row>
+
+          <fm-number-input-row
+            [formControl]="maximumIntervalControl"
+            label="最大複習間隔"
+            title="間隔上限"
+            description="複習間隔不超過此天數"
+            icon="date_range"
+            iconClass="bg-teal-500/10 text-teal-500"
+            [min]="30"
+            [max]="36500"
+            [step]="30"
+            unit="天"
+            inputWidth="w-20"
+            ariaLabel="最大複習間隔"
+            data-testid="fsrs-maximum-interval"
+          ></fm-number-input-row>
+
+          <fm-labeled-input
+            [formControl]="learningStepsControl"
+            label="學習步驟"
+            icon="stairs"
+            placeholder="1m, 10m"
+            ariaLabel="學習步驟"
+            data-testid="fsrs-learning-steps"
+          ></fm-labeled-input>
+          @if (learningStepsControl.errors?.['invalidLearningSteps']) {
+            <p class="text-xs text-red-500 -mt-4">格式不正確，範例：1m, 10m, 1h</p>
+          }
+
+          <fm-labeled-input
+            [formControl]="relearningStepsControl"
+            label="重學步驟"
+            icon="replay"
+            placeholder="10m"
+            ariaLabel="重學步驟"
+            data-testid="fsrs-relearning-steps"
+          ></fm-labeled-input>
+          @if (relearningStepsControl.errors?.['invalidLearningSteps']) {
+            <p class="text-xs text-red-500 -mt-4">格式不正確，範例：10m 或 5m, 10m</p>
+          }
+        </div>
+
+        <p class="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+          進階提示：修改 FSRS 參數不會影響已排程的卡片，僅對後續的複習排程生效。
         </p>
 
         @if (errorMessage()) {

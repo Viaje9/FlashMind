@@ -46,6 +46,9 @@ export class CardImportComponent implements OnInit {
   readonly canImport = computed(
     () => this.validCards().length > 0 && !this.parseError() && !this.isImporting()
   );
+  readonly canProceedToPreview = computed(
+    () => this.parsedCards().length > 0 && !this.parseError()
+  );
 
   readonly exampleJson = JSON.stringify(
     {
@@ -108,7 +111,10 @@ export class CardImportComponent implements OnInit {
 
     this.parseError.set('');
     this.parsedCards.set(result.cards);
-    if (result.cards.length > 0) {
+  }
+
+  onProceedToPreview() {
+    if (this.canProceedToPreview()) {
       this.currentStep.set('preview');
     }
   }

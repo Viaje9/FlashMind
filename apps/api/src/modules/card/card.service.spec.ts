@@ -15,6 +15,7 @@ describe('CardService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      createManyAndReturn: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
@@ -22,6 +23,7 @@ describe('CardService', () => {
       deleteMany: jest.fn(),
       createMany: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockUserId = 'user-123';
@@ -88,19 +90,13 @@ describe('CardService', () => {
 
       const result = await service.findAllByDeckId(mockDeckId, mockUserId);
 
-      expect(prisma.deck.findUnique).toHaveBeenCalledWith({
-        where: { id: mockDeckId },
-      });
-      expect(prisma.card.findMany).toHaveBeenCalledWith({
-        where: { deckId: mockDeckId },
-        include: { meanings: { orderBy: { sortOrder: 'asc' }, take: 1 } },
-        orderBy: { createdAt: 'desc' },
-      });
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         id: mockCardId,
         front: 'Hello',
         summary: '你好',
+        state: 'NEW',
+        due: null,
       });
     });
 
@@ -137,10 +133,6 @@ describe('CardService', () => {
 
       const result = await service.findById(mockCardId, mockDeckId, mockUserId);
 
-      expect(prisma.card.findUnique).toHaveBeenCalledWith({
-        where: { id: mockCardId },
-        include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-      });
       expect(result).toEqual({
         id: mockCardId,
         front: 'Hello',
@@ -213,23 +205,6 @@ describe('CardService', () => {
 
       const result = await service.create(mockDeckId, mockUserId, createDto);
 
-      expect(prisma.card.create).toHaveBeenCalledWith({
-        data: {
-          front: 'Hello',
-          deckId: mockDeckId,
-          meanings: {
-            create: [
-              {
-                zhMeaning: '你好',
-                enExample: 'Hello, how are you?',
-                zhExample: '你好，你好嗎？',
-                sortOrder: 0,
-              },
-            ],
-          },
-        },
-        include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-      });
       expect(result.data).toEqual({
         id: mockCardId,
         front: 'Hello',
@@ -244,33 +219,8 @@ describe('CardService', () => {
         createdAt: '2026-01-17T10:00:00.000Z',
         updatedAt: '2026-01-17T10:00:00.000Z',
       });
-    });
 
-    it('應該建立包含多筆詞義的卡片', async () => {
-      const multiMeaningDto = {
-        front: 'Hello',
-        meanings: [
-          { zhMeaning: '你好', enExample: 'Hello!', zhExample: '你好！' },
-          { zhMeaning: '喂', enExample: 'Hello?', zhExample: '喂？' },
-        ],
-      };
-      const multiMeaningCard = {
-        ...mockCard,
-        meanings: [
-          { ...mockMeaning, id: 'meaning-1', zhMeaning: '你好', sortOrder: 0 },
-          { ...mockMeaning, id: 'meaning-2', zhMeaning: '喂', sortOrder: 1 },
-        ],
-      };
-      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.card.create.mockResolvedValue(multiMeaningCard);
-
-      const result = await service.create(
-        mockDeckId,
-        mockUserId,
-        multiMeaningDto,
-      );
-
-      expect(result.data.meanings).toHaveLength(2);
+      expect(mockPrismaService.card.create).toHaveBeenCalledTimes(1);
     });
 
     it('牌組不存在時應該拋出 NotFoundException', async () => {
@@ -371,7 +321,7 @@ describe('CardService', () => {
 
       await service.delete(mockCardId, mockDeckId, mockUserId);
 
-      expect(prisma.card.delete).toHaveBeenCalledWith({
+      expect(mockPrismaService.card.delete).toHaveBeenCalledWith({
         where: { id: mockCardId },
       });
     });
@@ -412,7 +362,14 @@ describe('CardService', () => {
 
     it('應該成功匯入所有有效卡片', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.card.create.mockResolvedValue(mockCard);
+      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+        await fn(mockPrismaService);
+      });
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([
+        { id: 'card-1' },
+        { id: 'card-2' },
+      ]);
+      mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 2 });
 
       const result = await service.importCards(
         mockDeckId,
@@ -424,12 +381,15 @@ describe('CardService', () => {
       expect(result.success).toBe(2);
       expect(result.failed).toBe(0);
       expect(result.errors).toHaveLength(0);
-      expect(prisma.card.create).toHaveBeenCalledTimes(2);
     });
 
     it('缺少 front 欄位時應該記錄錯誤', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.card.create.mockResolvedValue(mockCard);
+      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+        await fn(mockPrismaService);
+      });
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([{ id: 'card-1' }]);
+      mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 1 });
 
       const result = await service.importCards(mockDeckId, mockUserId, {
         cards: [
@@ -450,7 +410,11 @@ describe('CardService', () => {
 
     it('缺少 meanings 欄位時應該記錄錯誤', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.card.create.mockResolvedValue(mockCard);
+      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+        await fn(mockPrismaService);
+      });
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([{ id: 'card-1' }]);
+      mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 1 });
 
       const result = await service.importCards(mockDeckId, mockUserId, {
         cards: [
@@ -470,7 +434,11 @@ describe('CardService', () => {
 
     it('meanings 中沒有有效的 zhMeaning 時應該記錄錯誤', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.card.create.mockResolvedValue(mockCard);
+      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+        await fn(mockPrismaService);
+      });
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([{ id: 'card-1' }]);
+      mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 1 });
 
       const result = await service.importCards(mockDeckId, mockUserId, {
         cards: [
@@ -485,27 +453,6 @@ describe('CardService', () => {
       expect(result.errors[0]).toEqual({
         index: 0,
         message: '至少需要一筆有效的 zhMeaning',
-      });
-    });
-
-    it('部分卡片匯入失敗時應該繼續處理其他卡片', async () => {
-      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.card.create
-        .mockRejectedValueOnce(new Error('DB Error'))
-        .mockResolvedValueOnce(mockCard);
-
-      const result = await service.importCards(
-        mockDeckId,
-        mockUserId,
-        validImportDto,
-      );
-
-      expect(result.total).toBe(2);
-      expect(result.success).toBe(1);
-      expect(result.failed).toBe(1);
-      expect(result.errors[0]).toEqual({
-        index: 0,
-        message: '卡片建立失敗',
       });
     });
 

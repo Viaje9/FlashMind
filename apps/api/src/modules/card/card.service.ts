@@ -171,6 +171,7 @@ export class CardService {
 
     const existingCard = await this.prisma.card.findUnique({
       where: { id: cardId },
+      include: { meanings: { orderBy: { sortOrder: 'asc' } } },
     });
 
     if (!existingCard || existingCard.deckId !== deckId) {
@@ -239,9 +240,7 @@ export class CardService {
       });
     }
 
-    await this.prisma.card.delete({
-      where: { id: cardId },
-    });
+    await this.prisma.card.delete({ where: { id: cardId } });
   }
 
   async importCards(

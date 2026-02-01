@@ -16,6 +16,7 @@
       <fm-deck-stats-card
         [newCount]="d.stats.newCount"
         [reviewCount]="d.stats.reviewCount"
+        [enableReverse]="d.enableReverse ?? false"
         [createdAtLabel]="formatDate(d.stats.createdAt)"
         [lastReviewLabel]="formatLastStudied(d.stats.lastStudiedAt)"
         [actionLabel]="hasStudyItems() ? '開始學習' : '無待學習'"

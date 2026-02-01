@@ -30,6 +30,11 @@ describe('DeckService', () => {
     dailyNewCards: 20,
     dailyReviewCards: 100,
     dailyResetHour: 4,
+    learningSteps: '1m,10m',
+    relearningSteps: '10m',
+    requestRetention: 0.9,
+    maximumInterval: 36500,
+    enableReverse: false,
     userId: mockUserId,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
@@ -78,6 +83,30 @@ describe('DeckService', () => {
 
       expect(result).toEqual([]);
     });
+
+    it('enableReverse 為 true 時統計應包含反向卡片', async () => {
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findMany.mockResolvedValue([reverseDeck]);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(10)  // totalCount
+        .mockResolvedValueOnce(3)   // newCount (forward)
+        .mockResolvedValueOnce(2)   // reviewCount (forward)
+        .mockResolvedValueOnce(4)   // reverseNewCount
+        .mockResolvedValueOnce(1);  // reverseReviewCount
+
+      const result = await service.findAllByUserId(mockUserId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: 'deck-123',
+        name: '英文單字',
+        newCount: 7,        // 3 + 4
+        reviewCount: 3,     // 2 + 1
+        totalCount: 10,     // 不變
+        completedCount: 7,  // 10 - 3
+        progress: 70,       // (7/10) * 100
+      });
+    });
   });
 
   describe('findById', () => {
@@ -95,6 +124,11 @@ describe('DeckService', () => {
         dailyNewCards: 20,
         dailyReviewCards: 100,
         dailyResetHour: 4,
+        learningSteps: '1m,10m',
+        relearningSteps: '10m',
+        requestRetention: 0.9,
+        maximumInterval: 36500,
+        enableReverse: false,
         stats: {
           newCount: 0,
           reviewCount: 0,
@@ -134,6 +168,11 @@ describe('DeckService', () => {
           dailyNewCards: 20,
           dailyReviewCards: 100,
           dailyResetHour: 4,
+          learningSteps: '1m,10m',
+          relearningSteps: '10m',
+          requestRetention: 0.9,
+          maximumInterval: 36500,
+          enableReverse: false,
           userId: mockUserId,
         },
       });
@@ -143,6 +182,11 @@ describe('DeckService', () => {
         dailyNewCards: 20,
         dailyReviewCards: 100,
         dailyResetHour: 4,
+        learningSteps: '1m,10m',
+        relearningSteps: '10m',
+        requestRetention: 0.9,
+        maximumInterval: 36500,
+        enableReverse: false,
         createdAt: '2026-01-17T10:00:00.000Z',
         updatedAt: '2026-01-17T10:00:00.000Z',
       });
@@ -168,8 +212,41 @@ describe('DeckService', () => {
           dailyNewCards: 30,
           dailyReviewCards: 150,
           dailyResetHour: 4,
+          learningSteps: '1m,10m',
+          relearningSteps: '10m',
+          requestRetention: 0.9,
+          maximumInterval: 36500,
+          enableReverse: false,
           userId: mockUserId,
         },
+      });
+    });
+
+    it('應該使用自訂的 FSRS 參數建立牌組', async () => {
+      const customDeck = {
+        ...mockDeck,
+        learningSteps: '1m,5m,10m',
+        relearningSteps: '5m',
+        requestRetention: 0.85,
+        maximumInterval: 180,
+      };
+      mockPrismaService.deck.create.mockResolvedValue(customDeck);
+
+      await service.create(mockUserId, {
+        name: '英文單字',
+        learningSteps: '1m,5m,10m',
+        relearningSteps: '5m',
+        requestRetention: 0.85,
+        maximumInterval: 180,
+      });
+
+      expect(prisma.deck.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          learningSteps: '1m,5m,10m',
+          relearningSteps: '5m',
+          requestRetention: 0.85,
+          maximumInterval: 180,
+        }),
       });
     });
   });
@@ -201,6 +278,39 @@ describe('DeckService', () => {
         data: { dailyNewCards: 50 },
       });
       expect(result.data.dailyNewCards).toBe(50);
+    });
+
+    it('應該更新 FSRS 參數', async () => {
+      const updatedDeck = {
+        ...mockDeck,
+        requestRetention: 0.85,
+        maximumInterval: 180,
+        learningSteps: '1m,5m,10m',
+        relearningSteps: '5m',
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.deck.update.mockResolvedValue(updatedDeck);
+
+      const result = await service.update('deck-123', mockUserId, {
+        requestRetention: 0.85,
+        maximumInterval: 180,
+        learningSteps: '1m,5m,10m',
+        relearningSteps: '5m',
+      });
+
+      expect(prisma.deck.update).toHaveBeenCalledWith({
+        where: { id: 'deck-123' },
+        data: {
+          requestRetention: 0.85,
+          maximumInterval: 180,
+          learningSteps: '1m,5m,10m',
+          relearningSteps: '5m',
+        },
+      });
+      expect(result.data.requestRetention).toBe(0.85);
+      expect(result.data.maximumInterval).toBe(180);
+      expect(result.data.learningSteps).toBe('1m,5m,10m');
+      expect(result.data.relearningSteps).toBe('5m');
     });
 
     it('牌組不存在時應該拋出 NotFoundException', async () => {

@@ -21,6 +21,10 @@ export interface SubmitReviewRequest {
      * 評分 - known: 知道（右滑） - unfamiliar: 不熟（上滑） - unknown: 不知道（左滑） 
      */
     rating: SubmitReviewRequest.RatingEnum;
+    /**
+     * 學習方向（FORWARD 正向、REVERSE 反向）
+     */
+    direction?: SubmitReviewRequest.DirectionEnum;
 }
 export namespace SubmitReviewRequest {
     export const RatingEnum = {
@@ -29,6 +33,11 @@ export namespace SubmitReviewRequest {
         Unknown: 'unknown'
     } as const;
     export type RatingEnum = typeof RatingEnum[keyof typeof RatingEnum];
+    export const DirectionEnum = {
+        Forward: 'FORWARD',
+        Reverse: 'REVERSE'
+    } as const;
+    export type DirectionEnum = typeof DirectionEnum[keyof typeof DirectionEnum];
 }
 
 

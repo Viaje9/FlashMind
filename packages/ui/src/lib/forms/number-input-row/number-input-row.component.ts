@@ -33,6 +33,7 @@ export class FmNumberInputRowComponent implements ControlValueAccessor {
   readonly step = input<number | null>(null);
   readonly ariaLabel = input('');
   readonly testId = input<string>();
+  readonly inputWidth = input('w-12');
 
   readonly value = signal(0);
   readonly disabled = signal(false);

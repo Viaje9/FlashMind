@@ -34,6 +34,26 @@ export interface DeckDetail {
      * 每日重置時間（0-23 時）
      */
     dailyResetHour: number;
+    /**
+     * 學習步驟（逗號分隔）
+     */
+    learningSteps?: string;
+    /**
+     * 重學步驟（逗號分隔）
+     */
+    relearningSteps?: string;
+    /**
+     * 目標保留率
+     */
+    requestRetention?: number;
+    /**
+     * 最大複習間隔（天）
+     */
+    maximumInterval?: number;
+    /**
+     * 是否啟用反向學習
+     */
+    enableReverse?: boolean;
     stats: DeckStats;
 }
 
