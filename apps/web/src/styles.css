@@ -5,8 +5,14 @@
 @source "../../../packages/ui/**/*.{html,ts}";
 
 /* PWA safe-area：確保瀏海區域顯示正確背景色 */
+/* overscroll-behavior-x: none 防止水平過度捲動觸發 iOS Safari 頁面導航 */
 html {
   background-color: var(--color-background-light);
+  overscroll-behavior-x: none;
+}
+
+body {
+  overscroll-behavior-x: none;
 }
 
 @media (prefers-color-scheme: dark) {
