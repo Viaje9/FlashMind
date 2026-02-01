@@ -37,9 +37,6 @@ export class SettingsComponent {
   readonly dailyReminderControl = new FormControl(true);
   readonly spacedRepetitionControl = new FormControl(true);
   readonly smartShuffleControl = new FormControl(false);
-  readonly soundEffectsControl = new FormControl(true);
-  readonly hapticFeedbackControl = new FormControl(false);
-
   readonly userName = computed(() => {
     const email = this.user()?.email;
     return email ? email.split('@')[0] : '使用者';
