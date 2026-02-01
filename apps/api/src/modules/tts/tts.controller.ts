@@ -9,9 +9,10 @@ import {
 import { TtsService } from './tts.service';
 import { SynthesizeSpeechDto, SynthesizeWordDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 
 @Controller('tts')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, WhitelistGuard)
 export class TtsController {
   constructor(private readonly ttsService: TtsService) {}
 

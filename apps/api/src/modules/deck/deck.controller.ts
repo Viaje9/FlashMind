@@ -14,10 +14,11 @@ import {
 import { DeckService } from './deck.service';
 import { CreateDeckDto, UpdateDeckDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('decks')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, WhitelistGuard)
 export class DeckController {
   constructor(private readonly deckService: DeckService) {}
 

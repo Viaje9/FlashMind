@@ -14,10 +14,11 @@ import {
 import { CardService } from './card.service';
 import { CreateCardDto, UpdateCardDto, ImportCardsDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 
 @Controller('decks/:deckId/cards')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, WhitelistGuard)
 export class CardController {
   constructor(private readonly cardService: CardService) {}
 

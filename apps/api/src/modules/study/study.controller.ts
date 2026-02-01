@@ -8,12 +8,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
 import { StudyService } from './study.service';
 import { SubmitReviewDto } from './dto';
 
 @Controller('decks/:deckId/study')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, WhitelistGuard)
 export class StudyController {
   constructor(private readonly studyService: StudyService) {}
 

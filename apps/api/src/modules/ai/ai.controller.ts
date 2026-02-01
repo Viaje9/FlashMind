@@ -2,9 +2,10 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { GenerateCardContentDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 
 @Controller('ai')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, WhitelistGuard)
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
