@@ -60,8 +60,11 @@ pnpm format
 # 產生 Prisma Client
 pnpm prisma:generate
 
-# 執行資料庫遷移
+# 執行本機資料庫遷移（開發用）
 pnpm prisma:migrate
+
+# 執行正式環境資料庫遷移（讀取 .env.production）
+pnpm prisma:migrate:deploy
 ```
 
 ## 環境變數

@@ -61,4 +61,4 @@ EXPOSE 3280
 
 # 啟動 API
 WORKDIR /app/apps/api
-CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
+CMD ["node", "dist/main"]
