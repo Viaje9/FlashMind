@@ -149,7 +149,7 @@ describe('StudyService', () => {
       mockPrismaService.reviewLog.count.mockResolvedValue(0);
     });
 
-    it('應該回傳學習卡片（複習卡優先）', async () => {
+    it('應該回傳學習卡片（包含複習卡與新卡）', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.reviewLog.count
         .mockResolvedValueOnce(0) // todayNewCardsStudied
@@ -161,10 +161,10 @@ describe('StudyService', () => {
       const result = await service.getStudyCards(mockDeckId, mockUserId);
 
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('card-due-123'); // due card first
-      expect(result[0].isNew).toBe(false);
-      expect(result[1].id).toBe(mockCardId); // new card second
-      expect(result[1].isNew).toBe(true);
+      const ids = result.map((c) => c.id).sort();
+      expect(ids).toEqual([mockCardId, 'card-due-123'].sort());
+      expect(result.find((c) => c.id === 'card-due-123')!.isNew).toBe(false);
+      expect(result.find((c) => c.id === mockCardId)!.isNew).toBe(true);
     });
 
     it('學習卡片應包含 direction 欄位為 FORWARD', async () => {
@@ -304,17 +304,16 @@ describe('StudyService', () => {
 
       const result = await service.getStudyCards(mockDeckId, mockUserId);
 
-      // 4 張卡：正向複習 + 反向複習 + 正向新卡 + 反向新卡
+      // 4 張卡：包含 2 張 FORWARD + 2 張 REVERSE（順序為隨機混合）
       expect(result).toHaveLength(4);
-      expect(result[0].direction).toBe('FORWARD');
-      expect(result[0].isNew).toBe(false);
-      expect(result[1].direction).toBe('REVERSE');
-      expect(result[1].isNew).toBe(false);
-      expect(result[1].state).toBe(CardState.REVIEW);
-      expect(result[2].direction).toBe('FORWARD');
-      expect(result[2].isNew).toBe(true);
-      expect(result[3].direction).toBe('REVERSE');
-      expect(result[3].isNew).toBe(true);
+      const forwardCards = result.filter((c) => c.direction === 'FORWARD');
+      const reverseCards = result.filter((c) => c.direction === 'REVERSE');
+      expect(forwardCards).toHaveLength(2);
+      expect(reverseCards).toHaveLength(2);
+      expect(forwardCards.find((c) => !c.isNew)).toBeDefined();
+      expect(forwardCards.find((c) => c.isNew)).toBeDefined();
+      expect(reverseCards.find((c) => !c.isNew)).toBeDefined();
+      expect(reverseCards.find((c) => c.isNew)).toBeDefined();
     });
 
     it('enableReverse 為 false 時不查詢反向卡片', async () => {

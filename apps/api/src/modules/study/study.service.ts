@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { FsrsService, StudyRating, CardScheduleState, DeckFsrsParams } from '../fsrs';
 import { CardState, StudyRating as PrismaStudyRating } from '@prisma/client';
 import { getStartOfStudyDay, getEffectiveDailyLimits } from './study-day';
+import { shuffleWithSpacing, MIN_FORWARD_REVERSE_SPACING } from './shuffle-with-spacing';
 
 export interface StudyCardMeaning {
   id: string;
@@ -160,7 +161,7 @@ export class StudyService {
 
   /**
    * 取得今日學習卡片
-   * 排序：待複習卡片優先（按 due 升序），再新卡片（按建立時間）
+   * 排序：新卡與複習卡隨機混合，同一張卡的正反向至少間隔 5 張
    */
   async getStudyCards(deckId: string, userId: string): Promise<StudyCard[]> {
     const deckSettings = await this.validateDeckAccess(deckId, userId);
@@ -258,13 +259,15 @@ export class StudyService {
       reverseNewStudyCards = reverseNewCards.map((card) => this.mapToStudyCard(card, 'REVERSE'));
     }
 
-    // 4. 合併結果：正向複習 → 反向複習 → 正向新卡 → 反向新卡
-    return [
+    // 4. 合併並隨機混合排列，正反向至少間隔 MIN_FORWARD_REVERSE_SPACING 張
+    const allCards = [
       ...forwardDueStudyCards,
       ...reverseDueStudyCards,
       ...forwardNewStudyCards,
       ...reverseNewStudyCards,
     ];
+
+    return shuffleWithSpacing(allCards, MIN_FORWARD_REVERSE_SPACING);
   }
 
   /**
