@@ -1,5 +1,5 @@
 <div class="min-h-screen pb-24">
-  <fm-page-header [title]="deck()?.name ?? '載入中...'" layout="center">
+  <fm-page-header title="" layout="center">
     <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回" routerLink="/decks" testId="deck-detail-back">
       <span class="material-symbols-outlined text-[22px]">arrow_back</span>
     </fm-icon-button>
@@ -14,6 +14,7 @@
   <main class="mx-auto w-full max-w-md px-4 pt-4 space-y-4">
     @if (deck(); as d) {
       <fm-deck-stats-card
+        [deckName]="d.name"
         [newCount]="d.stats.newCount"
         [reviewCount]="d.stats.reviewCount"
         [enableReverse]="d.enableReverse ?? false"

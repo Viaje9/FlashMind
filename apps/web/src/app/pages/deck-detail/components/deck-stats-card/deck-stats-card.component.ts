@@ -9,6 +9,7 @@ import { FmButtonComponent } from '@flashmind/ui';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FmDeckStatsCardComponent {
+  readonly deckName = input('');
   readonly newCount = input(0);
   readonly reviewCount = input(0);
   readonly enableReverse = input(false);
