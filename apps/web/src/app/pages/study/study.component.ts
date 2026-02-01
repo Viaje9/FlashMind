@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, OnDestroy, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { FmStudyCardComponent, StudyExample } from './components/study-card/study-card.component';
@@ -59,6 +59,20 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly isCompleted = computed(() => this.phase() === 'completed');
   readonly hasError = computed(() => this.phase() === 'error');
   readonly showDecisionBar = computed(() => this.isStudying() && this.isFlipped());
+
+  // 卡片正面自動播放音訊
+  private readonly autoPlayEffect = effect(() => {
+    const phase = this.phase();
+    const flipped = this.isFlipped();
+    const submitting = this.isSubmitting();
+    const word = this.word();
+
+    if (phase === 'studying' && !flipped && !submitting && word) {
+      untracked(() => {
+        void this.ttsStore.playWord(word);
+      });
+    }
+  });
 
   // TTS loading 狀態
   readonly wordAudioLoading = computed(() => this.ttsStore.isLoading(this.word()));
