@@ -15,3 +15,40 @@ export function getStartOfStudyDay(now: Date, resetHour: number): Date {
 
   return start;
 }
+
+export interface DeckWithOverride {
+  dailyNewCards: number;
+  dailyReviewCards: number;
+  dailyResetHour: number;
+  overrideDate: Date | null;
+  overrideNewCards: number | null;
+  overrideReviewCards: number | null;
+}
+
+/**
+ * 計算有效的每日上限，考慮覆寫值。
+ *
+ * - 若 overrideDate 等於當前學習日起始時間，使用覆寫值
+ * - 取 max(overrideValue, defaultValue) 確保覆寫不會降低上限
+ * - 覆寫無效或不存在時，使用牌組預設值
+ */
+export function getEffectiveDailyLimits(
+  deck: DeckWithOverride,
+  now: Date = new Date(),
+): { effectiveNewCards: number; effectiveReviewCards: number } {
+  const studyDayStart = getStartOfStudyDay(now, deck.dailyResetHour);
+  const isOverrideActive =
+    deck.overrideDate !== null &&
+    deck.overrideDate.getTime() === studyDayStart.getTime();
+
+  return {
+    effectiveNewCards:
+      isOverrideActive && deck.overrideNewCards != null
+        ? Math.max(deck.overrideNewCards, deck.dailyNewCards)
+        : deck.dailyNewCards,
+    effectiveReviewCards:
+      isOverrideActive && deck.overrideReviewCards != null
+        ? Math.max(deck.overrideReviewCards, deck.dailyReviewCards)
+        : deck.dailyReviewCards,
+  };
+}

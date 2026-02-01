@@ -12,8 +12,13 @@ import {
 } from '@flashmind/ui';
 import { FmCardListItemComponent } from './components/card-list-item/card-list-item.component';
 import { FmDeckStatsCardComponent } from './components/deck-stats-card/deck-stats-card.component';
-import { DecksService, DeckDetail, CardListItem, StudyService, StudySummary } from '@flashmind/api-client';
+import { DecksService, DeckDetail, DeckService, CardListItem, StudyService, StudySummary } from '@flashmind/api-client';
 import { CardStore } from '../../components/card/card.store';
+import {
+  DailyOverrideDialogComponent,
+  DailyOverrideDialogData,
+  DailyOverrideDialogResult
+} from './components/daily-override-dialog/daily-override-dialog.component';
 
 @Component({
   selector: 'app-deck-detail-page',
@@ -36,6 +41,7 @@ export class DeckDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly decksService = inject(DecksService);
+  private readonly deckService = inject(DeckService);
   private readonly studyService = inject(StudyService);
   private readonly cardStore = inject(CardStore);
   private readonly dialogService = inject(DialogService);
@@ -46,6 +52,7 @@ export class DeckDetailComponent implements OnInit {
   readonly deck = signal<DeckDetail | null>(null);
   readonly isLoading = signal(true);
   readonly studySummary = signal<StudySummary | null>(null);
+  readonly overrideActive = signal(false);
 
   readonly cards = this.cardStore.cards;
   readonly cardsLoading = this.cardStore.loading;
@@ -97,11 +104,22 @@ export class DeckDetailComponent implements OnInit {
     this.studyService.getStudySummary(deckId).subscribe({
       next: (response) => {
         this.studySummary.set(response.data);
+        this.detectOverrideActive(response.data);
       },
       error: () => {
         // 靜默處理錯誤，進度條不顯示即可
       }
     });
+  }
+
+  private detectOverrideActive(summary: StudySummary): void {
+    const d = this.deck();
+    if (!d) return;
+    // summary 回傳的是 effective limit，與牌組原始設定比較即可判斷覆寫狀態
+    const isOverridden =
+      summary.dailyNewCards > d.dailyNewCards ||
+      summary.dailyReviewCards > d.dailyReviewCards;
+    this.overrideActive.set(isOverridden);
   }
 
   onStartStudy() {
@@ -133,6 +151,36 @@ export class DeckDetailComponent implements OnInit {
           // 重新載入牌組資訊以更新統計
           this.loadDeck(this.deckId());
         }
+      }
+    });
+  }
+
+  onOverrideClick(): void {
+    const summary = this.studySummary();
+    if (!summary) return;
+
+    const dialogRef = this.dialogService.open<
+      DailyOverrideDialogComponent,
+      DailyOverrideDialogData,
+      DailyOverrideDialogResult
+    >(DailyOverrideDialogComponent, {
+      data: {
+        dailyNewCards: summary.dailyNewCards,
+        dailyReviewCards: summary.dailyReviewCards,
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.deckService.setDailyOverride(this.deckId(), {
+          newCards: result.newCards,
+          reviewCards: result.reviewCards,
+        }).subscribe({
+          next: () => {
+            this.overrideActive.set(true);
+            this.loadStudySummary(this.deckId());
+          }
+        });
       }
     });
   }

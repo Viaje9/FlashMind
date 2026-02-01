@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Param,
@@ -12,7 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { DeckService } from './deck.service';
-import { CreateDeckDto, UpdateDeckDto } from './dto';
+import { CreateDeckDto, UpdateDeckDto, SetDailyOverrideDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
@@ -56,5 +57,14 @@ export class DeckController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteDeck(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     await this.deckService.delete(id, req.user.id);
+  }
+
+  @Put(':id/daily-override')
+  async setDailyOverride(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: SetDailyOverrideDto,
+  ) {
+    return this.deckService.setDailyOverride(id, req.user.id, dto);
   }
 }

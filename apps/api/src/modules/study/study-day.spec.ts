@@ -1,4 +1,4 @@
-import { getStartOfStudyDay } from './study-day';
+import { getStartOfStudyDay, getEffectiveDailyLimits, DeckWithOverride } from './study-day';
 
 describe('getStartOfStudyDay', () => {
   it('當前時間已過 resetHour，應回傳今天的 resetHour', () => {
@@ -62,5 +62,85 @@ describe('getStartOfStudyDay', () => {
 
     expect(result.getDate()).toBe(19);
     expect(result.getHours()).toBe(23);
+  });
+});
+
+describe('getEffectiveDailyLimits', () => {
+  const baseDeck: DeckWithOverride = {
+    dailyNewCards: 20,
+    dailyReviewCards: 100,
+    dailyResetHour: 4,
+    overrideDate: null,
+    overrideNewCards: null,
+    overrideReviewCards: null,
+  };
+
+  it('無覆寫時應回傳預設值', () => {
+    const now = new Date('2026-01-20T10:00:00');
+    const result = getEffectiveDailyLimits(baseDeck, now);
+
+    expect(result.effectiveNewCards).toBe(20);
+    expect(result.effectiveReviewCards).toBe(100);
+  });
+
+  it('覆寫有效時應回傳覆寫值', () => {
+    const now = new Date('2026-01-20T10:00:00');
+    const overrideDate = getStartOfStudyDay(now, 4);
+    const deck: DeckWithOverride = {
+      ...baseDeck,
+      overrideDate,
+      overrideNewCards: 50,
+      overrideReviewCards: 200,
+    };
+    const result = getEffectiveDailyLimits(deck, now);
+
+    expect(result.effectiveNewCards).toBe(50);
+    expect(result.effectiveReviewCards).toBe(200);
+  });
+
+  it('覆寫過期時應回傳預設值', () => {
+    const yesterday = new Date('2026-01-19T10:00:00');
+    const overrideDate = getStartOfStudyDay(yesterday, 4);
+    const deck: DeckWithOverride = {
+      ...baseDeck,
+      overrideDate,
+      overrideNewCards: 50,
+      overrideReviewCards: 200,
+    };
+    const now = new Date('2026-01-20T10:00:00');
+    const result = getEffectiveDailyLimits(deck, now);
+
+    expect(result.effectiveNewCards).toBe(20);
+    expect(result.effectiveReviewCards).toBe(100);
+  });
+
+  it('部分覆寫時，未覆寫項目使用預設值', () => {
+    const now = new Date('2026-01-20T10:00:00');
+    const overrideDate = getStartOfStudyDay(now, 4);
+    const deck: DeckWithOverride = {
+      ...baseDeck,
+      overrideDate,
+      overrideNewCards: 50,
+      overrideReviewCards: null,
+    };
+    const result = getEffectiveDailyLimits(deck, now);
+
+    expect(result.effectiveNewCards).toBe(50);
+    expect(result.effectiveReviewCards).toBe(100);
+  });
+
+  it('覆寫值低於預設值時應取預設值（安全取大）', () => {
+    const now = new Date('2026-01-20T10:00:00');
+    const overrideDate = getStartOfStudyDay(now, 4);
+    const deck: DeckWithOverride = {
+      ...baseDeck,
+      overrideDate,
+      overrideNewCards: 10,
+      overrideReviewCards: 50,
+    };
+    const result = getEffectiveDailyLimits(deck, now);
+
+    expect(result.effectiveNewCards).toBe(20);
+    expect(result.effectiveReviewCards).toBe(100);
   });
 });

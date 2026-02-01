@@ -943,6 +943,60 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /decks/{deckId}/daily-override:
+    put:
+      operationId: setDailyOverride
+      tags:
+        - Deck
+      summary: 設定今日學習上限覆寫
+      description: 臨時提高指定牌組的今日新卡或複習上限。覆寫值必須大於或等於牌組預設值。隔天自動失效。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetDailyOverrideRequest"
+      responses:
+        "200":
+          description: 覆寫設定成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetDailyOverrideResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 覆寫值低於預設值
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # ============================================================
   # TTS
   # ============================================================
@@ -2061,6 +2115,40 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/StudySummary"
+
+    SetDailyOverrideRequest:
+      type: object
+      description: 設定今日學習上限覆寫
+      properties:
+        newCards:
+          type: integer
+          description: 今日新卡上限覆寫（必須 >= 牌組預設值）
+          example: 50
+        reviewCards:
+          type: integer
+          description: 今日複習上限覆寫（必須 >= 牌組預設值）
+          example: 200
+
+    SetDailyOverrideResponse:
+      type: object
+      description: 覆寫設定成功回應
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - effectiveNewCards
+            - effectiveReviewCards
+          properties:
+            effectiveNewCards:
+              type: integer
+              description: 設定後的有效新卡上限
+              example: 50
+            effectiveReviewCards:
+              type: integer
+              description: 設定後的有效複習上限
+              example: 200
 
     # ============================================================
     # TTS

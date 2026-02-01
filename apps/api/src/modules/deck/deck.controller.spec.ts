@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DeckController } from './deck.controller';
 import { DeckService } from './deck.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 
 describe('DeckController', () => {
   let controller: DeckController;
@@ -13,9 +14,10 @@ describe('DeckController', () => {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    setDailyOverride: jest.fn(),
   };
 
-  const mockAuthGuard = {
+  const mockGuard = {
     canActivate: jest.fn(() => true),
   };
 
@@ -28,7 +30,9 @@ describe('DeckController', () => {
       providers: [{ provide: DeckService, useValue: mockDeckService }],
     })
       .overrideGuard(AuthGuard)
-      .useValue(mockAuthGuard)
+      .useValue(mockGuard)
+      .overrideGuard(WhitelistGuard)
+      .useValue(mockGuard)
       .compile();
 
     controller = module.get<DeckController>(DeckController);
@@ -134,6 +138,21 @@ describe('DeckController', () => {
       await controller.deleteDeck(mockRequest, 'deck-1');
 
       expect(service.delete).toHaveBeenCalledWith('deck-1', 'user-123');
+    });
+  });
+
+  describe('setDailyOverride', () => {
+    it('應該設定今日上限覆寫', async () => {
+      const dto = { newCards: 30, reviewCards: 150 };
+      const mockResponse = {
+        data: { effectiveNewCards: 30, effectiveReviewCards: 150 },
+      };
+      mockDeckService.setDailyOverride.mockResolvedValue(mockResponse);
+
+      const result = await controller.setDailyOverride(mockRequest, 'deck-1', dto);
+
+      expect(service.setDailyOverride).toHaveBeenCalledWith('deck-1', 'user-123', dto);
+      expect(result).toEqual(mockResponse);
     });
   });
 });

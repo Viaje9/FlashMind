@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 
 describe('AiController', () => {
   let controller: AiController;
@@ -11,7 +12,7 @@ describe('AiController', () => {
     generateCardContent: jest.fn(),
   };
 
-  const mockAuthGuard = {
+  const mockGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -21,7 +22,9 @@ describe('AiController', () => {
       providers: [{ provide: AiService, useValue: mockAiService }],
     })
       .overrideGuard(AuthGuard)
-      .useValue(mockAuthGuard)
+      .useValue(mockGuard)
+      .overrideGuard(WhitelistGuard)
+      .useValue(mockGuard)
       .compile();
 
     controller = module.get<AiController>(AiController);

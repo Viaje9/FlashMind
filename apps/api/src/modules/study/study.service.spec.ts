@@ -4,6 +4,7 @@ import { StudyService } from './study.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FsrsService } from '../fsrs';
 import { CardState, StudyRating as PrismaStudyRating } from '@prisma/client';
+import { getStartOfStudyDay } from './study-day';
 
 describe('StudyService', () => {
   let service: StudyService;
@@ -52,6 +53,9 @@ describe('StudyService', () => {
     requestRetention: 0.9,
     maximumInterval: 36500,
     enableReverse: false,
+    overrideDate: null,
+    overrideNewCards: null,
+    overrideReviewCards: null,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
   };
@@ -328,6 +332,38 @@ describe('StudyService', () => {
       expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(2);
       expect(result).toHaveLength(2);
       expect(result.every((c) => c.direction === 'FORWARD')).toBe(true);
+    });
+
+    it('覆寫有效時應使用覆寫上限計算剩餘額度', async () => {
+      const now = new Date('2026-01-20T10:00:00');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const overrideDate = getStartOfStudyDay(now, 4);
+      const overrideDeck = {
+        ...mockDeck,
+        overrideDate,
+        overrideNewCards: 50,
+        overrideReviewCards: 200,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(overrideDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(10) // todayNewCardsStudied = 10
+        .mockResolvedValueOnce(50); // todayReviewCardsStudied = 50
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard]) // due cards
+        .mockResolvedValueOnce([mockNewCard]); // new cards
+
+      await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 複習卡 take = 200 - 50 = 150
+      const dueCardsCall = mockPrismaService.card.findMany.mock.calls[0];
+      expect(dueCardsCall[0].take).toBe(150);
+      // 新卡 take = 50 - 10 = 40
+      const newCardsCall = mockPrismaService.card.findMany.mock.calls[1];
+      expect(newCardsCall[0].take).toBe(40);
+
+      jest.useRealTimers();
     });
   });
 
@@ -836,6 +872,36 @@ describe('StudyService', () => {
 
       expect(result.todayNewStudied).toBe(10);
       expect(result.todayReviewStudied).toBe(5);
+    });
+
+    it('覆寫有效時 dailyNewCards 和 dailyReviewCards 應回傳有效上限', async () => {
+      const now = new Date('2026-01-20T10:00:00');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const overrideDate = getStartOfStudyDay(now, 4);
+      const overrideDeck = {
+        ...mockDeck,
+        overrideDate,
+        overrideNewCards: 50,
+        overrideReviewCards: 200,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(overrideDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(100)
+        .mockResolvedValueOnce(30)
+        .mockResolvedValueOnce(15);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(5);
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result.dailyNewCards).toBe(50);
+      expect(result.dailyReviewCards).toBe(200);
+
+      jest.useRealTimers();
     });
 
     it('尚未學習時 todayNewStudied 和 todayReviewStudied 應為 0', async () => {

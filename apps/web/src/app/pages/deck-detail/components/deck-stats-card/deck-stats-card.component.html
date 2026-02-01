@@ -47,9 +47,30 @@
         }
       </div>
     </div>
-    @if (metaLine()) {
-      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">{{ metaLine() }}</p>
-    }
+    <div class="flex items-center justify-between mb-4">
+      @if (metaLine()) {
+        <p class="text-xs text-slate-500 dark:text-slate-400">{{ metaLine() }}</p>
+      }
+      <button
+        class="flex items-center gap-1 text-xs font-medium transition-colors shrink-0 ml-auto"
+        [class.text-amber-600]="overrideActive()"
+        [class.dark:text-amber-400]="overrideActive()"
+        [class.text-slate-500]="!overrideActive()"
+        [class.dark:text-slate-400]="!overrideActive()"
+        [class.hover:text-slate-700]="!overrideActive()"
+        [class.dark:hover:text-slate-300]="!overrideActive()"
+        (click)="overrideClick.emit()"
+        data-testid="deck-detail-override-btn"
+      >
+        <span class="material-symbols-outlined text-[16px]">tune</span>
+        @if (overrideActive()) {
+          <span class="inline-block size-1.5 rounded-full bg-amber-500"></span>
+          <span>已調整今日上限</span>
+        } @else {
+          <span>調整今日上限</span>
+        }
+      </button>
+    </div>
     <div class="flex gap-3">
       <fm-button variant="primary" size="sm" [fullWidth]="true" [disabled]="actionDisabled()" (click)="actionClick.emit()">
         <span class="material-symbols-outlined text-[20px]">play_arrow</span>

@@ -3,6 +3,7 @@ import { StreamableFile } from '@nestjs/common';
 import { TtsController } from './tts.controller';
 import { TtsService } from './tts.service';
 import { AuthGuard } from '../auth/auth.guard';
+import { WhitelistGuard } from '../auth/whitelist.guard';
 
 describe('TtsController', () => {
   let controller: TtsController;
@@ -13,7 +14,7 @@ describe('TtsController', () => {
     synthesizeWord: jest.fn(),
   };
 
-  const mockAuthGuard = {
+  const mockGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -23,7 +24,9 @@ describe('TtsController', () => {
       providers: [{ provide: TtsService, useValue: mockTtsService }],
     })
       .overrideGuard(AuthGuard)
-      .useValue(mockAuthGuard)
+      .useValue(mockGuard)
+      .overrideGuard(WhitelistGuard)
+      .useValue(mockGuard)
       .compile();
 
     controller = module.get<TtsController>(TtsController);

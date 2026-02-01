@@ -67,6 +67,11 @@ model Deck {
 
   enableReverse    Boolean  @default(false)
 
+  // 今日上限覆寫（隔天自動失效）
+  overrideDate         DateTime?
+  overrideNewCards     Int?
+  overrideReviewCards  Int?
+
   userId           String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

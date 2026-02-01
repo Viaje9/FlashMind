@@ -24,7 +24,10 @@ export class FmDeckStatsCardComponent {
   readonly todayNewStudied = input(0);
   readonly todayReviewStudied = input(0);
 
+  readonly overrideActive = input(false);
+
   readonly actionClick = output<void>();
+  readonly overrideClick = output<void>();
 
   readonly metaLine = computed(() => {
     const createdAt = this.createdAtLabel();

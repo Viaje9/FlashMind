@@ -2,11 +2,12 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { CardState } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateDeckDto, UpdateDeckDto } from './dto';
-import { getStartOfStudyDay } from '../study/study-day';
+import { CreateDeckDto, UpdateDeckDto, SetDailyOverrideDto } from './dto';
+import { getStartOfStudyDay, getEffectiveDailyLimits } from '../study/study-day';
 
 export interface DeckListItem {
   id: string;
@@ -113,6 +114,8 @@ export class DeckService {
         const completedCount = totalCount - newCount;
         const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
+        const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deck, now);
+
         return {
           id: deck.id,
           name: deck.name,
@@ -122,8 +125,8 @@ export class DeckService {
           completedCount,
           progress,
           enableReverse: deck.enableReverse,
-          dailyNewCards: deck.dailyNewCards,
-          dailyReviewCards: deck.dailyReviewCards,
+          dailyNewCards: effectiveNewCards,
+          dailyReviewCards: effectiveReviewCards,
           todayNewStudied,
           todayReviewStudied,
         };
@@ -352,5 +355,68 @@ export class DeckService {
     await this.prisma.deck.delete({
       where: { id },
     });
+  }
+
+  async setDailyOverride(id: string, userId: string, dto: SetDailyOverrideDto) {
+    const deck = await this.prisma.deck.findUnique({
+      where: { id },
+    });
+
+    if (!deck) {
+      throw new NotFoundException({
+        error: {
+          code: 'DECK_NOT_FOUND',
+          message: '找不到此牌組',
+        },
+      });
+    }
+
+    if (deck.userId !== userId) {
+      throw new ForbiddenException({
+        error: {
+          code: 'FORBIDDEN',
+          message: '無權限存取此牌組',
+        },
+      });
+    }
+
+    if (dto.newCards !== undefined && dto.newCards < deck.dailyNewCards) {
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'OVERRIDE_BELOW_DEFAULT',
+          message: `覆寫值必須大於或等於預設值（每日新卡上限：${deck.dailyNewCards}）`,
+        },
+      });
+    }
+
+    if (dto.reviewCards !== undefined && dto.reviewCards < deck.dailyReviewCards) {
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'OVERRIDE_BELOW_DEFAULT',
+          message: `覆寫值必須大於或等於預設值（每日複習上限：${deck.dailyReviewCards}）`,
+        },
+      });
+    }
+
+    const now = new Date();
+    const overrideDate = getStartOfStudyDay(now, deck.dailyResetHour);
+
+    const updatedDeck = await this.prisma.deck.update({
+      where: { id },
+      data: {
+        overrideDate,
+        overrideNewCards: dto.newCards ?? null,
+        overrideReviewCards: dto.reviewCards ?? null,
+      },
+    });
+
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(updatedDeck, now);
+
+    return {
+      data: {
+        effectiveNewCards,
+        effectiveReviewCards,
+      },
+    };
   }
 }

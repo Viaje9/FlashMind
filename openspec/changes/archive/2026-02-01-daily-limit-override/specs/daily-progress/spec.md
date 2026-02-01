@@ -1,9 +1,4 @@
-# daily-progress Specification
-
-## Purpose
-在牌組詳情頁的統計卡片及牌組列表頁的卡片中顯示今日練習進度（進度條與 N / M 文字），讓使用者掌握每日學習狀況。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 今日學習進度顯示
 

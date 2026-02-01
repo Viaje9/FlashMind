@@ -6,6 +6,7 @@ api/aI.service.ts
 api/api.ts
 api/auth.service.ts
 api/cards.service.ts
+api/deck.service.ts
 api/decks.service.ts
 api/study.service.ts
 api/tTS.service.ts
@@ -44,6 +45,9 @@ model/paginationMeta.ts
 model/registerRequest.ts
 model/reviewResult.ts
 model/reviewResultResponse.ts
+model/setDailyOverrideRequest.ts
+model/setDailyOverrideResponse.ts
+model/setDailyOverrideResponseData.ts
 model/studyCard.ts
 model/studyCardsResponse.ts
 model/studySummary.ts

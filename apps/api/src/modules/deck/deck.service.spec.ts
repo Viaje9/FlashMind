@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
 import { DeckService } from './deck.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { getStartOfStudyDay } from '../study/study-day';
 
 describe('DeckService', () => {
   let service: DeckService;
@@ -36,6 +37,9 @@ describe('DeckService', () => {
     requestRetention: 0.9,
     maximumInterval: 36500,
     enableReverse: false,
+    overrideDate: null,
+    overrideNewCards: null,
+    overrideReviewCards: null,
     userId: mockUserId,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
@@ -388,6 +392,104 @@ describe('DeckService', () => {
       await expect(service.delete('deck-123', 'other-user')).rejects.toThrow(
         ForbiddenException,
       );
+    });
+  });
+
+  describe('setDailyOverride', () => {
+    it('應該成功設定覆寫', async () => {
+      const now = new Date('2026-01-20T10:00:00');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const overrideDate = getStartOfStudyDay(now, 4);
+      const updatedDeck = {
+        ...mockDeck,
+        overrideDate,
+        overrideNewCards: 50,
+        overrideReviewCards: 200,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.deck.update.mockResolvedValue(updatedDeck);
+
+      const result = await service.setDailyOverride('deck-123', mockUserId, {
+        newCards: 50,
+        reviewCards: 200,
+      });
+
+      expect(result.data.effectiveNewCards).toBe(50);
+      expect(result.data.effectiveReviewCards).toBe(200);
+      expect(prisma.deck.update).toHaveBeenCalledWith({
+        where: { id: 'deck-123' },
+        data: expect.objectContaining({
+          overrideNewCards: 50,
+          overrideReviewCards: 200,
+        }),
+      });
+
+      jest.useRealTimers();
+    });
+
+    it('覆寫值低於預設值時應拋出 UnprocessableEntityException（新卡）', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+
+      await expect(
+        service.setDailyOverride('deck-123', mockUserId, { newCards: 5 }),
+      ).rejects.toThrow(UnprocessableEntityException);
+    });
+
+    it('覆寫值低於預設值時應拋出 UnprocessableEntityException（複習卡）', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+
+      await expect(
+        service.setDailyOverride('deck-123', mockUserId, { reviewCards: 50 }),
+      ).rejects.toThrow(UnprocessableEntityException);
+    });
+
+    it('未授權存取應拋出 ForbiddenException', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+
+      await expect(
+        service.setDailyOverride('deck-123', 'other-user', { newCards: 50 }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('牌組不存在時應拋出 NotFoundException', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.setDailyOverride('nonexistent', mockUserId, { newCards: 50 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('重複設定覆寫應取代前次', async () => {
+      const now = new Date('2026-01-20T10:00:00');
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+
+      const overrideDate = getStartOfStudyDay(now, 4);
+      const firstUpdate = {
+        ...mockDeck,
+        overrideDate,
+        overrideNewCards: 50,
+        overrideReviewCards: null,
+      };
+      const secondUpdate = {
+        ...mockDeck,
+        overrideDate,
+        overrideNewCards: 80,
+        overrideReviewCards: null,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.deck.update
+        .mockResolvedValueOnce(firstUpdate)
+        .mockResolvedValueOnce(secondUpdate);
+
+      await service.setDailyOverride('deck-123', mockUserId, { newCards: 50 });
+      const result = await service.setDailyOverride('deck-123', mockUserId, { newCards: 80 });
+
+      expect(result.data.effectiveNewCards).toBe(80);
+
+      jest.useRealTimers();
     });
   });
 });
