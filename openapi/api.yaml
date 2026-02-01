@@ -1194,6 +1194,7 @@ components:
         - name
         - dailyNewCards
         - dailyReviewCards
+        - dailyResetHour
         - createdAt
         - updatedAt
       properties:
@@ -1220,6 +1221,13 @@ components:
           maximum: 500
           default: 100
           example: 100
+        dailyResetHour:
+          type: integer
+          description: 每日重置時間（0-23 時，預設 4 點）
+          minimum: 0
+          maximum: 23
+          default: 4
+          example: 4
         createdAt:
           type: string
           format: date-time
@@ -1283,6 +1291,7 @@ components:
         - name
         - dailyNewCards
         - dailyReviewCards
+        - dailyResetHour
         - stats
       properties:
         id:
@@ -1301,6 +1310,13 @@ components:
           type: integer
           description: 每日複習數
           example: 100
+        dailyResetHour:
+          type: integer
+          description: 每日重置時間（0-23 時）
+          minimum: 0
+          maximum: 23
+          default: 4
+          example: 4
         stats:
           $ref: "#/components/schemas/DeckStats"
 
@@ -1362,6 +1378,13 @@ components:
           maximum: 500
           default: 100
           example: 100
+        dailyResetHour:
+          type: integer
+          description: 每日重置時間（0-23 時，預設 4 點）
+          minimum: 0
+          maximum: 23
+          default: 4
+          example: 4
 
     UpdateDeckRequest:
       type: object
@@ -1384,6 +1407,12 @@ components:
           minimum: 10
           maximum: 500
           example: 100
+        dailyResetHour:
+          type: integer
+          description: 每日重置時間（0-23 時）
+          minimum: 0
+          maximum: 23
+          example: 4
 
     DeckResponse:
       type: object

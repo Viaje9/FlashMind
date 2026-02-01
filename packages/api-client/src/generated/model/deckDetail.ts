@@ -30,6 +30,10 @@ export interface DeckDetail {
      * 每日複習數
      */
     dailyReviewCards: number;
+    /**
+     * 每日重置時間（0-23 時）
+     */
+    dailyResetHour: number;
     stats: DeckStats;
 }
 

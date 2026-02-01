@@ -50,6 +50,20 @@
             unit="張"
             ariaLabel="每日複習數"
           ></fm-number-input-row>
+
+          <fm-number-input-row
+            [formControl]="dailyResetHourControl"
+            label="每日重置時間"
+            title="學習日起始"
+            description="每天此時重置學習額度"
+            icon="schedule"
+            iconClass="bg-emerald-500/10 text-emerald-500"
+            [min]="0"
+            [max]="23"
+            [step]="1"
+            unit="時"
+            ariaLabel="每日重置時間"
+          ></fm-number-input-row>
         </div>
 
         <p class="text-xs leading-relaxed text-slate-400 dark:text-slate-500">

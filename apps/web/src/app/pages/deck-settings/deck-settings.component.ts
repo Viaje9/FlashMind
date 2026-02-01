@@ -38,6 +38,7 @@ export class DeckSettingsComponent implements OnInit {
   readonly deckNameControl = new FormControl('', [Validators.required, Validators.maxLength(100)]);
   readonly dailyNewCardsControl = new FormControl(20);
   readonly dailyReviewCardsControl = new FormControl(100);
+  readonly dailyResetHourControl = new FormControl(4);
 
   readonly deckId = signal('');
   readonly deckName = signal('');
@@ -67,6 +68,7 @@ export class DeckSettingsComponent implements OnInit {
         this.deckNameControl.setValue(deck.name);
         this.dailyNewCardsControl.setValue(deck.dailyNewCards);
         this.dailyReviewCardsControl.setValue(deck.dailyReviewCards);
+        this.dailyResetHourControl.setValue(deck.dailyResetHour);
         this.isLoading.set(false);
       },
       error: () => {
@@ -88,7 +90,8 @@ export class DeckSettingsComponent implements OnInit {
     this.decksService.updateDeck(this.deckId(), {
       name: this.deckNameControl.value!.trim(),
       dailyNewCards: this.dailyNewCardsControl.value ?? 20,
-      dailyReviewCards: this.dailyReviewCardsControl.value ?? 100
+      dailyReviewCards: this.dailyReviewCardsControl.value ?? 100,
+      dailyResetHour: this.dailyResetHourControl.value ?? 4
     }).subscribe({
       next: () => {
         this.isSubmitting.set(false);

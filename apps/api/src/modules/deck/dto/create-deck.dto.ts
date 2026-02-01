@@ -16,4 +16,10 @@ export class CreateDeckDto {
   @Min(10)
   @Max(500)
   dailyReviewCards?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  dailyResetHour?: number;
 }

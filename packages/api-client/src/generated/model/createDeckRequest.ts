@@ -25,5 +25,9 @@ export interface CreateDeckRequest {
      * 每日複習數（預設 100）
      */
     dailyReviewCards?: number;
+    /**
+     * 每日重置時間（0-23 時，預設 4 點）
+     */
+    dailyResetHour?: number;
 }
 

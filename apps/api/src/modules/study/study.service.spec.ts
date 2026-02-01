@@ -43,6 +43,7 @@ describe('StudyService', () => {
     userId: mockUserId,
     dailyNewCards: 20,
     dailyReviewCards: 100,
+    dailyResetHour: 4,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
   };
@@ -109,8 +110,16 @@ describe('StudyService', () => {
   });
 
   describe('getStudyCards', () => {
+    beforeEach(() => {
+      // 預設今日已學數為 0
+      mockPrismaService.reviewLog.count.mockResolvedValue(0);
+    });
+
     it('應該回傳學習卡片（複習卡優先）', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0) // todayNewCardsStudied
+        .mockResolvedValueOnce(0); // todayReviewCardsStudied
       mockPrismaService.card.findMany
         .mockResolvedValueOnce([mockDueCard]) // due cards
         .mockResolvedValueOnce([mockNewCard]); // new cards
@@ -126,6 +135,9 @@ describe('StudyService', () => {
 
     it('沒有卡片時應該回傳空陣列', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
       mockPrismaService.card.findMany
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
@@ -133,6 +145,70 @@ describe('StudyService', () => {
       const result = await service.getStudyCards(mockDeckId, mockUserId);
 
       expect(result).toEqual([]);
+    });
+
+    it('已學新卡應從 dailyNewCards 扣除', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(10) // todayNewCardsStudied = 10
+        .mockResolvedValueOnce(0); // todayReviewCardsStudied
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard]) // due cards
+        .mockResolvedValueOnce([mockNewCard]); // new cards
+
+      await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 新卡查詢的 take 應為 20 - 10 = 10
+      const newCardsCall = mockPrismaService.card.findMany.mock.calls[1];
+      expect(newCardsCall[0].take).toBe(10);
+    });
+
+    it('已複習卡應從 dailyReviewCards 扣除', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0) // todayNewCardsStudied
+        .mockResolvedValueOnce(50); // todayReviewCardsStudied = 50
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard]) // due cards
+        .mockResolvedValueOnce([mockNewCard]); // new cards
+
+      await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 複習卡查詢的 take 應為 100 - 50 = 50
+      const dueCardsCall = mockPrismaService.card.findMany.mock.calls[0];
+      expect(dueCardsCall[0].take).toBe(50);
+    });
+
+    it('新卡額度用完時不查詢新卡', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(20) // todayNewCardsStudied = 20（已用完）
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard]); // 只有 due cards 查詢
+
+      const result = await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 應只呼叫一次 findMany（只查複習卡）
+      expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(1);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('card-due-123');
+    });
+
+    it('複習卡額度用完時不查詢複習卡', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(100); // todayReviewCardsStudied = 100（已用完）
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockNewCard]); // 只有 new cards 查詢
+
+      const result = await service.getStudyCards(mockDeckId, mockUserId);
+
+      // 應只呼叫一次 findMany（只查新卡）
+      expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(1);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(mockCardId);
     });
 
     it('牌組不存在時應該拋出 NotFoundException', async () => {

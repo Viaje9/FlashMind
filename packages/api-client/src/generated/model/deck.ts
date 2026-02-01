@@ -30,6 +30,10 @@ export interface Deck {
      */
     dailyReviewCards: number;
     /**
+     * 每日重置時間（0-23 時，預設 4 點）
+     */
+    dailyResetHour: number;
+    /**
      * 建立時間（ISO 8601 UTC）
      */
     createdAt: string;

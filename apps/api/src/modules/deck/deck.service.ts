@@ -22,6 +22,7 @@ export interface DeckDetail {
   name: string;
   dailyNewCards: number;
   dailyReviewCards: number;
+  dailyResetHour: number;
   stats: {
     newCount: number;
     reviewCount: number;
@@ -124,6 +125,7 @@ export class DeckService {
       name: deck.name,
       dailyNewCards: deck.dailyNewCards,
       dailyReviewCards: deck.dailyReviewCards,
+      dailyResetHour: deck.dailyResetHour,
       stats: {
         newCount,
         reviewCount,
@@ -140,6 +142,7 @@ export class DeckService {
         name: dto.name,
         dailyNewCards: dto.dailyNewCards ?? 20,
         dailyReviewCards: dto.dailyReviewCards ?? 100,
+        dailyResetHour: dto.dailyResetHour ?? 4,
         userId,
       },
     });
@@ -150,6 +153,7 @@ export class DeckService {
         name: deck.name,
         dailyNewCards: deck.dailyNewCards,
         dailyReviewCards: deck.dailyReviewCards,
+        dailyResetHour: deck.dailyResetHour,
         createdAt: deck.createdAt.toISOString(),
         updatedAt: deck.updatedAt.toISOString(),
       },
@@ -189,6 +193,9 @@ export class DeckService {
         ...(dto.dailyReviewCards !== undefined && {
           dailyReviewCards: dto.dailyReviewCards,
         }),
+        ...(dto.dailyResetHour !== undefined && {
+          dailyResetHour: dto.dailyResetHour,
+        }),
       },
     });
 
@@ -198,6 +205,7 @@ export class DeckService {
         name: updatedDeck.name,
         dailyNewCards: updatedDeck.dailyNewCards,
         dailyReviewCards: updatedDeck.dailyReviewCards,
+        dailyResetHour: updatedDeck.dailyResetHour,
         createdAt: updatedDeck.createdAt.toISOString(),
         updatedAt: updatedDeck.updatedAt.toISOString(),
       },

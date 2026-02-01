@@ -15,6 +15,12 @@ describe('DeckService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    card: {
+      count: jest.fn().mockResolvedValue(0),
+    },
+    reviewLog: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
   };
 
   const mockUserId = 'user-123';
@@ -23,6 +29,7 @@ describe('DeckService', () => {
     name: '英文單字',
     dailyNewCards: 20,
     dailyReviewCards: 100,
+    dailyResetHour: 4,
     userId: mockUserId,
     createdAt: new Date('2026-01-17T10:00:00Z'),
     updatedAt: new Date('2026-01-17T10:00:00Z'),
@@ -87,6 +94,7 @@ describe('DeckService', () => {
         name: '英文單字',
         dailyNewCards: 20,
         dailyReviewCards: 100,
+        dailyResetHour: 4,
         stats: {
           newCount: 0,
           reviewCount: 0,
@@ -125,6 +133,7 @@ describe('DeckService', () => {
           name: '英文單字',
           dailyNewCards: 20,
           dailyReviewCards: 100,
+          dailyResetHour: 4,
           userId: mockUserId,
         },
       });
@@ -133,6 +142,7 @@ describe('DeckService', () => {
         name: '英文單字',
         dailyNewCards: 20,
         dailyReviewCards: 100,
+        dailyResetHour: 4,
         createdAt: '2026-01-17T10:00:00.000Z',
         updatedAt: '2026-01-17T10:00:00.000Z',
       });
@@ -157,6 +167,7 @@ describe('DeckService', () => {
           name: '英文單字',
           dailyNewCards: 30,
           dailyReviewCards: 150,
+          dailyResetHour: 4,
           userId: mockUserId,
         },
       });

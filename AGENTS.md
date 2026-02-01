@@ -231,6 +231,10 @@ mcp__playwright-test__generator_setup_page({
 })
 ```
 
+### E2E 測試帳號
+
+E2E 測試使用固定的測試帳號，存放於 `e2e/.auth/test-accounts.json`（已 gitignore）。撰寫 E2E 測試時統一讀取此檔案取得帳號密碼，不要在測試程式碼中硬編碼。
+
 ### E2E 測試選擇器規範
 
 撰寫 E2E 測試時**優先使用 `getByTestId()` 選擇器**：

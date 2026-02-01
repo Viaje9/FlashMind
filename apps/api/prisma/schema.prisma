@@ -57,6 +57,7 @@ model Deck {
   name             String
   dailyNewCards    Int      @default(20)
   dailyReviewCards Int      @default(100)
+  dailyResetHour   Int      @default(4)
   userId           String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

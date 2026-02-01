@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { FsrsService, StudyRating, CardScheduleState } from '../fsrs';
 import { CardState, StudyRating as PrismaStudyRating } from '@prisma/client';
+import { getStartOfStudyDay } from './study-day';
 
 export interface StudyCardMeaning {
   id: string;
@@ -46,10 +47,10 @@ export class StudyService {
   private async validateDeckAccess(
     deckId: string,
     userId: string,
-  ): Promise<{ dailyNewCards: number; dailyReviewCards: number }> {
+  ): Promise<{ dailyNewCards: number; dailyReviewCards: number; dailyResetHour: number }> {
     const deck = await this.prisma.deck.findUnique({
       where: { id: deckId },
-      select: { userId: true, dailyNewCards: true, dailyReviewCards: true },
+      select: { userId: true, dailyNewCards: true, dailyReviewCards: true, dailyResetHour: true },
     });
 
     if (!deck) {
@@ -70,7 +71,11 @@ export class StudyService {
       });
     }
 
-    return { dailyNewCards: deck.dailyNewCards, dailyReviewCards: deck.dailyReviewCards };
+    return {
+      dailyNewCards: deck.dailyNewCards,
+      dailyReviewCards: deck.dailyReviewCards,
+      dailyResetHour: deck.dailyResetHour,
+    };
   }
 
   private async validateCardAccess(
@@ -100,36 +105,60 @@ export class StudyService {
    * 排序：待複習卡片優先（按 due 升序），再新卡片（按建立時間）
    */
   async getStudyCards(deckId: string, userId: string): Promise<StudyCard[]> {
-    const { dailyNewCards, dailyReviewCards } = await this.validateDeckAccess(deckId, userId);
+    const { dailyNewCards, dailyReviewCards, dailyResetHour } =
+      await this.validateDeckAccess(deckId, userId);
     const now = new Date();
+    const startOfStudyDay = getStartOfStudyDay(now, dailyResetHour);
+
+    // 查今日已學新卡數
+    const todayNewCardsStudied = await this.prisma.reviewLog.count({
+      where: {
+        card: { deckId },
+        prevState: CardState.NEW,
+        reviewedAt: { gte: startOfStudyDay },
+      },
+    });
+
+    // 查今日已複習數（非新卡）
+    const todayReviewCardsStudied = await this.prisma.reviewLog.count({
+      where: {
+        card: { deckId },
+        prevState: { not: CardState.NEW },
+        reviewedAt: { gte: startOfStudyDay },
+      },
+    });
+
+    const remainingReviewSlots = Math.max(0, dailyReviewCards - todayReviewCardsStudied);
+    const remainingNewSlots = Math.max(0, dailyNewCards - todayNewCardsStudied);
 
     // 1. 取得待複習卡片（due <= now，且不是 NEW 狀態）
-    const dueCards = await this.prisma.card.findMany({
-      where: {
-        deckId,
-        state: { not: CardState.NEW },
-        due: { lte: now },
-      },
-      include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-      orderBy: { due: 'asc' },
-      take: dailyReviewCards,
-    });
+    const dueCards = remainingReviewSlots > 0
+      ? await this.prisma.card.findMany({
+          where: {
+            deckId,
+            state: { not: CardState.NEW },
+            due: { lte: now },
+          },
+          include: { meanings: { orderBy: { sortOrder: 'asc' } } },
+          orderBy: { due: 'asc' },
+          take: remainingReviewSlots,
+        })
+      : [];
 
-    // 2. 計算還能學習多少新卡
-    const remainingNewSlots = dailyNewCards;
+    // 2. 取得新卡片
+    const newCards = remainingNewSlots > 0
+      ? await this.prisma.card.findMany({
+          where: {
+            deckId,
+            state: CardState.NEW,
+          },
+          include: { meanings: { orderBy: { sortOrder: 'asc' } } },
+          orderBy: { createdAt: 'asc' },
+          take: remainingNewSlots,
+        })
+      : [];
 
-    // 3. 取得新卡片
-    const newCards = await this.prisma.card.findMany({
-      where: {
-        deckId,
-        state: CardState.NEW,
-      },
-      include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-      orderBy: { createdAt: 'asc' },
-      take: remainingNewSlots,
-    });
-
-    // 4. 合併結果
+    // 3. 合併結果
     const allCards = [...dueCards, ...newCards];
 
     return allCards.map((card) => ({
@@ -244,9 +273,9 @@ export class StudyService {
    * 取得學習統計摘要
    */
   async getSummary(deckId: string, userId: string): Promise<StudySummary> {
-    await this.validateDeckAccess(deckId, userId);
+    const { dailyResetHour } = await this.validateDeckAccess(deckId, userId);
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfToday = getStartOfStudyDay(now, dailyResetHour);
 
     // 總卡片數
     const totalCards = await this.prisma.card.count({
