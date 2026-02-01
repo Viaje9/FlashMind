@@ -29,5 +29,21 @@ export interface StudySummary {
      * 今日已學習數
      */
     todayStudied: number;
+    /**
+     * 牌組每日新卡上限
+     */
+    dailyNewCards: number;
+    /**
+     * 牌組每日複習上限
+     */
+    dailyReviewCards: number;
+    /**
+     * 今日已學新卡數
+     */
+    todayNewStudied: number;
+    /**
+     * 今日已複習數
+     */
+    todayReviewStudied: number;
 }
 

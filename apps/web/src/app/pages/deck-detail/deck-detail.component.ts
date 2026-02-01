@@ -12,7 +12,7 @@ import {
 } from '@flashmind/ui';
 import { FmCardListItemComponent } from './components/card-list-item/card-list-item.component';
 import { FmDeckStatsCardComponent } from './components/deck-stats-card/deck-stats-card.component';
-import { DecksService, DeckDetail, CardListItem } from '@flashmind/api-client';
+import { DecksService, DeckDetail, CardListItem, StudyService, StudySummary } from '@flashmind/api-client';
 import { CardStore } from '../../components/card/card.store';
 
 @Component({
@@ -36,6 +36,7 @@ export class DeckDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly decksService = inject(DecksService);
+  private readonly studyService = inject(StudyService);
   private readonly cardStore = inject(CardStore);
   private readonly dialogService = inject(DialogService);
 
@@ -44,6 +45,7 @@ export class DeckDetailComponent implements OnInit {
   readonly searchTerm = signal('');
   readonly deck = signal<DeckDetail | null>(null);
   readonly isLoading = signal(true);
+  readonly studySummary = signal<StudySummary | null>(null);
 
   readonly cards = this.cardStore.cards;
   readonly cardsLoading = this.cardStore.loading;
@@ -70,6 +72,7 @@ export class DeckDetailComponent implements OnInit {
     if (id) {
       this.deckId.set(id);
       this.loadDeck(id);
+      this.loadStudySummary(id);
       void this.cardStore.loadCards(id);
     }
     this.searchControl.valueChanges.subscribe((value) => {
@@ -86,6 +89,17 @@ export class DeckDetailComponent implements OnInit {
       },
       error: () => {
         this.isLoading.set(false);
+      }
+    });
+  }
+
+  private loadStudySummary(deckId: string) {
+    this.studyService.getStudySummary(deckId).subscribe({
+      next: (response) => {
+        this.studySummary.set(response.data);
+      },
+      error: () => {
+        // 靜默處理錯誤，進度條不顯示即可
       }
     });
   }

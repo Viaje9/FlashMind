@@ -29,6 +29,10 @@ export interface StudySummary {
   newCount: number;
   reviewCount: number;
   todayStudied: number;
+  dailyNewCards: number;
+  dailyReviewCards: number;
+  todayNewStudied: number;
+  todayReviewStudied: number;
 }
 
 export interface ReviewResult {
@@ -409,7 +413,8 @@ export class StudyService {
    * 取得學習統計摘要
    */
   async getSummary(deckId: string, userId: string): Promise<StudySummary> {
-    const { dailyResetHour, enableReverse } = await this.validateDeckAccess(deckId, userId);
+    const { dailyResetHour, dailyNewCards, dailyReviewCards, enableReverse } =
+      await this.validateDeckAccess(deckId, userId);
     const now = new Date();
     const startOfToday = getStartOfStudyDay(now, dailyResetHour);
 
@@ -461,11 +466,33 @@ export class StudyService {
       },
     });
 
+    // 今日已學新卡數（prevState = NEW）
+    const todayNewStudied = await this.prisma.reviewLog.count({
+      where: {
+        card: { deckId },
+        prevState: CardState.NEW,
+        reviewedAt: { gte: startOfToday },
+      },
+    });
+
+    // 今日已複習數（prevState != NEW）
+    const todayReviewStudied = await this.prisma.reviewLog.count({
+      where: {
+        card: { deckId },
+        prevState: { not: CardState.NEW },
+        reviewedAt: { gte: startOfToday },
+      },
+    });
+
     return {
       totalCards,
       newCount,
       reviewCount,
       todayStudied,
+      dailyNewCards,
+      dailyReviewCards,
+      todayNewStudied,
+      todayReviewStudied,
     };
   }
 }

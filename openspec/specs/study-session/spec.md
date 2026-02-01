@@ -181,6 +181,30 @@ TBD - created by archiving change add-study-mode-fsrs. Update Purpose after arch
 - **THEN** `newCount` SHALL 只計算正向新卡數
 - **AND** `reviewCount` SHALL 只計算正向待複習數
 
+#### Scenario: 回傳每日限額與今日已學數量
+
+- **WHEN** 前端呼叫 `GET /decks/{deckId}/study/summary`
+- **THEN** 除原有欄位外，SHALL 額外回傳 `dailyNewCards`（number，牌組每日新卡上限）
+- **AND** SHALL 額外回傳 `dailyReviewCards`（number，牌組每日複習上限）
+- **AND** SHALL 額外回傳 `todayNewStudied`（number，今日已學新卡數）
+- **AND** SHALL 額外回傳 `todayReviewStudied`（number，今日已複習數）
+
+#### Scenario: 今日已學新卡數計算
+
+- **WHEN** 系統計算 `todayNewStudied`
+- **THEN** SHALL 計算今日學習日起始時間（根據 `dailyResetHour`）之後，該牌組中 `prevState = NEW` 的 ReviewLog 數量
+
+#### Scenario: 今日已複習數計算
+
+- **WHEN** 系統計算 `todayReviewStudied`
+- **THEN** SHALL 計算今日學習日起始時間之後，該牌組中 `prevState != NEW` 的 ReviewLog 數量
+
+#### Scenario: 啟用反向學習時的已學數計算
+
+- **WHEN** 牌組啟用反向學習
+- **THEN** `todayNewStudied` SHALL 包含正向與反向的新卡學習次數
+- **AND** `todayReviewStudied` SHALL 包含正向與反向的複習次數
+
 ---
 
 ### Requirement: Complete Study Session

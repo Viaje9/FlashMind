@@ -21,6 +21,10 @@
         [lastReviewLabel]="formatLastStudied(d.stats.lastStudiedAt)"
         [actionLabel]="hasStudyItems() ? '開始學習' : '無待學習'"
         [actionDisabled]="!hasStudyItems()"
+        [dailyNewCards]="studySummary()?.dailyNewCards ?? 0"
+        [dailyReviewCards]="studySummary()?.dailyReviewCards ?? 0"
+        [todayNewStudied]="studySummary()?.todayNewStudied ?? 0"
+        [todayReviewStudied]="studySummary()?.todayReviewStudied ?? 0"
         (actionClick)="onStartStudy()"
         testId="deck-detail-stats"
       ></fm-deck-stats-card>

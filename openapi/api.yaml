@@ -1995,6 +1995,10 @@ components:
         - newCount
         - reviewCount
         - todayStudied
+        - dailyNewCards
+        - dailyReviewCards
+        - todayNewStudied
+        - todayReviewStudied
       properties:
         totalCards:
           type: integer
@@ -2012,6 +2016,22 @@ components:
           type: integer
           description: 今日已學習數
           example: 10
+        dailyNewCards:
+          type: integer
+          description: 牌組每日新卡上限
+          example: 20
+        dailyReviewCards:
+          type: integer
+          description: 牌組每日複習上限
+          example: 100
+        todayNewStudied:
+          type: integer
+          description: 今日已學新卡數
+          example: 5
+        todayReviewStudied:
+          type: integer
+          description: 今日已複習數
+          example: 8
 
     StudySummaryResponse:
       type: object

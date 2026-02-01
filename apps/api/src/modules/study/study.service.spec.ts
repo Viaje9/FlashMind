@@ -658,13 +658,16 @@ describe('StudyService', () => {
   });
 
   describe('getSummary', () => {
-    it('應該回傳學習統計摘要', async () => {
+    it('應該回傳學習統計摘要（含每日限額與今日已學細項）', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.card.count
         .mockResolvedValueOnce(100) // totalCards
         .mockResolvedValueOnce(30) // forwardNewCount
         .mockResolvedValueOnce(15); // forwardReviewCount
-      mockPrismaService.reviewLog.count.mockResolvedValue(10); // todayStudied
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(10) // todayStudied
+        .mockResolvedValueOnce(5)  // todayNewStudied
+        .mockResolvedValueOnce(5); // todayReviewStudied
 
       const result = await service.getSummary(mockDeckId, mockUserId);
 
@@ -673,6 +676,10 @@ describe('StudyService', () => {
         newCount: 30,
         reviewCount: 15,
         todayStudied: 10,
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        todayNewStudied: 5,
+        todayReviewStudied: 5,
       });
     });
 
@@ -701,7 +708,10 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(15) // forwardReviewCount
         .mockResolvedValueOnce(20) // reverseNewCount
         .mockResolvedValueOnce(8); // reverseReviewCount
-      mockPrismaService.reviewLog.count.mockResolvedValue(10); // todayStudied
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(10) // todayStudied
+        .mockResolvedValueOnce(5)  // todayNewStudied
+        .mockResolvedValueOnce(5); // todayReviewStudied
 
       const result = await service.getSummary(mockDeckId, mockUserId);
 
@@ -710,6 +720,10 @@ describe('StudyService', () => {
         newCount: 50, // 30 + 20
         reviewCount: 23, // 15 + 8
         todayStudied: 10,
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        todayNewStudied: 5,
+        todayReviewStudied: 5,
       });
     });
 
@@ -719,7 +733,10 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(100) // totalCards
         .mockResolvedValueOnce(30) // forwardNewCount
         .mockResolvedValueOnce(15); // forwardReviewCount
-      mockPrismaService.reviewLog.count.mockResolvedValue(10); // todayStudied
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(10) // todayStudied
+        .mockResolvedValueOnce(3)  // todayNewStudied
+        .mockResolvedValueOnce(7); // todayReviewStudied
 
       const result = await service.getSummary(mockDeckId, mockUserId);
 
@@ -727,6 +744,116 @@ describe('StudyService', () => {
       expect(mockPrismaService.card.count).toHaveBeenCalledTimes(3);
       expect(result.newCount).toBe(30);
       expect(result.reviewCount).toBe(15);
+      expect(result.dailyNewCards).toBe(20);
+      expect(result.dailyReviewCards).toBe(100);
+      expect(result.todayNewStudied).toBe(3);
+      expect(result.todayReviewStudied).toBe(7);
+    });
+
+    it('todayNewStudied 應計算 prevState=NEW 的 ReviewLog 數量', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(50) // totalCards
+        .mockResolvedValueOnce(10) // forwardNewCount
+        .mockResolvedValueOnce(5); // forwardReviewCount
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(12) // todayStudied
+        .mockResolvedValueOnce(8)  // todayNewStudied
+        .mockResolvedValueOnce(4); // todayReviewStudied
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result.todayNewStudied).toBe(8);
+      // 驗證第二次 reviewLog.count 呼叫使用 prevState: NEW
+      expect(mockPrismaService.reviewLog.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            prevState: CardState.NEW,
+          }),
+        }),
+      );
+    });
+
+    it('todayReviewStudied 應計算 prevState!=NEW 的 ReviewLog 數量', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(50) // totalCards
+        .mockResolvedValueOnce(10) // forwardNewCount
+        .mockResolvedValueOnce(5); // forwardReviewCount
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(12) // todayStudied
+        .mockResolvedValueOnce(8)  // todayNewStudied
+        .mockResolvedValueOnce(4); // todayReviewStudied
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result.todayReviewStudied).toBe(4);
+      // 驗證第三次 reviewLog.count 呼叫使用 prevState: { not: NEW }
+      expect(mockPrismaService.reviewLog.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            prevState: { not: CardState.NEW },
+          }),
+        }),
+      );
+    });
+
+    it('dailyNewCards 和 dailyReviewCards 應來自牌組設定', async () => {
+      const customDeck = { ...mockDeck, dailyNewCards: 15, dailyReviewCards: 200 };
+      mockPrismaService.deck.findUnique.mockResolvedValue(customDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(50) // totalCards
+        .mockResolvedValueOnce(10) // forwardNewCount
+        .mockResolvedValueOnce(5); // forwardReviewCount
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)  // todayStudied
+        .mockResolvedValueOnce(0)  // todayNewStudied
+        .mockResolvedValueOnce(0); // todayReviewStudied
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result.dailyNewCards).toBe(15);
+      expect(result.dailyReviewCards).toBe(200);
+    });
+
+    it('啟用反向學習時 todayNewStudied 應包含正向與反向的新卡學習次數', async () => {
+      const reverseDeck = { ...mockDeck, enableReverse: true };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(50)  // totalCards
+        .mockResolvedValueOnce(10)  // forwardNewCount
+        .mockResolvedValueOnce(5)   // forwardReviewCount
+        .mockResolvedValueOnce(10)  // reverseNewCount
+        .mockResolvedValueOnce(3);  // reverseReviewCount
+      // todayNewStudied 和 todayReviewStudied 查詢是按 card.deckId 過濾，
+      // 已包含正向和反向（因為是根據 ReviewLog.prevState 判斷）
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(15)  // todayStudied（含正向與反向）
+        .mockResolvedValueOnce(10)  // todayNewStudied（含正向與反向 NEW）
+        .mockResolvedValueOnce(5);  // todayReviewStudied（含正向與反向非 NEW）
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result.todayNewStudied).toBe(10);
+      expect(result.todayReviewStudied).toBe(5);
+    });
+
+    it('尚未學習時 todayNewStudied 和 todayReviewStudied 應為 0', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.count
+        .mockResolvedValueOnce(50) // totalCards
+        .mockResolvedValueOnce(20) // forwardNewCount
+        .mockResolvedValueOnce(10); // forwardReviewCount
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)  // todayStudied
+        .mockResolvedValueOnce(0)  // todayNewStudied
+        .mockResolvedValueOnce(0); // todayReviewStudied
+
+      const result = await service.getSummary(mockDeckId, mockUserId);
+
+      expect(result.todayNewStudied).toBe(0);
+      expect(result.todayReviewStudied).toBe(0);
+      expect(result.todayStudied).toBe(0);
     });
   });
 });

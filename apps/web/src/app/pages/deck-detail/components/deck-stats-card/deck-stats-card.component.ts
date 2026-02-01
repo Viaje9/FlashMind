@@ -18,6 +18,11 @@ export class FmDeckStatsCardComponent {
   readonly actionDisabled = input(false);
   readonly testId = input<string>();
 
+  readonly dailyNewCards = input(0);
+  readonly dailyReviewCards = input(0);
+  readonly todayNewStudied = input(0);
+  readonly todayReviewStudied = input(0);
+
   readonly actionClick = output<void>();
 
   readonly metaLine = computed(() => {
@@ -33,5 +38,17 @@ export class FmDeckStatsCardComponent {
       return `上次複習：${lastReview}`;
     }
     return '';
+  });
+
+  readonly newProgressPercent = computed(() => {
+    const limit = this.dailyNewCards();
+    if (limit <= 0) return 0;
+    return Math.min(100, (this.todayNewStudied() / limit) * 100);
+  });
+
+  readonly reviewProgressPercent = computed(() => {
+    const limit = this.dailyReviewCards();
+    if (limit <= 0) return 0;
+    return Math.min(100, (this.todayReviewStudied() / limit) * 100);
   });
 }
