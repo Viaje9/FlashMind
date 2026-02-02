@@ -7,7 +7,10 @@ import {
 import { CardState } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDeckDto, UpdateDeckDto, SetDailyOverrideDto } from './dto';
-import { getStartOfStudyDay, getEffectiveDailyLimits } from '../study/study-day';
+import {
+  getStartOfStudyDay,
+  getEffectiveDailyLimits,
+} from '../study/study-day';
 
 export interface DeckListItem {
   id: string;
@@ -48,7 +51,10 @@ export interface DeckDetail {
 export class DeckService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllByUserId(userId: string, timezone: string): Promise<DeckListItem[]> {
+  async findAllByUserId(
+    userId: string,
+    timezone: string,
+  ): Promise<DeckListItem[]> {
     const decks = await this.prisma.deck.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
@@ -58,7 +64,11 @@ export class DeckService {
 
     return Promise.all(
       decks.map(async (deck) => {
-        const startOfStudyDay = getStartOfStudyDay(now, deck.dailyResetHour, timezone);
+        const startOfStudyDay = getStartOfStudyDay(
+          now,
+          deck.dailyResetHour,
+          timezone,
+        );
 
         const queries: Promise<number>[] = [
           this.prisma.card.count({ where: { deckId: deck.id } }),
@@ -89,32 +99,36 @@ export class DeckService {
           );
         }
 
-        const [counts, todayNewStudied, todayReviewStudied] = await Promise.all([
-          Promise.all(queries),
-          this.prisma.reviewLog.count({
-            where: {
-              card: { deckId: deck.id },
-              prevState: CardState.NEW,
-              reviewedAt: { gte: startOfStudyDay },
-            },
-          }),
-          this.prisma.reviewLog.count({
-            where: {
-              card: { deckId: deck.id },
-              prevState: { not: CardState.NEW },
-              reviewedAt: { gte: startOfStudyDay },
-            },
-          }),
-        ]);
+        const [counts, todayNewStudied, todayReviewStudied] = await Promise.all(
+          [
+            Promise.all(queries),
+            this.prisma.reviewLog.count({
+              where: {
+                card: { deckId: deck.id },
+                prevState: CardState.NEW,
+                reviewedAt: { gte: startOfStudyDay },
+              },
+            }),
+            this.prisma.reviewLog.count({
+              where: {
+                card: { deckId: deck.id },
+                prevState: { not: CardState.NEW },
+                reviewedAt: { gte: startOfStudyDay },
+              },
+            }),
+          ],
+        );
 
         const [totalCount, newCount, reviewCount] = counts;
         const reverseNewCount = deck.enableReverse ? counts[3] : 0;
         const reverseReviewCount = deck.enableReverse ? counts[4] : 0;
 
         const completedCount = totalCount - newCount;
-        const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+        const progress =
+          totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-        const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deck, now, timezone);
+        const { effectiveNewCards, effectiveReviewCards } =
+          getEffectiveDailyLimits(deck, now, timezone);
 
         return {
           id: deck.id,
@@ -198,9 +212,15 @@ export class DeckService {
         }),
       ]);
 
-    const reverseNewCount = deck.enableReverse ? (reverseCounts[0] as number) : 0;
-    const reverseReviewCount = deck.enableReverse ? (reverseCounts[1] as number) : 0;
-    const lastReviewLog = deck.enableReverse ? reverseCounts[2] : reverseCounts[0];
+    const reverseNewCount = deck.enableReverse
+      ? (reverseCounts[0] as number)
+      : 0;
+    const reverseReviewCount = deck.enableReverse
+      ? (reverseCounts[1] as number)
+      : 0;
+    const lastReviewLog = deck.enableReverse
+      ? reverseCounts[2]
+      : reverseCounts[0];
 
     return {
       id: deck.id,
@@ -214,11 +234,14 @@ export class DeckService {
       maximumInterval: deck.maximumInterval,
       enableReverse: deck.enableReverse,
       stats: {
-        newCount: (newCount as number) + reverseNewCount,
-        reviewCount: (reviewCount as number) + reverseReviewCount,
-        totalCount: totalCount as number,
+        newCount: newCount + reverseNewCount,
+        reviewCount: reviewCount + reverseReviewCount,
+        totalCount: totalCount,
         createdAt: deck.createdAt.toISOString(),
-        lastStudiedAt: (lastReviewLog as { reviewedAt: Date } | null)?.reviewedAt.toISOString() ?? null,
+        lastStudiedAt:
+          (
+            lastReviewLog as { reviewedAt: Date } | null
+          )?.reviewedAt.toISOString() ?? null,
       },
     };
   }
@@ -357,7 +380,12 @@ export class DeckService {
     });
   }
 
-  async setDailyOverride(id: string, userId: string, dto: SetDailyOverrideDto, timezone: string) {
+  async setDailyOverride(
+    id: string,
+    userId: string,
+    dto: SetDailyOverrideDto,
+    timezone: string,
+  ) {
     const deck = await this.prisma.deck.findUnique({
       where: { id },
     });
@@ -389,7 +417,10 @@ export class DeckService {
       });
     }
 
-    if (dto.reviewCards !== undefined && dto.reviewCards < deck.dailyReviewCards) {
+    if (
+      dto.reviewCards !== undefined &&
+      dto.reviewCards < deck.dailyReviewCards
+    ) {
       throw new UnprocessableEntityException({
         error: {
           code: 'OVERRIDE_BELOW_DEFAULT',
@@ -410,7 +441,11 @@ export class DeckService {
       },
     });
 
-    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(updatedDeck, now, timezone);
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(
+      updatedDeck,
+      now,
+      timezone,
+    );
 
     return {
       data: {

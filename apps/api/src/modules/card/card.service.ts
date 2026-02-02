@@ -253,7 +253,11 @@ export class CardService {
     const errors: ImportCardError[] = [];
 
     // 先驗證所有卡片，分出有效與無效
-    const validCards: { index: number; front: string; meanings: typeof dto.cards[number]['meanings'] }[] = [];
+    const validCards: {
+      index: number;
+      front: string;
+      meanings: (typeof dto.cards)[number]['meanings'];
+    }[] = [];
 
     for (let i = 0; i < dto.cards.length; i++) {
       const cardData = dto.cards[i];
@@ -280,7 +284,11 @@ export class CardService {
         continue;
       }
 
-      validCards.push({ index: i, front: cardData.front.trim(), meanings: cardData.meanings });
+      validCards.push({
+        index: i,
+        front: cardData.front.trim(),
+        meanings: cardData.meanings,
+      });
     }
 
     if (validCards.length === 0) {

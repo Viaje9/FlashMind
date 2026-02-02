@@ -52,7 +52,15 @@ function localToUtc(
 
   // 計算偏差（毫秒）
   const guessLocal = new Date(
-    Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, 0, 0),
+    Date.UTC(
+      local.year,
+      local.month - 1,
+      local.day,
+      local.hour,
+      local.minute,
+      0,
+      0,
+    ),
   );
   const diffMs = guess.getTime() - guessLocal.getTime();
 
@@ -64,7 +72,15 @@ function localToUtc(
   if (verify.hour !== hour || verify.day !== day) {
     // DST 不連續，再修正一次
     const verifyLocal = new Date(
-      Date.UTC(verify.year, verify.month - 1, verify.day, verify.hour, verify.minute, 0, 0),
+      Date.UTC(
+        verify.year,
+        verify.month - 1,
+        verify.day,
+        verify.hour,
+        verify.minute,
+        0,
+        0,
+      ),
     );
     const diffMs2 = corrected.getTime() - verifyLocal.getTime();
     return new Date(corrected.getTime() + diffMs2);
@@ -89,7 +105,14 @@ export function getStartOfStudyDay(
   const local = getLocalDateParts(now, timezone);
 
   // 計算今天 resetHour 的 UTC 時間
-  const todayReset = localToUtc(local.year, local.month, local.day, resetHour, 0, timezone);
+  const todayReset = localToUtc(
+    local.year,
+    local.month,
+    local.day,
+    resetHour,
+    0,
+    timezone,
+  );
 
   if (now >= todayReset) {
     return todayReset;
@@ -98,7 +121,14 @@ export function getStartOfStudyDay(
   // 還沒到今天的重置時間，學習日起始為昨天的 resetHour
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const yLocal = getLocalDateParts(yesterday, timezone);
-  return localToUtc(yLocal.year, yLocal.month, yLocal.day, resetHour, 0, timezone);
+  return localToUtc(
+    yLocal.year,
+    yLocal.month,
+    yLocal.day,
+    resetHour,
+    0,
+    timezone,
+  );
 }
 
 export interface DeckWithOverride {

@@ -1,4 +1,4 @@
-import { FsrsService, CardScheduleState, StudyRating, DeckFsrsParams } from './fsrs.service';
+import { FsrsService, CardScheduleState, DeckFsrsParams } from './fsrs.service';
 import { Rating } from 'ts-fsrs';
 
 describe('FsrsService', () => {
@@ -53,7 +53,11 @@ describe('FsrsService', () => {
     });
 
     it('should update card state after "unfamiliar" rating', () => {
-      const result = service.calculateNextReview(newCardState, 'unfamiliar', now);
+      const result = service.calculateNextReview(
+        newCardState,
+        'unfamiliar',
+        now,
+      );
 
       expect(result.card.reps).toBe(1);
       expect(result.card.due).toBeDefined();
@@ -71,9 +75,21 @@ describe('FsrsService', () => {
     });
 
     it('should give longest interval for "known" rating', () => {
-      const knownResult = service.calculateNextReview(newCardState, 'known', now);
-      const unfamiliarResult = service.calculateNextReview(newCardState, 'unfamiliar', now);
-      const unknownResult = service.calculateNextReview(newCardState, 'unknown', now);
+      const knownResult = service.calculateNextReview(
+        newCardState,
+        'known',
+        now,
+      );
+      const unfamiliarResult = service.calculateNextReview(
+        newCardState,
+        'unfamiliar',
+        now,
+      );
+      const unknownResult = service.calculateNextReview(
+        newCardState,
+        'unknown',
+        now,
+      );
 
       expect(knownResult.card.due!.getTime()).toBeGreaterThan(
         unfamiliarResult.card.due!.getTime(),
@@ -243,14 +259,32 @@ describe('FsrsService', () => {
         learningStep: 0,
       };
 
-      const highRetention: DeckFsrsParams = { requestRetention: 0.95, maximumInterval: 36500 };
-      const lowRetention: DeckFsrsParams = { requestRetention: 0.70, maximumInterval: 36500 };
+      const highRetention: DeckFsrsParams = {
+        requestRetention: 0.95,
+        maximumInterval: 36500,
+      };
+      const lowRetention: DeckFsrsParams = {
+        requestRetention: 0.7,
+        maximumInterval: 36500,
+      };
 
-      const highResult = service.calculateNextReview(reviewCard, 'known', now, highRetention);
-      const lowResult = service.calculateNextReview(reviewCard, 'known', now, lowRetention);
+      const highResult = service.calculateNextReview(
+        reviewCard,
+        'known',
+        now,
+        highRetention,
+      );
+      const lowResult = service.calculateNextReview(
+        reviewCard,
+        'known',
+        now,
+        lowRetention,
+      );
 
       // 較高保留率應該產生更短的間隔（更頻繁的複習）
-      expect(highResult.card.scheduledDays).toBeLessThanOrEqual(lowResult.card.scheduledDays);
+      expect(highResult.card.scheduledDays).toBeLessThanOrEqual(
+        lowResult.card.scheduledDays,
+      );
     });
   });
 
@@ -278,7 +312,12 @@ describe('FsrsService', () => {
       };
 
       // 第一次評分 unknown → 進入 LEARNING
-      const result = service.calculateNextReview(newCard, 'unknown', now, params);
+      const result = service.calculateNextReview(
+        newCard,
+        'unknown',
+        now,
+        params,
+      );
       expect(result.card.state).toBe('LEARNING');
     });
 
@@ -329,11 +368,20 @@ describe('FsrsService', () => {
     });
 
     it('應該解析含空白的步驟字串', () => {
-      expect(service.parseLearningSteps(' 1m , 10m , 1h ')).toEqual(['1m', '10m', '1h']);
+      expect(service.parseLearningSteps(' 1m , 10m , 1h ')).toEqual([
+        '1m',
+        '10m',
+        '1h',
+      ]);
     });
 
     it('應該解析包含不同時間單位的步驟', () => {
-      expect(service.parseLearningSteps('1m,10m,1h,1d')).toEqual(['1m', '10m', '1h', '1d']);
+      expect(service.parseLearningSteps('1m,10m,1h,1d')).toEqual([
+        '1m',
+        '10m',
+        '1h',
+        '1d',
+      ]);
     });
   });
 

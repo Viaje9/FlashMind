@@ -1,4 +1,7 @@
-import { shuffleWithSpacing, MIN_FORWARD_REVERSE_SPACING } from './shuffle-with-spacing';
+import {
+  shuffleWithSpacing,
+  MIN_FORWARD_REVERSE_SPACING,
+} from './shuffle-with-spacing';
 import { StudyCard } from './study.service';
 import { CardState } from '@prisma/client';
 
@@ -10,7 +13,9 @@ function makeStudyCard(
   return {
     id,
     front: `word-${id}`,
-    meanings: [{ id: `m-${id}`, zhMeaning: '翻譯', enExample: null, zhExample: null }],
+    meanings: [
+      { id: `m-${id}`, zhMeaning: '翻譯', enExample: null, zhExample: null },
+    ],
     state: isNew ? CardState.NEW : CardState.REVIEW,
     isNew,
     direction,

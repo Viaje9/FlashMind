@@ -1,18 +1,31 @@
 <div class="flex flex-col">
   <div class="fixed top-0 left-0 right-0 z-30 bg-background-light dark:bg-background-dark">
     <fm-page-header [title]="deckName()" layout="center" [sticky]="false">
-      <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回" (click)="onBackToDeck()">
+      <fm-icon-button
+        class="fm-header-left"
+        variant="ghost"
+        ariaLabel="返回"
+        (click)="onBackToDeck()"
+      >
         <span class="material-symbols-outlined text-[22px]">arrow_back_ios_new</span>
       </fm-icon-button>
       @if (canUndo()) {
-        <fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="返回上一張" (click)="onUndo()">
+        <fm-icon-button
+          class="fm-header-right"
+          variant="ghost"
+          ariaLabel="返回上一張"
+          (click)="onUndo()"
+        >
           <span class="material-symbols-outlined text-[22px]">undo</span>
         </fm-icon-button>
       }
     </fm-page-header>
     @if (isStudying()) {
       <div class="mx-auto w-full max-w-md">
-        <fm-study-progress [current]="progress().current" [total]="progress().total"></fm-study-progress>
+        <fm-study-progress
+          [current]="progress().current"
+          [total]="progress().total"
+        ></fm-study-progress>
       </div>
     }
   </div>
@@ -21,7 +34,9 @@
   @if (isLoading()) {
     <div class="flex-1 flex items-center justify-center">
       <div class="text-center">
-        <span class="material-symbols-outlined text-4xl animate-spin text-primary">progress_activity</span>
+        <span class="material-symbols-outlined text-4xl animate-spin text-primary"
+          >progress_activity</span
+        >
         <p class="mt-4 text-base-content/60">載入學習卡片中...</p>
       </div>
     </div>
@@ -96,21 +111,33 @@
         <main
           class="mx-auto w-full max-w-md min-h-[calc(100dvh-env(safe-area-inset-top,0px)-7.25rem)] flex flex-col items-center justify-center px-4 py-4"
           data-testid="study-card-container"
+          tabindex="0"
+          role="button"
           [class.cursor-pointer]="!isSubmitting()"
           (click)="onCardClick()"
+          (keydown.enter)="onCardClick()"
         >
-          <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 shadow-lg w-full study-front-card">
+          <div
+            class="card bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 shadow-lg w-full study-front-card"
+          >
             <div class="card-body items-center text-center py-16">
               @if (isSubmitting()) {
-                <span class="material-symbols-outlined text-4xl animate-spin text-primary">progress_activity</span>
+                <span class="material-symbols-outlined text-4xl animate-spin text-primary"
+                  >progress_activity</span
+                >
               } @else {
                 @if (isReverse()) {
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 mb-3" data-testid="study-reverse-badge">
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 mb-3"
+                    data-testid="study-reverse-badge"
+                  >
                     <span class="material-symbols-outlined text-[14px]">swap_horiz</span>
                     反向卡
                   </span>
                 }
-                <h2 class="card-title text-4xl font-bold text-slate-800 dark:text-white">{{ word() }}</h2>
+                <h2 class="card-title text-4xl font-bold text-slate-800 dark:text-white">
+                  {{ word() }}
+                </h2>
                 <p class="text-primary/70 mt-4 font-medium">點擊查看答案</p>
               }
             </div>

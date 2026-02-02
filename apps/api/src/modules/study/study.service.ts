@@ -4,10 +4,18 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { FsrsService, StudyRating, CardScheduleState, DeckFsrsParams } from '../fsrs';
+import {
+  FsrsService,
+  StudyRating,
+  CardScheduleState,
+  DeckFsrsParams,
+} from '../fsrs';
 import { CardState, StudyRating as PrismaStudyRating } from '@prisma/client';
 import { getStartOfStudyDay, getEffectiveDailyLimits } from './study-day';
-import { shuffleWithSpacing, MIN_FORWARD_REVERSE_SPACING } from './shuffle-with-spacing';
+import {
+  shuffleWithSpacing,
+  MIN_FORWARD_REVERSE_SPACING,
+} from './shuffle-with-spacing';
 
 export interface StudyCardMeaning {
   id: string;
@@ -140,7 +148,18 @@ export class StudyService {
   }
 
   private mapToStudyCard(
-    card: { id: string; front: string; state: CardState; reverseState: CardState; meanings: { id: string; zhMeaning: string; enExample: string | null; zhExample: string | null }[] },
+    card: {
+      id: string;
+      front: string;
+      state: CardState;
+      reverseState: CardState;
+      meanings: {
+        id: string;
+        zhMeaning: string;
+        enExample: string | null;
+        zhExample: string | null;
+      }[];
+    },
     direction: 'FORWARD' | 'REVERSE',
   ): StudyCard {
     const state = direction === 'FORWARD' ? card.state : card.reverseState;
@@ -163,12 +182,20 @@ export class StudyService {
    * 取得今日學習卡片
    * 排序：新卡與複習卡隨機混合，同一張卡的正反向至少間隔 5 張
    */
-  async getStudyCards(deckId: string, userId: string, timezone: string): Promise<StudyCard[]> {
+  async getStudyCards(
+    deckId: string,
+    userId: string,
+    timezone: string,
+  ): Promise<StudyCard[]> {
     const deckSettings = await this.validateDeckAccess(deckId, userId);
     const { dailyResetHour, enableReverse } = deckSettings;
     const now = new Date();
     const startOfStudyDay = getStartOfStudyDay(now, dailyResetHour, timezone);
-    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deckSettings, now, timezone);
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(
+      deckSettings,
+      now,
+      timezone,
+    );
 
     // 查今日已學新卡數
     const todayNewCardsStudied = await this.prisma.reviewLog.count({
@@ -188,75 +215,99 @@ export class StudyService {
       },
     });
 
-    const remainingReviewSlots = Math.max(0, effectiveReviewCards - todayReviewCardsStudied);
-    const remainingNewSlots = Math.max(0, effectiveNewCards - todayNewCardsStudied);
+    const remainingReviewSlots = Math.max(
+      0,
+      effectiveReviewCards - todayReviewCardsStudied,
+    );
+    const remainingNewSlots = Math.max(
+      0,
+      effectiveNewCards - todayNewCardsStudied,
+    );
 
     // 1. 取得正向待複習卡片（due <= now，且不是 NEW 狀態）
-    const forwardDueCards = remainingReviewSlots > 0
-      ? await this.prisma.card.findMany({
-          where: {
-            deckId,
-            state: { not: CardState.NEW },
-            due: { lte: now },
-          },
-          include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-          orderBy: { due: 'asc' },
-          take: remainingReviewSlots,
-        })
-      : [];
+    const forwardDueCards =
+      remainingReviewSlots > 0
+        ? await this.prisma.card.findMany({
+            where: {
+              deckId,
+              state: { not: CardState.NEW },
+              due: { lte: now },
+            },
+            include: { meanings: { orderBy: { sortOrder: 'asc' } } },
+            orderBy: { due: 'asc' },
+            take: remainingReviewSlots,
+          })
+        : [];
 
     // 2. 取得正向新卡片
-    const forwardNewCards = remainingNewSlots > 0
-      ? await this.prisma.card.findMany({
-          where: {
-            deckId,
-            state: CardState.NEW,
-          },
-          include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-          orderBy: { createdAt: 'asc' },
-          take: remainingNewSlots,
-        })
-      : [];
+    const forwardNewCards =
+      remainingNewSlots > 0
+        ? await this.prisma.card.findMany({
+            where: {
+              deckId,
+              state: CardState.NEW,
+            },
+            include: { meanings: { orderBy: { sortOrder: 'asc' } } },
+            orderBy: { createdAt: 'asc' },
+            take: remainingNewSlots,
+          })
+        : [];
 
     // 正向結果
-    const forwardDueStudyCards = forwardDueCards.map((card) => this.mapToStudyCard(card, 'FORWARD'));
-    const forwardNewStudyCards = forwardNewCards.map((card) => this.mapToStudyCard(card, 'FORWARD'));
+    const forwardDueStudyCards = forwardDueCards.map((card) =>
+      this.mapToStudyCard(card, 'FORWARD'),
+    );
+    const forwardNewStudyCards = forwardNewCards.map((card) =>
+      this.mapToStudyCard(card, 'FORWARD'),
+    );
 
     // 3. 若 enableReverse，取得反向卡片
     let reverseDueStudyCards: StudyCard[] = [];
     let reverseNewStudyCards: StudyCard[] = [];
 
     if (enableReverse) {
-      const reverseRemainingReviewSlots = Math.max(0, remainingReviewSlots - forwardDueCards.length);
-      const reverseRemainingNewSlots = Math.max(0, remainingNewSlots - forwardNewCards.length);
+      const reverseRemainingReviewSlots = Math.max(
+        0,
+        remainingReviewSlots - forwardDueCards.length,
+      );
+      const reverseRemainingNewSlots = Math.max(
+        0,
+        remainingNewSlots - forwardNewCards.length,
+      );
 
-      const reverseDueCards = reverseRemainingReviewSlots > 0
-        ? await this.prisma.card.findMany({
-            where: {
-              deckId,
-              reverseState: { not: CardState.NEW },
-              reverseDue: { lte: now },
-            },
-            include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-            orderBy: { reverseDue: 'asc' },
-            take: reverseRemainingReviewSlots,
-          })
-        : [];
+      const reverseDueCards =
+        reverseRemainingReviewSlots > 0
+          ? await this.prisma.card.findMany({
+              where: {
+                deckId,
+                reverseState: { not: CardState.NEW },
+                reverseDue: { lte: now },
+              },
+              include: { meanings: { orderBy: { sortOrder: 'asc' } } },
+              orderBy: { reverseDue: 'asc' },
+              take: reverseRemainingReviewSlots,
+            })
+          : [];
 
-      const reverseNewCards = reverseRemainingNewSlots > 0
-        ? await this.prisma.card.findMany({
-            where: {
-              deckId,
-              reverseState: CardState.NEW,
-            },
-            include: { meanings: { orderBy: { sortOrder: 'asc' } } },
-            orderBy: { createdAt: 'asc' },
-            take: reverseRemainingNewSlots,
-          })
-        : [];
+      const reverseNewCards =
+        reverseRemainingNewSlots > 0
+          ? await this.prisma.card.findMany({
+              where: {
+                deckId,
+                reverseState: CardState.NEW,
+              },
+              include: { meanings: { orderBy: { sortOrder: 'asc' } } },
+              orderBy: { createdAt: 'asc' },
+              take: reverseRemainingNewSlots,
+            })
+          : [];
 
-      reverseDueStudyCards = reverseDueCards.map((card) => this.mapToStudyCard(card, 'REVERSE'));
-      reverseNewStudyCards = reverseNewCards.map((card) => this.mapToStudyCard(card, 'REVERSE'));
+      reverseDueStudyCards = reverseDueCards.map((card) =>
+        this.mapToStudyCard(card, 'REVERSE'),
+      );
+      reverseNewStudyCards = reverseNewCards.map((card) =>
+        this.mapToStudyCard(card, 'REVERSE'),
+      );
     }
 
     // 4. 合併並隨機混合排列，正反向至少間隔 MIN_FORWARD_REVERSE_SPACING 張
@@ -313,67 +364,78 @@ export class StudyService {
     }
 
     // 根據 direction 讀取對應 FSRS 欄位
-    const currentState: CardScheduleState = direction === 'FORWARD'
-      ? {
-          state: card.state as CardScheduleState['state'],
-          due: card.due,
-          stability: card.stability,
-          difficulty: card.difficulty,
-          elapsedDays: card.elapsedDays,
-          scheduledDays: card.scheduledDays,
-          reps: card.reps,
-          lapses: card.lapses,
-          lastReview: card.lastReview,
-          learningStep: card.learningStep,
-        }
-      : {
-          state: card.reverseState as CardScheduleState['state'],
-          due: card.reverseDue,
-          stability: card.reverseStability,
-          difficulty: card.reverseDifficulty,
-          elapsedDays: card.reverseElapsedDays,
-          scheduledDays: card.reverseScheduledDays,
-          reps: card.reverseReps,
-          lapses: card.reverseLapses,
-          lastReview: card.reverseLastReview,
-          learningStep: card.reverseLearningStep,
-        };
+    const currentState: CardScheduleState =
+      direction === 'FORWARD'
+        ? {
+            state: card.state as CardScheduleState['state'],
+            due: card.due,
+            stability: card.stability,
+            difficulty: card.difficulty,
+            elapsedDays: card.elapsedDays,
+            scheduledDays: card.scheduledDays,
+            reps: card.reps,
+            lapses: card.lapses,
+            lastReview: card.lastReview,
+            learningStep: card.learningStep,
+          }
+        : {
+            state: card.reverseState as CardScheduleState['state'],
+            due: card.reverseDue,
+            stability: card.reverseStability,
+            difficulty: card.reverseDifficulty,
+            elapsedDays: card.reverseElapsedDays,
+            scheduledDays: card.reverseScheduledDays,
+            reps: card.reverseReps,
+            lapses: card.reverseLapses,
+            lastReview: card.reverseLastReview,
+            learningStep: card.reverseLearningStep,
+          };
 
     // 計算新的排程（使用牌組專屬 FSRS 參數）
     const fsrsParams: DeckFsrsParams = {
       requestRetention: deckSettings.requestRetention,
       maximumInterval: deckSettings.maximumInterval,
-      learningSteps: this.fsrsService.parseLearningSteps(deckSettings.learningSteps),
-      relearningSteps: this.fsrsService.parseLearningSteps(deckSettings.relearningSteps),
+      learningSteps: this.fsrsService.parseLearningSteps(
+        deckSettings.learningSteps,
+      ),
+      relearningSteps: this.fsrsService.parseLearningSteps(
+        deckSettings.relearningSteps,
+      ),
     };
-    const result = this.fsrsService.calculateNextReview(currentState, rating, now, fsrsParams);
+    const result = this.fsrsService.calculateNextReview(
+      currentState,
+      rating,
+      now,
+      fsrsParams,
+    );
 
     // 根據 direction 更新對應欄位
-    const updateData = direction === 'FORWARD'
-      ? {
-          state: result.card.state as CardState,
-          due: result.card.due,
-          stability: result.card.stability,
-          difficulty: result.card.difficulty,
-          elapsedDays: result.card.elapsedDays,
-          scheduledDays: result.card.scheduledDays,
-          reps: result.card.reps,
-          lapses: result.card.lapses,
-          lastReview: result.card.lastReview,
-          learningStep: result.card.learningStep,
-        }
-      : {
-          reverseState: result.card.state as CardState,
-          reverseDue: result.card.due,
-          reverseStability: result.card.stability,
-          reverseDifficulty: result.card.difficulty,
-          reverseElapsedDays: result.card.elapsedDays,
-          reverseScheduledDays: result.card.scheduledDays,
-          reverseReps: result.card.reps,
-          reverseLapses: result.card.lapses,
-          reverseLastReview: result.card.lastReview,
-          reverseLearningStep: result.card.learningStep,
-        };
+    const updateData =
+      direction === 'FORWARD'
+        ? {
+            state: result.card.state as CardState,
+            due: result.card.due,
+            stability: result.card.stability,
+            difficulty: result.card.difficulty,
+            elapsedDays: result.card.elapsedDays,
+            scheduledDays: result.card.scheduledDays,
+            reps: result.card.reps,
+            lapses: result.card.lapses,
+            lastReview: result.card.lastReview,
+            learningStep: result.card.learningStep,
+          }
+        : {
+            reverseState: result.card.state as CardState,
+            reverseDue: result.card.due,
+            reverseStability: result.card.stability,
+            reverseDifficulty: result.card.difficulty,
+            reverseElapsedDays: result.card.elapsedDays,
+            reverseScheduledDays: result.card.scheduledDays,
+            reverseReps: result.card.reps,
+            reverseLapses: result.card.lapses,
+            reverseLastReview: result.card.lastReview,
+            reverseLearningStep: result.card.learningStep,
+          };
 
     // 更新卡片
     await this.prisma.card.update({
@@ -383,8 +445,10 @@ export class StudyService {
 
     // 根據 direction 讀取 prev 欄位
     const prevState = direction === 'FORWARD' ? card.state : card.reverseState;
-    const prevStability = direction === 'FORWARD' ? card.stability : card.reverseStability;
-    const prevDifficulty = direction === 'FORWARD' ? card.difficulty : card.reverseDifficulty;
+    const prevStability =
+      direction === 'FORWARD' ? card.stability : card.reverseStability;
+    const prevDifficulty =
+      direction === 'FORWARD' ? card.difficulty : card.reverseDifficulty;
 
     // 建立 ReviewLog
     await this.prisma.reviewLog.create({
@@ -425,12 +489,20 @@ export class StudyService {
   /**
    * 取得學習統計摘要
    */
-  async getSummary(deckId: string, userId: string, timezone: string): Promise<StudySummary> {
+  async getSummary(
+    deckId: string,
+    userId: string,
+    timezone: string,
+  ): Promise<StudySummary> {
     const deckSettings = await this.validateDeckAccess(deckId, userId);
     const { dailyResetHour, enableReverse } = deckSettings;
     const now = new Date();
     const startOfToday = getStartOfStudyDay(now, dailyResetHour, timezone);
-    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deckSettings, now, timezone);
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(
+      deckSettings,
+      now,
+      timezone,
+    );
 
     // 總卡片數
     const totalCards = await this.prisma.card.count({

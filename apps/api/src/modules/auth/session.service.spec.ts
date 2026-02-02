@@ -32,7 +32,10 @@ describe('SessionService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SessionService, { provide: PrismaService, useValue: mockPrismaService }],
+      providers: [
+        SessionService,
+        { provide: PrismaService, useValue: mockPrismaService },
+      ],
     }).compile();
 
     service = module.get<SessionService>(SessionService);
@@ -74,7 +77,10 @@ describe('SessionService', () => {
     });
 
     it('rememberMe 為 true 時應該建立 30 天有效的 session', async () => {
-      prisma.session.create.mockResolvedValue({ ...mockSession, rememberMe: true });
+      prisma.session.create.mockResolvedValue({
+        ...mockSession,
+        rememberMe: true,
+      });
 
       await service.createSession('user-123', { rememberMe: true });
 
@@ -169,7 +175,9 @@ describe('SessionService', () => {
     it('session 不存在時不應該拋出錯誤', async () => {
       prisma.session.delete.mockRejectedValue(new Error('Record not found'));
 
-      await expect(service.revokeSession('nonexistent-token')).resolves.not.toThrow();
+      await expect(
+        service.revokeSession('nonexistent-token'),
+      ).resolves.not.toThrow();
     });
   });
 

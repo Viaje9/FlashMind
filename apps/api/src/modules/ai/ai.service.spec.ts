@@ -1,11 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { InternalServerErrorException } from '@nestjs/common';
-import { AiService, GeneratedMeaning } from './ai.service';
+import { AiService } from './ai.service';
 
 describe('AiService', () => {
   let service: AiService;
-  let configService: ConfigService;
 
   const mockConfigService = {
     get: jest.fn(),
@@ -20,7 +19,6 @@ describe('AiService', () => {
     }).compile();
 
     service = module.get<AiService>(AiService);
-    configService = module.get<ConfigService>(ConfigService);
 
     jest.clearAllMocks();
     mockConfigService.get.mockReturnValue('test-api-key');
@@ -145,8 +143,16 @@ describe('AiService', () => {
               message: {
                 content: JSON.stringify({
                   meanings: [
-                    { zhMeaning: '跑步 (v.)', enExample: 'I run every morning.', zhExample: '我每天早上跑步。' },
-                    { zhMeaning: '賽跑 (n.)', enExample: 'He finished the run in 10 minutes.', zhExample: '他在 10 分鐘內完成賽跑。' },
+                    {
+                      zhMeaning: '跑步 (v.)',
+                      enExample: 'I run every morning.',
+                      zhExample: '我每天早上跑步。',
+                    },
+                    {
+                      zhMeaning: '賽跑 (n.)',
+                      enExample: 'He finished the run in 10 minutes.',
+                      zhExample: '他在 10 分鐘內完成賽跑。',
+                    },
                   ],
                 }),
               },

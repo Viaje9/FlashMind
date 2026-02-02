@@ -8,7 +8,8 @@ export class TtsService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('AZURE_SPEECH_KEY') ?? '';
-    this.region = this.configService.get<string>('AZURE_SPEECH_REGION') ?? 'eastasia';
+    this.region =
+      this.configService.get<string>('AZURE_SPEECH_REGION') ?? 'eastasia';
   }
 
   async synthesizeWord(text: string): Promise<Buffer> {

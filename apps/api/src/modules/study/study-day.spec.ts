@@ -1,4 +1,8 @@
-import { getStartOfStudyDay, getEffectiveDailyLimits, DeckWithOverride } from './study-day';
+import {
+  getStartOfStudyDay,
+  getEffectiveDailyLimits,
+  DeckWithOverride,
+} from './study-day';
 
 describe('getStartOfStudyDay', () => {
   describe('Asia/Taipei (UTC+8)', () => {

@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { DeckService } from './deck.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getStartOfStudyDay } from '../study/study-day';
@@ -98,21 +102,23 @@ describe('DeckService', () => {
     it('應回傳今日學習進度', async () => {
       mockPrismaService.deck.findMany.mockResolvedValue([mockDeck]);
       mockPrismaService.card.count
-        .mockResolvedValueOnce(50)   // totalCount
-        .mockResolvedValueOnce(20)   // newCount
-        .mockResolvedValueOnce(10);  // reviewCount
+        .mockResolvedValueOnce(50) // totalCount
+        .mockResolvedValueOnce(20) // newCount
+        .mockResolvedValueOnce(10); // reviewCount
       mockPrismaService.reviewLog.count
-        .mockResolvedValueOnce(5)    // todayNewStudied
-        .mockResolvedValueOnce(8);   // todayReviewStudied
+        .mockResolvedValueOnce(5) // todayNewStudied
+        .mockResolvedValueOnce(8); // todayReviewStudied
 
       const result = await service.findAllByUserId(mockUserId, mockTimezone);
 
-      expect(result[0]).toEqual(expect.objectContaining({
-        dailyNewCards: 20,
-        dailyReviewCards: 100,
-        todayNewStudied: 5,
-        todayReviewStudied: 8,
-      }));
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          dailyNewCards: 20,
+          dailyReviewCards: 100,
+          todayNewStudied: 5,
+          todayReviewStudied: 8,
+        }),
+      );
       expect(mockPrismaService.reviewLog.count).toHaveBeenCalledTimes(2);
     });
 
@@ -120,11 +126,11 @@ describe('DeckService', () => {
       const reverseDeck = { ...mockDeck, enableReverse: true };
       mockPrismaService.deck.findMany.mockResolvedValue([reverseDeck]);
       mockPrismaService.card.count
-        .mockResolvedValueOnce(10)  // totalCount
-        .mockResolvedValueOnce(3)   // newCount (forward)
-        .mockResolvedValueOnce(2)   // reviewCount (forward)
-        .mockResolvedValueOnce(4)   // reverseNewCount
-        .mockResolvedValueOnce(1);  // reverseReviewCount
+        .mockResolvedValueOnce(10) // totalCount
+        .mockResolvedValueOnce(3) // newCount (forward)
+        .mockResolvedValueOnce(2) // reviewCount (forward)
+        .mockResolvedValueOnce(4) // reverseNewCount
+        .mockResolvedValueOnce(1); // reverseReviewCount
 
       const result = await service.findAllByUserId(mockUserId, mockTimezone);
 
@@ -132,11 +138,11 @@ describe('DeckService', () => {
       expect(result[0]).toEqual({
         id: 'deck-123',
         name: '英文單字',
-        newCount: 7,        // 3 + 4
-        reviewCount: 3,     // 2 + 1
-        totalCount: 10,     // 不變
-        completedCount: 7,  // 10 - 3
-        progress: 70,       // (7/10) * 100
+        newCount: 7, // 3 + 4
+        reviewCount: 3, // 2 + 1
+        totalCount: 10, // 不變
+        completedCount: 7, // 10 - 3
+        progress: 70, // (7/10) * 100
         enableReverse: true,
         dailyNewCards: 20,
         dailyReviewCards: 100,
@@ -294,7 +300,9 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.deck.update.mockResolvedValue(updatedDeck);
 
-      const result = await service.update('deck-123', mockUserId, { name: '新名稱' });
+      const result = await service.update('deck-123', mockUserId, {
+        name: '新名稱',
+      });
 
       expect(prisma.deck.update).toHaveBeenCalledWith({
         where: { id: 'deck-123' },
@@ -308,7 +316,9 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.deck.update.mockResolvedValue(updatedDeck);
 
-      const result = await service.update('deck-123', mockUserId, { dailyNewCards: 50 });
+      const result = await service.update('deck-123', mockUserId, {
+        dailyNewCards: 50,
+      });
 
       expect(prisma.deck.update).toHaveBeenCalledWith({
         where: { id: 'deck-123' },
@@ -412,10 +422,15 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.deck.update.mockResolvedValue(updatedDeck);
 
-      const result = await service.setDailyOverride('deck-123', mockUserId, {
-        newCards: 50,
-        reviewCards: 200,
-      }, mockTimezone);
+      const result = await service.setDailyOverride(
+        'deck-123',
+        mockUserId,
+        {
+          newCards: 50,
+          reviewCards: 200,
+        },
+        mockTimezone,
+      );
 
       expect(result.data.effectiveNewCards).toBe(50);
       expect(result.data.effectiveReviewCards).toBe(200);
@@ -434,7 +449,12 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.setDailyOverride('deck-123', mockUserId, { newCards: 5 }, mockTimezone),
+        service.setDailyOverride(
+          'deck-123',
+          mockUserId,
+          { newCards: 5 },
+          mockTimezone,
+        ),
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
@@ -442,7 +462,12 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.setDailyOverride('deck-123', mockUserId, { reviewCards: 50 }, mockTimezone),
+        service.setDailyOverride(
+          'deck-123',
+          mockUserId,
+          { reviewCards: 50 },
+          mockTimezone,
+        ),
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
@@ -450,7 +475,12 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.setDailyOverride('deck-123', 'other-user', { newCards: 50 }, mockTimezone),
+        service.setDailyOverride(
+          'deck-123',
+          'other-user',
+          { newCards: 50 },
+          mockTimezone,
+        ),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -458,7 +488,12 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.setDailyOverride('nonexistent', mockUserId, { newCards: 50 }, mockTimezone),
+        service.setDailyOverride(
+          'nonexistent',
+          mockUserId,
+          { newCards: 50 },
+          mockTimezone,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -485,8 +520,18 @@ describe('DeckService', () => {
         .mockResolvedValueOnce(firstUpdate)
         .mockResolvedValueOnce(secondUpdate);
 
-      await service.setDailyOverride('deck-123', mockUserId, { newCards: 50 }, mockTimezone);
-      const result = await service.setDailyOverride('deck-123', mockUserId, { newCards: 80 }, mockTimezone);
+      await service.setDailyOverride(
+        'deck-123',
+        mockUserId,
+        { newCards: 50 },
+        mockTimezone,
+      );
+      const result = await service.setDailyOverride(
+        'deck-123',
+        mockUserId,
+        { newCards: 80 },
+        mockTimezone,
+      );
 
       expect(result.data.effectiveNewCards).toBe(80);
 

@@ -13,17 +13,15 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 
 # 複製所有 packages 和 apps 的 package.json
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma.config.ts ./apps/api/
 COPY apps/api/prisma ./apps/api/prisma/
 COPY packages/ ./packages/
 
-# 安裝依賴
-RUN pnpm install --frozen-lockfile
+# 安裝依賴（postinstall 會觸發 prisma generate，需要 DATABASE_URL 佔位值）
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" pnpm install --frozen-lockfile
 
 # 複製 API 原始碼
 COPY apps/api/ ./apps/api/
-
-# 產生 Prisma Client
-RUN pnpm --filter api prisma:generate
 
 # 建構 API
 RUN pnpm --filter api build
@@ -44,14 +42,13 @@ ENV NODE_ENV=production
 # 複製 workspace 設定檔
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma.config.ts ./apps/api/
 COPY apps/api/prisma ./apps/api/prisma/
 COPY packages/ ./packages/
 
 # 安裝所有依賴（包括 devDependencies，因為 postinstall 腳本需要 prisma CLI）
-RUN pnpm install --frozen-lockfile
-
-# 產生 Prisma Client
-RUN pnpm --filter api prisma:generate
+# postinstall 會觸發 prisma generate，需要 DATABASE_URL 佔位值
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" pnpm install --frozen-lockfile
 
 # 從 builder 複製建構產物
 COPY --from=builder /app/apps/api/dist ./apps/api/dist

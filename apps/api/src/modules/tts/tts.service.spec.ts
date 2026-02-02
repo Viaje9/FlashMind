@@ -5,7 +5,6 @@ import { TtsService } from './tts.service';
 
 describe('TtsService', () => {
   let service: TtsService;
-  let configService: ConfigService;
 
   const mockConfigService = {
     get: jest.fn(),
@@ -20,7 +19,6 @@ describe('TtsService', () => {
     }).compile();
 
     service = module.get<TtsService>(TtsService);
-    configService = module.get<ConfigService>(ConfigService);
 
     jest.clearAllMocks();
     mockConfigService.get.mockImplementation((key: string) => {

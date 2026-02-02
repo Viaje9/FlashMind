@@ -113,7 +113,7 @@ export class StudyStore {
         cards,
         phase: 'studying',
       }));
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         phase: 'error',
@@ -152,7 +152,7 @@ export class StudyStore {
           cardId: card.id,
           rating: rating as SubmitReviewRequest.RatingEnum,
           direction: card.direction as SubmitReviewRequest.DirectionEnum,
-        })
+        }),
       );
 
       // 如果是「不知道」，加入重試佇列
@@ -171,7 +171,7 @@ export class StudyStore {
 
       // 移動到下一張
       this.moveToNext();
-    } catch (err) {
+    } catch {
       // API 失敗時回滾歷史
       this.state.update((state) => ({
         ...state,
@@ -212,7 +212,7 @@ export class StudyStore {
       let newFailedQueue = state.failedQueue;
       if (isUnknownRating(lastEntry.rating)) {
         newFailedQueue = state.failedQueue.filter(
-          (c) => !(c.id === lastEntry.card.id && c.direction === lastEntry.card.direction)
+          (c) => !(c.id === lastEntry.card.id && c.direction === lastEntry.card.direction),
         );
       }
 
@@ -249,7 +249,7 @@ export class StudyStore {
     try {
       const response = await firstValueFrom(this.studyService.getStudySummary(deckId));
       this.state.update((s) => ({ ...s, summary: response.data }));
-    } catch (err) {
+    } catch {
       // 靜默失敗
     }
   }

@@ -60,7 +60,7 @@ export class TtsStore {
         playingText: trimmedText,
       }));
       await this.playAudio(audioUrl, trimmedText);
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loadingText: null,
@@ -97,7 +97,7 @@ export class TtsStore {
         playingText: trimmedText,
       }));
       await this.playAudio(audioUrl, trimmedText);
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loadingText: null,
@@ -130,9 +130,7 @@ export class TtsStore {
     }
 
     // 從 API 取得音訊（Azure TTS）
-    const blob = await firstValueFrom(
-      this.ttsService.synthesizeSpeech({ text }),
-    );
+    const blob = await firstValueFrom(this.ttsService.synthesizeSpeech({ text }));
     const url = URL.createObjectURL(blob);
 
     // 存入快取
@@ -151,9 +149,7 @@ export class TtsStore {
     }
 
     // 從 API 取得音訊（Google Translate TTS）
-    const blob = await firstValueFrom(
-      this.ttsService.synthesizeWord({ text }),
-    );
+    const blob = await firstValueFrom(this.ttsService.synthesizeWord({ text }));
     const url = URL.createObjectURL(blob);
 
     // 存入快取

@@ -362,9 +362,11 @@ describe('CardService', () => {
 
     it('應該成功匯入所有有效卡片', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
-        await fn(mockPrismaService);
-      });
+      mockPrismaService.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+          await fn(mockPrismaService);
+        },
+      );
       mockPrismaService.card.createManyAndReturn.mockResolvedValue([
         { id: 'card-1' },
         { id: 'card-2' },
@@ -385,10 +387,14 @@ describe('CardService', () => {
 
     it('缺少 front 欄位時應該記錄錯誤', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
-        await fn(mockPrismaService);
-      });
-      mockPrismaService.card.createManyAndReturn.mockResolvedValue([{ id: 'card-1' }]);
+      mockPrismaService.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+          await fn(mockPrismaService);
+        },
+      );
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([
+        { id: 'card-1' },
+      ]);
       mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 1 });
 
       const result = await service.importCards(mockDeckId, mockUserId, {
@@ -410,10 +416,14 @@ describe('CardService', () => {
 
     it('缺少 meanings 欄位時應該記錄錯誤', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
-        await fn(mockPrismaService);
-      });
-      mockPrismaService.card.createManyAndReturn.mockResolvedValue([{ id: 'card-1' }]);
+      mockPrismaService.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+          await fn(mockPrismaService);
+        },
+      );
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([
+        { id: 'card-1' },
+      ]);
       mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 1 });
 
       const result = await service.importCards(mockDeckId, mockUserId, {
@@ -434,10 +444,14 @@ describe('CardService', () => {
 
     it('meanings 中沒有有效的 zhMeaning 時應該記錄錯誤', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
-      mockPrismaService.$transaction.mockImplementation(async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
-        await fn(mockPrismaService);
-      });
-      mockPrismaService.card.createManyAndReturn.mockResolvedValue([{ id: 'card-1' }]);
+      mockPrismaService.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrismaService) => Promise<void>) => {
+          await fn(mockPrismaService);
+        },
+      );
+      mockPrismaService.card.createManyAndReturn.mockResolvedValue([
+        { id: 'card-1' },
+      ]);
       mockPrismaService.cardMeaning.createMany.mockResolvedValue({ count: 1 });
 
       const result = await service.importCards(mockDeckId, mockUserId, {

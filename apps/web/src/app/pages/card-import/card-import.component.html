@@ -29,7 +29,10 @@
         }
       </div>
       <!-- 連接線 -->
-      <div class="w-10 h-px mx-1" [class]="currentStep() !== 'input' ? 'bg-green-600' : 'bg-slate-600'"></div>
+      <div
+        class="w-10 h-px mx-1"
+        [class]="currentStep() !== 'input' ? 'bg-green-600' : 'bg-slate-600'"
+      ></div>
       <!-- 步驟 2：預覽 -->
       <div class="flex items-center gap-2">
         @if (currentStep() === 'preview') {
@@ -43,14 +46,19 @@
           </div>
           <span class="text-sm text-secondary-text">預覽</span>
         } @else {
-          <div class="w-7 h-7 rounded-full border-2 border-slate-600 flex items-center justify-center">
+          <div
+            class="w-7 h-7 rounded-full border-2 border-slate-600 flex items-center justify-center"
+          >
             <span class="text-xs text-slate-500">2</span>
           </div>
           <span class="text-sm text-secondary-text">預覽</span>
         }
       </div>
       <!-- 連接線 -->
-      <div class="w-10 h-px mx-1" [class]="currentStep() === 'result' ? 'bg-green-600' : 'bg-slate-600'"></div>
+      <div
+        class="w-10 h-px mx-1"
+        [class]="currentStep() === 'result' ? 'bg-green-600' : 'bg-slate-600'"
+      ></div>
       <!-- 步驟 3：完成 -->
       <div class="flex items-center gap-2">
         @if (currentStep() === 'result') {
@@ -59,7 +67,9 @@
           </div>
           <span class="text-sm font-semibold text-white">完成</span>
         } @else {
-          <div class="w-7 h-7 rounded-full border-2 border-slate-600 flex items-center justify-center">
+          <div
+            class="w-7 h-7 rounded-full border-2 border-slate-600 flex items-center justify-center"
+          >
             <span class="text-xs text-slate-500">3</span>
           </div>
           <span class="text-sm text-secondary-text">完成</span>
@@ -87,12 +97,14 @@
               複製範例
             </button>
           </div>
-          <pre class="text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap">{{ exampleJson }}</pre>
+          <pre class="text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap">{{
+            exampleJson
+          }}</pre>
         </div>
 
         <!-- JSON 輸入區塊 -->
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-white">貼上 JSON</label>
+        <label class="block space-y-2">
+          <span class="text-sm font-medium text-white">貼上 JSON</span>
           <textarea
             class="w-full h-48 px-3 py-2 rounded-lg bg-card-dark border border-slate-600 text-white placeholder-secondary-text focus:outline-none focus:border-primary resize-none font-mono text-sm"
             placeholder="在此貼上 JSON..."
@@ -100,7 +112,7 @@
             (input)="onJsonInputChange($event)"
             data-testid="card-import-json-input"
           ></textarea>
-        </div>
+        </label>
 
         <!-- 錯誤訊息 -->
         @if (parseError()) {
@@ -228,12 +240,18 @@
           <!-- 結果摘要 -->
           <div class="text-center py-8">
             @if (result.failed === 0) {
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-green-900/30 flex items-center justify-center">
-                <span class="material-symbols-outlined text-[32px] text-green-400">check_circle</span>
+              <div
+                class="w-16 h-16 mx-auto mb-4 rounded-full bg-green-900/30 flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-[32px] text-green-400"
+                  >check_circle</span
+                >
               </div>
               <h2 class="text-xl font-bold text-white mb-2">匯入完成</h2>
             } @else {
-              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-900/30 flex items-center justify-center">
+              <div
+                class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-900/30 flex items-center justify-center"
+              >
                 <span class="material-symbols-outlined text-[32px] text-yellow-400">warning</span>
               </div>
               <h2 class="text-xl font-bold text-white mb-2">匯入完成（部分失敗）</h2>

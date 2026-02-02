@@ -1,4 +1,13 @@
-import { IsString, IsInt, IsOptional, IsNumber, IsBoolean, MaxLength, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  MaxLength,
+  Min,
+  Max,
+} from 'class-validator';
 import { IsLearningSteps } from './learning-steps.validator';
 
 export class CreateDeckDto {
@@ -36,7 +45,7 @@ export class CreateDeckDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(0.70)
+  @Min(0.7)
   @Max(0.97)
   requestRetention?: number;
 

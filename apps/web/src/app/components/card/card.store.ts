@@ -1,5 +1,11 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { CardsService, CardListItem, Card, CreateCardRequest, UpdateCardRequest } from '@flashmind/api-client';
+import {
+  CardsService,
+  CardListItem,
+  Card,
+  CreateCardRequest,
+  UpdateCardRequest,
+} from '@flashmind/api-client';
 import { firstValueFrom } from 'rxjs';
 
 export interface CardStoreState {
@@ -36,7 +42,7 @@ export class CardStore {
         cards: response.data,
         loading: false,
       }));
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loading: false,
@@ -55,7 +61,7 @@ export class CardStore {
         currentCard: response.data,
         loading: false,
       }));
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loading: false,
@@ -71,7 +77,7 @@ export class CardStore {
       const response = await firstValueFrom(this.cardsService.createCard(deckId, data));
       this.state.update((s) => ({ ...s, loading: false }));
       return response.data.id;
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loading: false,
@@ -81,18 +87,14 @@ export class CardStore {
     }
   }
 
-  async updateCard(
-    deckId: string,
-    cardId: string,
-    data: UpdateCardRequest,
-  ): Promise<boolean> {
+  async updateCard(deckId: string, cardId: string, data: UpdateCardRequest): Promise<boolean> {
     this.state.update((s) => ({ ...s, loading: true, error: null }));
 
     try {
       await firstValueFrom(this.cardsService.updateCard(deckId, cardId, data));
       this.state.update((s) => ({ ...s, loading: false }));
       return true;
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loading: false,
@@ -113,7 +115,7 @@ export class CardStore {
         loading: false,
       }));
       return true;
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         loading: false,

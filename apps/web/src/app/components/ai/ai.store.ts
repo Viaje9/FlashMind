@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { AIService, GeneratedMeaning } from '@flashmind/api-client';
+import { AIService } from '@flashmind/api-client';
 import { firstValueFrom } from 'rxjs';
 import { mapGeneratedMeaningsToCardMeanings } from './ai.domain';
 import type { CardMeaningDraft } from '../card/card.domain';
@@ -25,12 +25,10 @@ export class AiStore {
     this.state.update((s) => ({ ...s, generating: true, error: null }));
 
     try {
-      const response = await firstValueFrom(
-        this.aiService.generateCardContent({ text }),
-      );
+      const response = await firstValueFrom(this.aiService.generateCardContent({ text }));
       this.state.update((s) => ({ ...s, generating: false }));
       return mapGeneratedMeaningsToCardMeanings(response.data.meanings);
-    } catch (err) {
+    } catch {
       this.state.update((s) => ({
         ...s,
         generating: false,

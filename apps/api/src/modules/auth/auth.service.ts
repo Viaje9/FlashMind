@@ -78,7 +78,10 @@ export class AuthService {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException({
         error: {
@@ -126,7 +129,9 @@ export class AuthService {
       });
     }
 
-    const state = Buffer.from(JSON.stringify({ rememberMe })).toString('base64url');
+    const state = Buffer.from(JSON.stringify({ rememberMe })).toString(
+      'base64url',
+    );
     const scope = encodeURIComponent('openid email profile');
 
     return (
@@ -177,12 +182,15 @@ export class AuthService {
       });
     }
 
-    const tokens: GoogleTokenResponse = await tokenResponse.json();
+    const tokens = (await tokenResponse.json()) as GoogleTokenResponse;
 
     // 取得使用者資訊
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
+    const userInfoResponse = await fetch(
+      'https://www.googleapis.com/oauth2/v3/userinfo',
+      {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      },
+    );
 
     if (!userInfoResponse.ok) {
       throw new UnauthorizedException({
@@ -193,13 +201,15 @@ export class AuthService {
       });
     }
 
-    const googleUser: GoogleUserInfo = await userInfoResponse.json();
+    const googleUser = (await userInfoResponse.json()) as GoogleUserInfo;
 
     // 解析 state
     let rememberMe = false;
     if (state) {
       try {
-        const stateData = JSON.parse(Buffer.from(state, 'base64url').toString());
+        const stateData = JSON.parse(
+          Buffer.from(state, 'base64url').toString(),
+        ) as { rememberMe?: boolean };
         rememberMe = stateData.rememberMe === true;
       } catch {
         // 忽略解析錯誤
@@ -227,7 +237,8 @@ export class AuthService {
     if (user) {
       // 更新 OAuth account
       const existingOAuth = user.oauthAccounts.find(
-        (a) => a.provider === Provider.GOOGLE && a.providerId === googleUser.sub,
+        (a) =>
+          a.provider === Provider.GOOGLE && a.providerId === googleUser.sub,
       );
 
       if (!existingOAuth) {

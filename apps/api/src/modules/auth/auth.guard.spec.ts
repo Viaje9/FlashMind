@@ -23,7 +23,9 @@ describe('AuthGuard', () => {
     },
   };
 
-  const createMockExecutionContext = (cookies: Record<string, string> = {}): ExecutionContext => {
+  const createMockExecutionContext = (
+    cookies: Record<string, string> = {},
+  ): ExecutionContext => {
     const mockRequest = {
       cookies,
       user: undefined as { id: string; email: string } | undefined,
@@ -43,7 +45,10 @@ describe('AuthGuard', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AuthGuard, { provide: SessionService, useValue: mockSessionService }],
+      providers: [
+        AuthGuard,
+        { provide: SessionService, useValue: mockSessionService },
+      ],
     }).compile();
 
     guard = module.get<AuthGuard>(AuthGuard);
@@ -56,13 +61,17 @@ describe('AuthGuard', () => {
 
   describe('canActivate', () => {
     it('有效 session 時應該回傳 true 並設定 user 資訊', async () => {
-      const context = createMockExecutionContext({ session: 'valid-session-token' });
+      const context = createMockExecutionContext({
+        session: 'valid-session-token',
+      });
       sessionService.validateSession.mockResolvedValue(mockSession);
 
       const result = await guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(sessionService.validateSession).toHaveBeenCalledWith('valid-session-token');
+      expect(sessionService.validateSession).toHaveBeenCalledWith(
+        'valid-session-token',
+      );
 
       const request = context.switchToHttp().getRequest();
       expect(request.user).toEqual({
@@ -76,7 +85,9 @@ describe('AuthGuard', () => {
     it('沒有 session cookie 時應該拋出 UnauthorizedException', async () => {
       const context = createMockExecutionContext({});
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         response: {
           error: {
@@ -91,7 +102,9 @@ describe('AuthGuard', () => {
       const context = createMockExecutionContext({ session: 'invalid-token' });
       sessionService.validateSession.mockResolvedValue(null);
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
       await expect(guard.canActivate(context)).rejects.toMatchObject({
         response: {
           error: {
@@ -111,13 +124,17 @@ describe('AuthGuard', () => {
         }),
       } as unknown as ExecutionContext;
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('session cookie 為空字串時應該拋出 UnauthorizedException', async () => {
       const context = createMockExecutionContext({ session: '' });
 
-      await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(sessionService.validateSession).not.toHaveBeenCalled();
     });
   });

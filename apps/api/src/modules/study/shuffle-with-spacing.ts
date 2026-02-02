@@ -73,7 +73,8 @@ export function shuffleWithSpacing(
       // 插入位置 i 時，配對卡的實際位置：
       // - 若 i <= partnerIndex，則 partner 被推到 partnerIndex + 1，插入卡在 i
       // - 若 i > partnerIndex，則 partner 在 partnerIndex，插入卡在 i
-      const effectivePartner = i <= partnerIndex ? partnerIndex + 1 : partnerIndex;
+      const effectivePartner =
+        i <= partnerIndex ? partnerIndex + 1 : partnerIndex;
       const gap = Math.abs(i - effectivePartner);
 
       if (gap >= minSpacing) {
@@ -87,9 +88,10 @@ export function shuffleWithSpacing(
     }
 
     // 從合法位置中隨機選一個；若沒有則用 best-effort
-    const insertPos = validPositions.length > 0
-      ? validPositions[Math.floor(Math.random() * validPositions.length)]
-      : bestEffortPos;
+    const insertPos =
+      validPositions.length > 0
+        ? validPositions[Math.floor(Math.random() * validPositions.length)]
+        : bestEffortPos;
 
     base.splice(insertPos, 0, card);
   }

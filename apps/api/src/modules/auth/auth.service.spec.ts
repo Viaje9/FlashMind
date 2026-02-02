@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
@@ -12,7 +16,6 @@ jest.mock('bcrypt');
 describe('AuthService', () => {
   let service: AuthService;
   let prisma: jest.Mocked<PrismaService>;
-  let sessionService: jest.Mocked<SessionService>;
   let configService: jest.Mocked<ConfigService>;
 
   const mockUser = {
@@ -59,7 +62,6 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
     prisma = module.get(PrismaService);
-    sessionService = module.get(SessionService);
     configService = module.get(ConfigService);
   });
 
@@ -102,7 +104,10 @@ describe('AuthService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       prisma.user.create.mockResolvedValue(mockUser);
 
-      await service.register({ email: 'TEST@EXAMPLE.COM', password: 'password123' });
+      await service.register({
+        email: 'TEST@EXAMPLE.COM',
+        password: 'password123',
+      });
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
@@ -112,7 +117,9 @@ describe('AuthService', () => {
     it('Email 已存在時應該拋出 ConflictException', async () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
       await expect(service.register(registerDto)).rejects.toMatchObject({
         response: {
           error: {
@@ -130,14 +137,20 @@ describe('AuthService', () => {
     it('應該成功登入並更新 lastLoginAt', async () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      prisma.user.update.mockResolvedValue({ ...mockUser, lastLoginAt: new Date() });
+      prisma.user.update.mockResolvedValue({
+        ...mockUser,
+        lastLoginAt: new Date(),
+      });
 
       const result = await service.login(loginDto);
 
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       });
-      expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashed-password');
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'password123',
+        'hashed-password',
+      );
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-123' },
         data: { lastLoginAt: expect.any(Date) },
@@ -148,7 +161,9 @@ describe('AuthService', () => {
     it('使用者不存在時應該拋出 UnauthorizedException', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       await expect(service.login(loginDto)).rejects.toMatchObject({
         response: {
           error: {
@@ -160,16 +175,23 @@ describe('AuthService', () => {
     });
 
     it('使用者無密碼（OAuth 使用者）時應該拋出 UnauthorizedException', async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...mockUser, passwordHash: null });
+      prisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        passwordHash: null,
+      });
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('密碼錯誤時應該拋出 UnauthorizedException', async () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       await expect(service.login(loginDto)).rejects.toMatchObject({
         response: {
           error: {
@@ -197,7 +219,9 @@ describe('AuthService', () => {
     it('使用者不存在時應該拋出 UnauthorizedException', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.getUserById('nonexistent')).rejects.toThrow(UnauthorizedException);
+      await expect(service.getUserById('nonexistent')).rejects.toThrow(
+        UnauthorizedException,
+      );
       await expect(service.getUserById('nonexistent')).rejects.toMatchObject({
         response: {
           error: {
@@ -209,7 +233,10 @@ describe('AuthService', () => {
     });
 
     it('lastLoginAt 為 null 時應該回傳 null', async () => {
-      prisma.user.findUnique.mockResolvedValue({ ...mockUser, lastLoginAt: null });
+      prisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        lastLoginAt: null,
+      });
 
       const result = await service.getUserById('user-123');
 
@@ -233,7 +260,9 @@ describe('AuthService', () => {
 
       expect(url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
       expect(url).toContain('client_id=test-client-id');
-      expect(url).toContain('redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fgoogle%2Fcallback');
+      expect(url).toContain(
+        'redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fgoogle%2Fcallback',
+      );
       expect(url).toContain('response_type=code');
       expect(url).toContain('scope=openid%20email%20profile');
     });
@@ -242,8 +271,12 @@ describe('AuthService', () => {
       const urlWithRemember = service.getGoogleAuthUrl(true);
       const urlWithoutRemember = service.getGoogleAuthUrl(false);
 
-      const stateWithRemember = new URL(urlWithRemember).searchParams.get('state');
-      const stateWithoutRemember = new URL(urlWithoutRemember).searchParams.get('state');
+      const stateWithRemember = new URL(urlWithRemember).searchParams.get(
+        'state',
+      );
+      const stateWithoutRemember = new URL(urlWithoutRemember).searchParams.get(
+        'state',
+      );
 
       const decodedWithRemember = JSON.parse(
         Buffer.from(stateWithRemember!, 'base64url').toString(),
@@ -262,7 +295,9 @@ describe('AuthService', () => {
         return 'http://localhost:3000/auth/google/callback';
       });
 
-      expect(() => service.getGoogleAuthUrl(false)).toThrow(BadRequestException);
+      expect(() => service.getGoogleAuthUrl(false)).toThrow(
+        BadRequestException,
+      );
       expect(() => service.getGoogleAuthUrl(false)).toThrow(
         expect.objectContaining({
           response: {
@@ -281,7 +316,9 @@ describe('AuthService', () => {
         return 'test-client-id';
       });
 
-      expect(() => service.getGoogleAuthUrl(false)).toThrow(BadRequestException);
+      expect(() => service.getGoogleAuthUrl(false)).toThrow(
+        BadRequestException,
+      );
     });
   });
 });
