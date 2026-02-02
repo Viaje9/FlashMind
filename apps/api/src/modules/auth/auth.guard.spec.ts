@@ -19,6 +19,7 @@ describe('AuthGuard', () => {
     user: {
       id: 'user-123',
       email: 'test@example.com',
+      timezone: 'Asia/Taipei',
     },
   };
 
@@ -67,6 +68,7 @@ describe('AuthGuard', () => {
       expect(request.user).toEqual({
         id: 'user-123',
         email: 'test@example.com',
+        timezone: 'Asia/Taipei',
       });
       expect(request.sessionToken).toBe('valid-session-token');
     });

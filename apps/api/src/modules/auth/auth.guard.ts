@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { SessionService } from './session.service';
 import { Request } from 'express';
 
@@ -6,6 +11,7 @@ export interface AuthenticatedRequest extends Request {
   user: {
     id: string;
     email: string;
+    timezone: string;
   };
   sessionToken: string;
 }
@@ -41,6 +47,7 @@ export class AuthGuard implements CanActivate {
     request.user = {
       id: session.user.id,
       email: session.user.email,
+      timezone: session.user.timezone,
     };
     request.sessionToken = sessionToken;
 

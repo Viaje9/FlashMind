@@ -23,7 +23,7 @@ export class StudyController {
     @Param('deckId') deckId: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    const cards = await this.studyService.getStudyCards(deckId, req.user.id);
+    const cards = await this.studyService.getStudyCards(deckId, req.user.id, req.user.timezone);
     return { data: cards };
   }
 
@@ -48,7 +48,7 @@ export class StudyController {
     @Param('deckId') deckId: string,
     @Req() req: AuthenticatedRequest,
   ) {
-    const summary = await this.studyService.getSummary(deckId, req.user.id);
+    const summary = await this.studyService.getSummary(deckId, req.user.id, req.user.timezone);
     return { data: summary };
   }
 }

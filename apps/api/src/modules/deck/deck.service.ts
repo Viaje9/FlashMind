@@ -48,7 +48,7 @@ export interface DeckDetail {
 export class DeckService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllByUserId(userId: string): Promise<DeckListItem[]> {
+  async findAllByUserId(userId: string, timezone: string): Promise<DeckListItem[]> {
     const decks = await this.prisma.deck.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
@@ -58,7 +58,7 @@ export class DeckService {
 
     return Promise.all(
       decks.map(async (deck) => {
-        const startOfStudyDay = getStartOfStudyDay(now, deck.dailyResetHour);
+        const startOfStudyDay = getStartOfStudyDay(now, deck.dailyResetHour, timezone);
 
         const queries: Promise<number>[] = [
           this.prisma.card.count({ where: { deckId: deck.id } }),
@@ -114,7 +114,7 @@ export class DeckService {
         const completedCount = totalCount - newCount;
         const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-        const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deck, now);
+        const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deck, now, timezone);
 
         return {
           id: deck.id,
@@ -357,7 +357,7 @@ export class DeckService {
     });
   }
 
-  async setDailyOverride(id: string, userId: string, dto: SetDailyOverrideDto) {
+  async setDailyOverride(id: string, userId: string, dto: SetDailyOverrideDto, timezone: string) {
     const deck = await this.prisma.deck.findUnique({
       where: { id },
     });
@@ -399,7 +399,7 @@ export class DeckService {
     }
 
     const now = new Date();
-    const overrideDate = getStartOfStudyDay(now, deck.dailyResetHour);
+    const overrideDate = getStartOfStudyDay(now, deck.dailyResetHour, timezone);
 
     const updatedDeck = await this.prisma.deck.update({
       where: { id },
@@ -410,7 +410,7 @@ export class DeckService {
       },
     });
 
-    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(updatedDeck, now);
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(updatedDeck, now, timezone);
 
     return {
       data: {

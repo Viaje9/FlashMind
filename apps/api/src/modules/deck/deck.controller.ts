@@ -25,7 +25,7 @@ export class DeckController {
 
   @Get()
   async listDecks(@Req() req: AuthenticatedRequest) {
-    const decks = await this.deckService.findAllByUserId(req.user.id);
+    const decks = await this.deckService.findAllByUserId(req.user.id, req.user.timezone);
     return { data: decks };
   }
 
@@ -65,6 +65,6 @@ export class DeckController {
     @Param('id') id: string,
     @Body() dto: SetDailyOverrideDto,
   ) {
-    return this.deckService.setDailyOverride(id, req.user.id, dto);
+    return this.deckService.setDailyOverride(id, req.user.id, dto, req.user.timezone);
   }
 }

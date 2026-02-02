@@ -163,12 +163,12 @@ export class StudyService {
    * 取得今日學習卡片
    * 排序：新卡與複習卡隨機混合，同一張卡的正反向至少間隔 5 張
    */
-  async getStudyCards(deckId: string, userId: string): Promise<StudyCard[]> {
+  async getStudyCards(deckId: string, userId: string, timezone: string): Promise<StudyCard[]> {
     const deckSettings = await this.validateDeckAccess(deckId, userId);
     const { dailyResetHour, enableReverse } = deckSettings;
     const now = new Date();
-    const startOfStudyDay = getStartOfStudyDay(now, dailyResetHour);
-    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deckSettings, now);
+    const startOfStudyDay = getStartOfStudyDay(now, dailyResetHour, timezone);
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deckSettings, now, timezone);
 
     // 查今日已學新卡數
     const todayNewCardsStudied = await this.prisma.reviewLog.count({
@@ -425,12 +425,12 @@ export class StudyService {
   /**
    * 取得學習統計摘要
    */
-  async getSummary(deckId: string, userId: string): Promise<StudySummary> {
+  async getSummary(deckId: string, userId: string, timezone: string): Promise<StudySummary> {
     const deckSettings = await this.validateDeckAccess(deckId, userId);
     const { dailyResetHour, enableReverse } = deckSettings;
     const now = new Date();
-    const startOfToday = getStartOfStudyDay(now, dailyResetHour);
-    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deckSettings, now);
+    const startOfToday = getStartOfStudyDay(now, dailyResetHour, timezone);
+    const { effectiveNewCards, effectiveReviewCards } = getEffectiveDailyLimits(deckSettings, now, timezone);
 
     // 總卡片數
     const totalCards = await this.prisma.card.count({

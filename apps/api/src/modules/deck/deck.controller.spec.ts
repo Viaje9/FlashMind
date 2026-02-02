@@ -21,7 +21,7 @@ describe('DeckController', () => {
     canActivate: jest.fn(() => true),
   };
 
-  const mockUser = { id: 'user-123', email: 'test@example.com' };
+  const mockUser = { id: 'user-123', email: 'test@example.com', timezone: 'Asia/Taipei' };
   const mockRequest = { user: mockUser } as any;
 
   beforeEach(async () => {
@@ -58,7 +58,7 @@ describe('DeckController', () => {
 
       const result = await controller.listDecks(mockRequest);
 
-      expect(service.findAllByUserId).toHaveBeenCalledWith('user-123');
+      expect(service.findAllByUserId).toHaveBeenCalledWith('user-123', 'Asia/Taipei');
       expect(result).toEqual({ data: mockDecks });
     });
   });
@@ -151,7 +151,7 @@ describe('DeckController', () => {
 
       const result = await controller.setDailyOverride(mockRequest, 'deck-1', dto);
 
-      expect(service.setDailyOverride).toHaveBeenCalledWith('deck-1', 'user-123', dto);
+      expect(service.setDailyOverride).toHaveBeenCalledWith('deck-1', 'user-123', dto, 'Asia/Taipei');
       expect(result).toEqual(mockResponse);
     });
   });

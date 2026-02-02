@@ -17,6 +17,7 @@ model User {
   email           String         @unique
   passwordHash    String?
   primaryProvider Provider       @default(EMAIL)
+  timezone        String         @default("Asia/Taipei")
   lastLoginAt     DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

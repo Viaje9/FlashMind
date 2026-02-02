@@ -39,6 +39,7 @@ describe('StudyService', () => {
 
   const mockUserId = 'user-123';
   const mockDeckId = 'deck-123';
+  const mockTimezone = 'Asia/Taipei';
   const mockCardId = 'card-123';
 
   const mockDeck = {
@@ -158,7 +159,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([mockDueCard]) // due cards
         .mockResolvedValueOnce([mockNewCard]); // new cards
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       expect(result).toHaveLength(2);
       const ids = result.map((c) => c.id).sort();
@@ -176,7 +177,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([]) // no due cards
         .mockResolvedValueOnce([mockNewCard]); // new cards
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       expect(result).toHaveLength(1);
       expect(result[0].direction).toBe('FORWARD');
@@ -191,7 +192,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       expect(result).toEqual([]);
     });
@@ -205,7 +206,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([mockDueCard]) // due cards
         .mockResolvedValueOnce([mockNewCard]); // new cards
 
-      await service.getStudyCards(mockDeckId, mockUserId);
+      await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 新卡查詢的 take 應為 20 - 10 = 10
       const newCardsCall = mockPrismaService.card.findMany.mock.calls[1];
@@ -221,7 +222,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([mockDueCard]) // due cards
         .mockResolvedValueOnce([mockNewCard]); // new cards
 
-      await service.getStudyCards(mockDeckId, mockUserId);
+      await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 複習卡查詢的 take 應為 100 - 50 = 50
       const dueCardsCall = mockPrismaService.card.findMany.mock.calls[0];
@@ -236,7 +237,7 @@ describe('StudyService', () => {
       mockPrismaService.card.findMany
         .mockResolvedValueOnce([mockDueCard]); // 只有 due cards 查詢
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 應只呼叫一次 findMany（只查複習卡）
       expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(1);
@@ -252,7 +253,7 @@ describe('StudyService', () => {
       mockPrismaService.card.findMany
         .mockResolvedValueOnce([mockNewCard]); // 只有 new cards 查詢
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 應只呼叫一次 findMany（只查新卡）
       expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(1);
@@ -264,7 +265,7 @@ describe('StudyService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.getStudyCards('nonexistent', mockUserId),
+        service.getStudyCards('nonexistent', mockUserId, mockTimezone),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -272,7 +273,7 @@ describe('StudyService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.getStudyCards(mockDeckId, 'other-user'),
+        service.getStudyCards(mockDeckId, 'other-user', mockTimezone),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -302,7 +303,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([reverseDueCard]) // 反向複習卡
         .mockResolvedValueOnce([reverseNewCard]); // 反向新卡
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 4 張卡：包含 2 張 FORWARD + 2 張 REVERSE（順序為隨機混合）
       expect(result).toHaveLength(4);
@@ -325,7 +326,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([mockDueCard]) // 正向複習卡
         .mockResolvedValueOnce([mockNewCard]); // 正向新卡
 
-      const result = await service.getStudyCards(mockDeckId, mockUserId);
+      const result = await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 只有 2 次 findMany 呼叫（正向複習 + 正向新卡）
       expect(mockPrismaService.card.findMany).toHaveBeenCalledTimes(2);
@@ -353,7 +354,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce([mockDueCard]) // due cards
         .mockResolvedValueOnce([mockNewCard]); // new cards
 
-      await service.getStudyCards(mockDeckId, mockUserId);
+      await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
 
       // 複習卡 take = 200 - 50 = 150
       const dueCardsCall = mockPrismaService.card.findMany.mock.calls[0];
@@ -704,7 +705,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(5)  // todayNewStudied
         .mockResolvedValueOnce(5); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result).toEqual({
         totalCards: 100,
@@ -722,7 +723,7 @@ describe('StudyService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.getSummary('nonexistent', mockUserId),
+        service.getSummary('nonexistent', mockUserId, mockTimezone),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -730,7 +731,7 @@ describe('StudyService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.getSummary(mockDeckId, 'other-user'),
+        service.getSummary(mockDeckId, 'other-user', mockTimezone),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -748,7 +749,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(5)  // todayNewStudied
         .mockResolvedValueOnce(5); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result).toEqual({
         totalCards: 100,
@@ -773,7 +774,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(3)  // todayNewStudied
         .mockResolvedValueOnce(7); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       // 只呼叫 3 次 card.count（totalCards + forwardNewCount + forwardReviewCount）
       expect(mockPrismaService.card.count).toHaveBeenCalledTimes(3);
@@ -796,7 +797,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(8)  // todayNewStudied
         .mockResolvedValueOnce(4); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result.todayNewStudied).toBe(8);
       // 驗證第二次 reviewLog.count 呼叫使用 prevState: NEW
@@ -820,7 +821,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(8)  // todayNewStudied
         .mockResolvedValueOnce(4); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result.todayReviewStudied).toBe(4);
       // 驗證第三次 reviewLog.count 呼叫使用 prevState: { not: NEW }
@@ -845,7 +846,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(0)  // todayNewStudied
         .mockResolvedValueOnce(0); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result.dailyNewCards).toBe(15);
       expect(result.dailyReviewCards).toBe(200);
@@ -867,7 +868,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(10)  // todayNewStudied（含正向與反向 NEW）
         .mockResolvedValueOnce(5);  // todayReviewStudied（含正向與反向非 NEW）
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result.todayNewStudied).toBe(10);
       expect(result.todayReviewStudied).toBe(5);
@@ -895,7 +896,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(5)
         .mockResolvedValueOnce(5);
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result.dailyNewCards).toBe(50);
       expect(result.dailyReviewCards).toBe(200);
@@ -914,7 +915,7 @@ describe('StudyService', () => {
         .mockResolvedValueOnce(0)  // todayNewStudied
         .mockResolvedValueOnce(0); // todayReviewStudied
 
-      const result = await service.getSummary(mockDeckId, mockUserId);
+      const result = await service.getSummary(mockDeckId, mockUserId, mockTimezone);
 
       expect(result.todayNewStudied).toBe(0);
       expect(result.todayReviewStudied).toBe(0);

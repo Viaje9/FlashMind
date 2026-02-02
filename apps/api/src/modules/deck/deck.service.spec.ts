@@ -26,6 +26,7 @@ describe('DeckService', () => {
   };
 
   const mockUserId = 'user-123';
+  const mockTimezone = 'Asia/Taipei';
   const mockDeck = {
     id: 'deck-123',
     name: '英文單字',
@@ -63,7 +64,7 @@ describe('DeckService', () => {
     it('應該回傳使用者的所有牌組', async () => {
       mockPrismaService.deck.findMany.mockResolvedValue([mockDeck]);
 
-      const result = await service.findAllByUserId(mockUserId);
+      const result = await service.findAllByUserId(mockUserId, mockTimezone);
 
       expect(prisma.deck.findMany).toHaveBeenCalledWith({
         where: { userId: mockUserId },
@@ -89,7 +90,7 @@ describe('DeckService', () => {
     it('使用者沒有牌組時應該回傳空陣列', async () => {
       mockPrismaService.deck.findMany.mockResolvedValue([]);
 
-      const result = await service.findAllByUserId(mockUserId);
+      const result = await service.findAllByUserId(mockUserId, mockTimezone);
 
       expect(result).toEqual([]);
     });
@@ -104,7 +105,7 @@ describe('DeckService', () => {
         .mockResolvedValueOnce(5)    // todayNewStudied
         .mockResolvedValueOnce(8);   // todayReviewStudied
 
-      const result = await service.findAllByUserId(mockUserId);
+      const result = await service.findAllByUserId(mockUserId, mockTimezone);
 
       expect(result[0]).toEqual(expect.objectContaining({
         dailyNewCards: 20,
@@ -125,7 +126,7 @@ describe('DeckService', () => {
         .mockResolvedValueOnce(4)   // reverseNewCount
         .mockResolvedValueOnce(1);  // reverseReviewCount
 
-      const result = await service.findAllByUserId(mockUserId);
+      const result = await service.findAllByUserId(mockUserId, mockTimezone);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
@@ -401,7 +402,7 @@ describe('DeckService', () => {
       jest.useFakeTimers();
       jest.setSystemTime(now);
 
-      const overrideDate = getStartOfStudyDay(now, 4);
+      const overrideDate = getStartOfStudyDay(now, 4, mockTimezone);
       const updatedDeck = {
         ...mockDeck,
         overrideDate,
@@ -414,7 +415,7 @@ describe('DeckService', () => {
       const result = await service.setDailyOverride('deck-123', mockUserId, {
         newCards: 50,
         reviewCards: 200,
-      });
+      }, mockTimezone);
 
       expect(result.data.effectiveNewCards).toBe(50);
       expect(result.data.effectiveReviewCards).toBe(200);
@@ -433,7 +434,7 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.setDailyOverride('deck-123', mockUserId, { newCards: 5 }),
+        service.setDailyOverride('deck-123', mockUserId, { newCards: 5 }, mockTimezone),
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
@@ -441,7 +442,7 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.setDailyOverride('deck-123', mockUserId, { reviewCards: 50 }),
+        service.setDailyOverride('deck-123', mockUserId, { reviewCards: 50 }, mockTimezone),
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
@@ -449,7 +450,7 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
 
       await expect(
-        service.setDailyOverride('deck-123', 'other-user', { newCards: 50 }),
+        service.setDailyOverride('deck-123', 'other-user', { newCards: 50 }, mockTimezone),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -457,7 +458,7 @@ describe('DeckService', () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.setDailyOverride('nonexistent', mockUserId, { newCards: 50 }),
+        service.setDailyOverride('nonexistent', mockUserId, { newCards: 50 }, mockTimezone),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -466,7 +467,7 @@ describe('DeckService', () => {
       jest.useFakeTimers();
       jest.setSystemTime(now);
 
-      const overrideDate = getStartOfStudyDay(now, 4);
+      const overrideDate = getStartOfStudyDay(now, 4, mockTimezone);
       const firstUpdate = {
         ...mockDeck,
         overrideDate,
@@ -484,8 +485,8 @@ describe('DeckService', () => {
         .mockResolvedValueOnce(firstUpdate)
         .mockResolvedValueOnce(secondUpdate);
 
-      await service.setDailyOverride('deck-123', mockUserId, { newCards: 50 });
-      const result = await service.setDailyOverride('deck-123', mockUserId, { newCards: 80 });
+      await service.setDailyOverride('deck-123', mockUserId, { newCards: 50 }, mockTimezone);
+      const result = await service.setDailyOverride('deck-123', mockUserId, { newCards: 80 }, mockTimezone);
 
       expect(result.data.effectiveNewCards).toBe(80);
 
