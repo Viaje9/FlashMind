@@ -4,14 +4,15 @@ packages:
   - e2e
 
 ignoredBuiltDependencies:
-  - '@nestjs/core'
-  - '@parcel/watcher'
+  - "@nestjs/core"
+  - "@parcel/watcher"
   - esbuild
   - lmdb
   - msgpackr-extract
   - unrs-resolver
 
 onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
+  - "@prisma/client"
+  - "@prisma/engines"
+  - bcrypt
   - prisma
