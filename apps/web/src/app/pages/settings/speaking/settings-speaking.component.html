@@ -1,0 +1,48 @@
+<div class="min-h-screen pb-10">
+  <fm-page-header title="口說練習設定" layout="center">
+    <fm-button class="fm-header-left" variant="ghost" size="sm" routerLink="/settings">
+      <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+      返回
+    </fm-button>
+    <fm-button class="fm-header-right" variant="ghost" size="sm" routerLink="/settings"
+      >完成</fm-button
+    >
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-lg space-y-6 p-4">
+    <section>
+      <fm-section-heading text="口說偏好"></fm-section-heading>
+      <div
+        class="overflow-hidden rounded-2xl bg-surface-light shadow-sm divide-y divide-slate-100 dark:bg-surface-dark dark:divide-white/5"
+      >
+        <fm-setting-row
+          [formControl]="autoPlayVoiceControl"
+          icon="volume_up"
+          iconClass="bg-orange-500/10 text-orange-500"
+          label="自動播放 AI 語音"
+          description="收到回覆後自動播放語音"
+          variant="toggle"
+          testId="speaking-settings-auto-play-voice"
+        ></fm-setting-row>
+        <fm-setting-row
+          [formControl]="showTranscriptControl"
+          icon="subtitles"
+          iconClass="bg-cyan-500/10 text-cyan-500"
+          label="顯示逐字稿"
+          description="顯示 AI 回覆文字內容"
+          variant="toggle"
+          testId="speaking-settings-show-transcript"
+        ></fm-setting-row>
+        <fm-setting-row
+          [formControl]="autoTranslateControl"
+          icon="translate"
+          iconClass="bg-indigo-500/10 text-indigo-500"
+          label="自動翻譯為繁體中文"
+          description="口說回覆完成後自動提供翻譯"
+          variant="toggle"
+          testId="speaking-settings-auto-translate"
+        ></fm-setting-row>
+      </div>
+    </section>
+  </main>
+</div>

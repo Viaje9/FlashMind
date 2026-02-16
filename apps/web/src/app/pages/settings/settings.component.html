@@ -1,71 +1,54 @@
-<div class="min-h-screen pb-10">
+<div class="flex min-h-screen flex-col">
   <fm-page-header title="設定" layout="center">
-    <fm-button class="fm-header-left" variant="ghost" size="sm" routerLink="/decks">
+    <fm-button class="fm-header-left" variant="ghost" size="sm" routerLink="/home">
       <span class="material-symbols-outlined text-[20px]">chevron_left</span>
       返回
     </fm-button>
-    <fm-button class="fm-header-right" variant="ghost" size="sm" routerLink="/decks">完成</fm-button>
+    <fm-button class="fm-header-right" variant="ghost" size="sm" routerLink="/home">完成</fm-button>
   </fm-page-header>
 
-  <main class="mx-auto w-full max-w-lg p-4 space-y-6">
-    <fm-profile-card [name]="userName()" [email]="userEmail()" actionLabel="管理帳戶"></fm-profile-card>
+  <main class="mx-auto w-full max-w-lg flex-1 p-4">
+    <div class="space-y-6">
+      <fm-profile-card
+        [name]="userName()"
+        [email]="userEmail()"
+        actionLabel="管理帳戶"
+      ></fm-profile-card>
 
-    <section>
-      <fm-section-heading text="學習偏好"></fm-section-heading>
-      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
-        <fm-setting-row
-          [formControl]="dailyReminderControl"
-          icon="notifications_active"
-          iconClass="bg-blue-500/10 text-blue-500"
-          label="每日學習提醒"
-          variant="toggle"
-        ></fm-setting-row>
-        <div class="pl-6">
+      <section>
+        <fm-section-heading text="練習設定"></fm-section-heading>
+        <div
+          class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5"
+        >
           <fm-setting-row
-            icon="schedule"
-            iconClass="bg-primary/10 text-primary"
-            label="提醒時間"
-            value="20:00"
+            icon="style"
+            iconClass="bg-blue-500/10 text-blue-500"
+            label="單字練習設定"
+            description="Decks 的學習偏好、提醒與模式"
             variant="link"
+            testId="settings-vocab-link"
+            (rowClick)="goToVocabSettings()"
+          ></fm-setting-row>
+          <fm-setting-row
+            icon="mic"
+            iconClass="bg-orange-500/10 text-orange-500"
+            label="口說練習設定"
+            description="語音播放、逐字稿與口說偏好"
+            variant="link"
+            testId="settings-speaking-link"
+            (rowClick)="goToSpeakingSettings()"
           ></fm-setting-row>
         </div>
-        <fm-setting-row
-          [formControl]="spacedRepetitionControl"
-          icon="psychology"
-          iconClass="bg-purple-500/10 text-purple-500"
-          label="間隔重複模式"
-          description="根據記憶曲線優化複習"
-          variant="toggle"
-        ></fm-setting-row>
-        <fm-setting-row
-          [formControl]="smartShuffleControl"
-          icon="shuffle"
-          iconClass="bg-green-500/10 text-green-500"
-          label="智能洗牌"
-          variant="toggle"
-        ></fm-setting-row>
-      </div>
-    </section>
+      </section>
+    </div>
+  </main>
 
-    <section>
-      <fm-section-heading text="支援與關於"></fm-section-heading>
-      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/5">
-        <fm-setting-row
-          icon="download"
-          iconClass="bg-teal-500/10 text-teal-500"
-          label="匯出學習數據"
-          variant="link"
-        ></fm-setting-row>
-        <fm-setting-row
-          icon="help"
-          iconClass="bg-indigo-500/10 text-indigo-500"
-          label="使用說明與協助"
-          variant="link"
-        ></fm-setting-row>
-      </div>
-    </section>
-
-    <section class="space-y-4">
+  <footer
+    class="sticky bottom-0 border-t border-slate-100 bg-background-light/95 backdrop-blur-sm dark:border-white/10 dark:bg-background-dark/95"
+  >
+    <div
+      class="mx-auto w-full max-w-lg space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3"
+    >
       <fm-button variant="danger" [fullWidth]="true" (click)="logout()" [disabled]="loading()">
         @if (loading()) {
           登出中...
@@ -77,6 +60,6 @@
         {{ version.displayString }}<br />
         © 2024 FlashMind
       </p>
-    </section>
-  </main>
+    </div>
+  </footer>
 </div>

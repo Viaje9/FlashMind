@@ -1,0 +1,48 @@
+<div class="min-h-screen pb-10">
+  <fm-page-header title="單字練習設定" layout="center">
+    <fm-button class="fm-header-left" variant="ghost" size="sm" routerLink="/settings">
+      <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+      返回
+    </fm-button>
+    <fm-button class="fm-header-right" variant="ghost" size="sm" routerLink="/settings"
+      >完成</fm-button
+    >
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-lg space-y-6 p-4">
+    <section>
+      <fm-section-heading text="Decks 偏好"></fm-section-heading>
+      <div
+        class="overflow-hidden rounded-2xl bg-surface-light shadow-sm divide-y divide-slate-100 dark:bg-surface-dark dark:divide-white/5"
+      >
+        <fm-setting-row
+          [formControl]="dailyReminderControl"
+          icon="notifications_active"
+          iconClass="bg-blue-500/10 text-blue-500"
+          label="每日學習提醒"
+          description="提醒你完成今日單字進度"
+          variant="toggle"
+          testId="vocab-settings-daily-reminder"
+        ></fm-setting-row>
+        <fm-setting-row
+          [formControl]="spacedRepetitionControl"
+          icon="psychology"
+          iconClass="bg-purple-500/10 text-purple-500"
+          label="間隔重複模式"
+          description="依記憶曲線安排複習"
+          variant="toggle"
+          testId="vocab-settings-spaced-repetition"
+        ></fm-setting-row>
+        <fm-setting-row
+          [formControl]="smartShuffleControl"
+          icon="shuffle"
+          iconClass="bg-green-500/10 text-green-500"
+          label="智能洗牌"
+          description="自動打散題目順序"
+          variant="toggle"
+          testId="vocab-settings-smart-shuffle"
+        ></fm-setting-row>
+      </div>
+    </section>
+  </main>
+</div>

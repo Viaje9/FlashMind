@@ -94,6 +94,22 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'settings/vocab',
+    loadComponent: () =>
+      import('./pages/settings/vocab/settings-vocab.component').then(
+        (module) => module.SettingsVocabComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'settings/speaking',
+    loadComponent: () =>
+      import('./pages/settings/speaking/settings-speaking.component').then(
+        (module) => module.SettingsSpeakingComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./pages/settings/settings.component').then((module) => module.SettingsComponent),
