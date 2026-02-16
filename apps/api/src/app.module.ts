@@ -9,6 +9,7 @@ import { CardModule } from './modules/card/card.module';
 import { AiModule } from './modules/ai/ai.module';
 import { TtsModule } from './modules/tts/tts.module';
 import { StudyModule } from './modules/study/study.module';
+import { SpeakingModule } from './modules/speaking/speaking.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { StudyModule } from './modules/study/study.module';
     AiModule,
     TtsModule,
     StudyModule,
+    SpeakingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,15 +1,26 @@
-export * from './aI.service';
-import { AIService } from './aI.service';
-export * from './auth.service';
-import { AuthService } from './auth.service';
-export * from './cards.service';
-import { CardsService } from './cards.service';
-export * from './deck.service';
-import { DeckService } from './deck.service';
-export * from './decks.service';
-import { DecksService } from './decks.service';
-export * from './study.service';
-import { StudyService } from './study.service';
-export * from './tTS.service';
-import { TTSService } from './tTS.service';
-export const APIS = [AIService, AuthService, CardsService, DeckService, DecksService, StudyService, TTSService];
+export * from "./aI.service";
+import { AIService } from "./aI.service";
+export * from "./auth.service";
+import { AuthService } from "./auth.service";
+export * from "./cards.service";
+import { CardsService } from "./cards.service";
+export * from "./deck.service";
+import { DeckService } from "./deck.service";
+export * from "./decks.service";
+import { DecksService } from "./decks.service";
+export * from "./speaking.service";
+import { SpeakingService } from "./speaking.service";
+export * from "./study.service";
+import { StudyService } from "./study.service";
+export * from "./tTS.service";
+import { TTSService } from "./tTS.service";
+export const APIS = [
+  AIService,
+  AuthService,
+  CardsService,
+  DeckService,
+  DecksService,
+  SpeakingService,
+  StudyService,
+  TTSService,
+];

@@ -41,6 +41,20 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'speaking/history',
+    loadComponent: () =>
+      import('./pages/speaking-history/speaking-history.component').then(
+        (module) => module.SpeakingHistoryComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'speaking',
+    loadComponent: () =>
+      import('./pages/speaking/speaking.component').then((module) => module.SpeakingComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: 'decks/:id/settings',
     loadComponent: () =>
       import('./pages/deck-settings/deck-settings.component').then(
@@ -108,6 +122,7 @@ export const routes: Routes = [
         (module) => module.SettingsSpeakingComponent,
       ),
     canActivate: [authGuard],
+    canDeactivate: [unsavedChangesGuard],
   },
   {
     path: 'settings',

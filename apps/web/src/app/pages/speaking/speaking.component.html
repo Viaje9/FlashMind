@@ -1,0 +1,564 @@
+<div
+  class="flex min-h-screen flex-col bg-background-light text-slate-900 dark:bg-background-dark dark:text-slate-100"
+>
+  <fm-page-header title="FlashMind" [titleClickable]="true" (titleClick)="onHeaderTitleClick()">
+    <fm-icon-button
+      class="fm-header-left"
+      variant="ghost"
+      ariaLabel="回首頁"
+      routerLink="/home"
+      data-testid="speaking-home-link"
+    >
+      <span class="material-symbols-outlined text-[22px]">home</span>
+    </fm-icon-button>
+    <fm-icon-button
+      class="fm-header-right"
+      variant="ghost"
+      ariaLabel="口說歷史"
+      routerLink="/speaking/history"
+      data-testid="speaking-history-link"
+    >
+      <span class="material-symbols-outlined text-[22px]">history</span>
+    </fm-icon-button>
+    <fm-icon-button
+      class="fm-header-right"
+      variant="ghost"
+      ariaLabel="口說設定"
+      routerLink="/settings/speaking"
+      data-testid="speaking-settings-link"
+    >
+      <span class="material-symbols-outlined text-[22px]">settings</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-4 pt-3">
+    @if (combinedError()) {
+      <div class="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-base text-rose-700">
+        <div class="flex items-center justify-between gap-3">
+          <span>{{ combinedError() }}</span>
+          <button class="text-base underline" type="button" (click)="clearError()">關閉</button>
+        </div>
+      </div>
+    }
+
+    @if (retryAvailable() && !sending()) {
+      <div
+        class="mb-3 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3"
+      >
+        <p class="text-base text-amber-800">上次語音送出失敗，已保留音檔可重試。</p>
+        <button
+          type="button"
+          class="rounded-lg bg-amber-500 px-3 py-1.5 text-base font-medium text-white hover:bg-amber-600"
+          (click)="onRetryLastRequest()"
+        >
+          重試送出
+        </button>
+      </div>
+    }
+
+    @if (permissionWarning()) {
+      <div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-base text-amber-800">
+        {{ permissionWarning() }}
+      </div>
+    }
+
+    @if (inputBlocked()) {
+      <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-base text-amber-800">
+        <h2 class="mb-2 text-base font-semibold text-amber-900">目前無法使用語音練習</h2>
+        <p class="mb-3 leading-relaxed">{{ unsupportedReason() }}</p>
+        <ul class="list-disc space-y-1 pl-5">
+          <li>請確認網址為 HTTPS 或 localhost</li>
+          <li>在瀏覽器網站設定中允許麥克風權限</li>
+          <li>調整後重整頁面再試一次</li>
+        </ul>
+      </section>
+    } @else {
+      <section class="flex-1 overflow-y-auto pb-4" data-testid="speaking-message-list">
+        @if (loadingConversation()) {
+          <div
+            class="rounded-xl border border-slate-200 bg-surface-light p-3 text-base text-slate-500 dark:border-white/10 dark:bg-surface-dark dark:text-slate-300"
+          >
+            載入會話中...
+          </div>
+        }
+
+        @if (!loadingConversation() && messages().length === 0) {
+          <div class="flex h-full flex-col items-center justify-center gap-4 py-6 text-center">
+            <div
+              class="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 text-primary"
+            >
+              <span class="material-symbols-outlined text-[42px]">mic</span>
+            </div>
+            <div>
+              <p class="text-base font-semibold text-slate-800">準備好練習了嗎？</p>
+              <p class="mt-1 text-base leading-relaxed text-slate-500">
+                點擊下方麥克風開始說話，AI 會用語音和文字回覆你。
+              </p>
+            </div>
+          </div>
+        }
+
+        @for (message of messages(); track message.id) {
+          @if (message.role === 'summary') {
+            <article
+              class="mb-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 shadow-sm"
+            >
+              <div class="mb-2 flex items-center gap-2 text-base font-semibold text-primary">
+                <span class="material-symbols-outlined text-[15px]">description</span>
+                對話整理
+              </div>
+              <p class="whitespace-pre-wrap text-base leading-relaxed text-slate-700">
+                {{ message.text }}
+              </p>
+            </article>
+          } @else {
+            <article
+              class="mb-3 flex"
+              [class.justify-end]="message.role === 'user'"
+              [class.justify-start]="message.role === 'assistant'"
+            >
+              @if (message.role === 'assistant') {
+                <button
+                  type="button"
+                  class="mr-2 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-base font-semibold text-primary transition"
+                  [class.ai-avatar-playing]="isMessagePlaying(message)"
+                  (click)="onPlayMessageAudio(message.id)"
+                  aria-label="播放 AI 語音"
+                >
+                  AI
+                </button>
+              }
+
+              @if (message.role === 'user') {
+                <button
+                  type="button"
+                  class="inline-flex w-full max-w-[64%] items-center justify-between gap-2 rounded-2xl px-3 py-2 text-white shadow-sm disabled:opacity-60"
+                  style="
+                    min-height: 3.9rem;
+                    background: linear-gradient(135deg, #fb7a16 0%, #ff8a26 55%, #ff952f 100%);
+                  "
+                  (click)="onPlayMessageAudio(message.id)"
+                  [disabled]="!message.audioBlobKey"
+                  aria-label="播放語音訊息"
+                >
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">mic</span>
+                    <span class="text-base leading-relaxed">語音訊息</span>
+                  </span>
+                  <span
+                    class="inline-flex flex-none items-center justify-center rounded-full bg-white/25"
+                    style="width: 2.25rem; height: 2.25rem"
+                    [class.bg-white/35]="isMessagePlaying(message)"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">
+                      {{ isMessagePlaying(message) ? 'equalizer' : 'play_arrow' }}
+                    </span>
+                  </span>
+                </button>
+              } @else {
+                <div
+                  class="max-w-[78%] rounded-2xl rounded-bl-md bg-surface-light px-4 py-2.5 shadow-sm ring-1 ring-slate-200"
+                >
+                  @if (!settings().showTranscript) {
+                    <p class="text-base text-slate-500">已隱藏逐字稿，請播放語音收聽。</p>
+                  } @else {
+                    <p class="whitespace-pre-wrap text-base leading-relaxed text-slate-700">
+                      @if (shouldShowTranslation(message) && message.translatedText?.trim()) {
+                        {{ message.translatedText }}
+                      } @else if (message.text?.trim()) {
+                        {{ message.text }}
+                      } @else {
+                        <span class="opacity-75">（語音訊息）</span>
+                      }
+                    </p>
+                  }
+
+                  @if (translatingMessageId() === message.id) {
+                    <div
+                      class="mt-2 inline-flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-base font-medium text-white dark:bg-blue-500"
+                    >
+                      <span>翻譯中</span>
+                      <span
+                        class="dot-bounce [animation-delay:0ms]"
+                        style="background-color: #ffffff"
+                      ></span>
+                      <span
+                        class="dot-bounce [animation-delay:150ms]"
+                        style="background-color: #ffffff"
+                      ></span>
+                      <span
+                        class="dot-bounce [animation-delay:300ms]"
+                        style="background-color: #ffffff"
+                      ></span>
+                    </div>
+                  }
+
+                  <div class="mt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      class="rounded-full bg-blue-600 px-3 py-1 text-base font-medium text-white hover:bg-blue-700 disabled:bg-blue-600 disabled:text-white dark:bg-blue-500 dark:hover:bg-blue-400 dark:disabled:bg-blue-500"
+                      (click)="onToggleTranslate(message)"
+                      [disabled]="translatingMessageId() === message.id"
+                    >
+                      @if (translatingMessageId() === message.id) {
+                        翻譯中...
+                      } @else if (message.translatedText && shouldShowTranslation(message)) {
+                        原文
+                      } @else {
+                        翻譯
+                      }
+                    </button>
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        }
+      </section>
+
+      <footer
+        class="sticky bottom-0 mt-auto rounded-2xl border border-slate-200 bg-surface-light px-3 py-3 shadow-sm dark:border-white/10 dark:bg-surface-dark"
+      >
+        <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1">
+          <div
+            class="flex items-center gap-2"
+            [class.justify-end]="isRecorderActive()"
+            [class.justify-between]="!isRecorderActive()"
+            [class.pr-5]="isRecorderActive()"
+          >
+            @if (isRecorderActive()) {
+              <button
+                type="button"
+                class="control-btn"
+                (click)="onCancelRecording()"
+                aria-label="取消錄音"
+                [disabled]="interactionLocked()"
+              >
+                <span class="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="control-btn"
+                [style.border-color]="assistantPanelOpen() ? 'rgb(56 189 248)' : 'rgb(147 197 253)'"
+                [style.background]="assistantPanelOpen() ? 'rgb(224 242 254)' : 'rgb(240 249 255)'"
+                [style.color]="assistantPanelOpen() ? 'rgb(3 105 161)' : 'rgb(2 132 199)'"
+                (click)="toggleAssistantPanel()"
+                data-testid="speaking-assistant-toggle"
+                aria-label="切換 AI 助手"
+                [disabled]="interactionLocked()"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M18 6.75V4.5m0 2.25h2.25M18 6.75h-2.25M18 6.75V9"
+                  />
+                </svg>
+              </button>
+              @if (hasUserMessages()) {
+                <button
+                  type="button"
+                  class="control-btn"
+                  style="border-color: rgb(203 213 225); color: rgb(15 23 42); background: white"
+                  (click)="onStartNewConversation()"
+                  aria-label="新對話"
+                  [disabled]="interactionLocked()"
+                >
+                  <span class="material-symbols-outlined text-[18px]">add</span>
+                </button>
+              }
+            }
+          </div>
+
+          <button
+            type="button"
+            class="mic-main-btn"
+            [class.mic-recording]="recorderStatus() === 'recording'"
+            [class.mic-paused]="recorderStatus() === 'paused'"
+            [attr.aria-label]="isRecorderActive() ? '停止並送出錄音' : '開始錄音'"
+            [disabled]="interactionLocked()"
+            (click)="isRecorderActive() ? onStopRecording() : onStartRecording()"
+            data-testid="speaking-mic-main"
+          >
+            @if (!isRecorderActive()) {
+              <span class="material-symbols-outlined text-[28px]">mic</span>
+            } @else {
+              <div class="flex flex-col items-center">
+                <span class="material-symbols-outlined text-[22px]">stop</span>
+                <span class="mt-0.5 text-[10px] font-semibold leading-none">{{
+                  formatDuration(recorderDurationMs())
+                }}</span>
+              </div>
+            }
+          </button>
+
+          <div
+            class="flex items-center gap-2"
+            [class.justify-start]="isRecorderActive()"
+            [class.justify-between]="!isRecorderActive()"
+            [class.pl-5]="isRecorderActive()"
+          >
+            @if (isRecorderActive()) {
+              <button
+                type="button"
+                class="control-btn"
+                (click)="recorderStatus() === 'paused' ? onResumeRecording() : onPauseRecording()"
+                [attr.aria-label]="recorderStatus() === 'paused' ? '繼續錄音' : '暫停錄音'"
+                [disabled]="interactionLocked()"
+              >
+                <span class="material-symbols-outlined text-[18px]">
+                  {{ recorderStatus() === 'paused' ? 'play_arrow' : 'pause' }}
+                </span>
+              </button>
+            } @else {
+              @if (hasUserMessages()) {
+                <button
+                  type="button"
+                  class="control-btn"
+                  style="
+                    border-color: rgb(253 186 116);
+                    color: rgb(234 88 12);
+                    background: rgb(255 247 237);
+                  "
+                  (click)="onSummarize()"
+                  [disabled]="!canSummarize() || interactionLocked()"
+                  aria-label="整理對話"
+                >
+                  <span class="material-symbols-outlined text-[18px]">description</span>
+                </button>
+              }
+              <button
+                type="button"
+                class="control-btn ml-auto"
+                [style.border-color]="notePanelOpen() ? 'rgb(251 191 36)' : 'rgb(252 211 77)'"
+                [style.background]="notePanelOpen() ? 'rgb(254 249 195)' : 'rgb(254 252 232)'"
+                [style.color]="notePanelOpen() ? 'rgb(180 83 9)' : 'rgb(217 119 6)'"
+                (click)="toggleNotePanel()"
+                aria-label="切換筆記面板"
+                [disabled]="interactionLocked()"
+              >
+                <span class="material-symbols-outlined text-[18px]">note</span>
+              </button>
+            }
+          </div>
+        </div>
+      </footer>
+    }
+  </main>
+
+  @if (assistantPanelOpen()) {
+    <div class="pointer-events-none fixed inset-0 z-[85]">
+      <section
+        #assistantPanelRef
+        class="assistant-panel pointer-events-auto"
+        role="dialog"
+        aria-label="AI 助手"
+        [style.top.px]="assistantPanelTop()"
+        [style.left.px]="ASSISTANT_PANEL_SIDE_GAP"
+        [style.right.px]="ASSISTANT_PANEL_SIDE_GAP"
+        [style.height.px]="assistantPanelHeight()"
+        [style.maxWidth]="'calc(32rem - ' + ASSISTANT_PANEL_SIDE_GAP * 2 + 'px)'"
+        (pointerdown)="onAssistantPanelPointerDown($event)"
+        (pointermove)="onAssistantPanelPointerMove($event)"
+        (pointerup)="onAssistantPanelPointerEnd($event)"
+        (pointercancel)="onAssistantPanelPointerEnd($event)"
+      >
+        <header class="assistant-panel-header" data-assistant-drag-handle="true">
+          <div class="flex items-center gap-2">
+            <svg
+              class="h-4 w-4 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 2C6.477 2 2 6.013 2 10.928c0 2.779 1.474 5.26 3.768 6.87-.193 1.464-.853 2.738-1.497 3.636a.75.75 0 00.666 1.127c2.16-.132 4.135-1.04 5.478-1.87.524.065 1.058.1 1.585.1 5.523 0 10-4.014 10-8.863C22 6.013 17.523 2 12 2z"
+              />
+            </svg>
+            <h3 class="text-base font-semibold text-slate-900">AI 助手</h3>
+          </div>
+          <div class="flex items-center gap-1">
+            @if (assistantMessages().length > 0) {
+              <button
+                class="rounded-md px-2 py-1 text-base font-medium text-primary hover:bg-primary/10"
+                type="button"
+                (click)="onClearAssistantChat()"
+              >
+                清空
+              </button>
+            }
+            <button
+              type="button"
+              class="panel-close"
+              (click)="toggleAssistantPanel()"
+              aria-label="關閉 AI 助手"
+            >
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+        </header>
+
+        <div #assistantMessagesRef class="assistant-list" data-testid="speaking-assistant-list">
+          @if (assistantMessages().length === 0) {
+            <div class="flex h-full flex-col items-center justify-center gap-2 text-center">
+              <svg
+                class="h-8 w-8 text-slate-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                />
+              </svg>
+              <p class="text-base text-slate-500">可詢問文法、句型、單字或發音建議。</p>
+            </div>
+          }
+
+          @for (message of assistantMessages(); track message.id) {
+            <article
+              class="mb-2 flex"
+              [class.justify-end]="message.role === 'user'"
+              [class.justify-start]="message.role === 'assistant'"
+            >
+              <div
+                class="max-w-[85%] rounded-2xl px-3 py-2.5 text-base leading-relaxed"
+                [class.rounded-br-md]="message.role === 'user'"
+                [class.bg-primary]="message.role === 'user'"
+                [class.text-white]="message.role === 'user'"
+                [class.rounded-bl-md]="message.role === 'assistant'"
+                [class.bg-primary/10]="message.role === 'assistant'"
+                [class.text-slate-700]="message.role === 'assistant'"
+              >
+                <p class="whitespace-pre-wrap">{{ message.content }}</p>
+              </div>
+            </article>
+          }
+
+          @if (assistantSending()) {
+            <div class="mb-2 flex justify-start">
+              <div class="rounded-2xl rounded-bl-md bg-primary/10 px-3 py-2">
+                <div class="flex gap-1">
+                  <span class="dot-bounce [animation-delay:0ms]"></span>
+                  <span class="dot-bounce [animation-delay:150ms]"></span>
+                  <span class="dot-bounce [animation-delay:300ms]"></span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="assistant-input-wrap">
+          <div class="flex items-end gap-2">
+            <button
+              type="button"
+              class="assistant-resize"
+              aria-label="調整 AI 助手高度"
+              (pointerdown)="onAssistantResizePointerDown($event)"
+              (pointermove)="onAssistantResizePointerMove($event)"
+              (pointerup)="onAssistantResizePointerEnd($event)"
+              (pointercancel)="onAssistantResizePointerEnd($event)"
+            >
+              <span class="material-symbols-outlined text-[14px]">drag_indicator</span>
+            </button>
+            <textarea
+              [formControl]="assistantInputControl"
+              rows="1"
+              class="assistant-textarea"
+              placeholder="輸入問題..."
+              data-testid="speaking-assistant-input"
+              (keydown)="onAssistantInputKeydown($event)"
+            ></textarea>
+            <fm-button
+              size="sm"
+              [disabled]="assistantSending() || !assistantInputControl.value.trim()"
+              (click)="onSendAssistantMessage()"
+            >
+              @if (assistantSending()) {
+                送出中
+              } @else {
+                送出
+              }
+            </fm-button>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  <div class="pointer-events-none fixed inset-0 z-[80]">
+    @if (notePanelOpen()) {
+      <div
+        #notePanelRef
+        class="note-panel pointer-events-auto"
+        role="dialog"
+        aria-label="口說小抄筆記"
+        [style.top.px]="notePanelTop()"
+        [style.left.px]="NOTE_PANEL_SIDE_GAP"
+        [style.right.px]="NOTE_PANEL_SIDE_GAP"
+        [style.height.px]="notePanelHeight()"
+        [style.maxWidth]="'calc(32rem - ' + NOTE_PANEL_SIDE_GAP * 2 + 'px)'"
+        (pointerdown)="onNotePanelPointerDown($event)"
+        (pointermove)="onNotePanelPointerMove($event)"
+        (pointerup)="onNotePanelPointerEnd($event)"
+        (pointercancel)="onNotePanelPointerEnd($event)"
+      >
+        <header class="note-header" data-note-drag-handle="true">
+          <p class="text-base font-bold text-slate-900">小抄筆記</p>
+          <button
+            type="button"
+            class="panel-close"
+            (click)="toggleNotePanel()"
+            aria-label="關閉筆記"
+          >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </header>
+
+        <textarea
+          [value]="noteText()"
+          (input)="onNoteTextInput($any($event.target).value)"
+          (focus)="noteEditing.set(true)"
+          (blur)="noteEditing.set(false)"
+          class="note-textarea"
+          placeholder="在這裡記錄你的口說重點、句型或提醒..."
+        ></textarea>
+
+        <button
+          type="button"
+          class="note-resize"
+          aria-label="調整筆記高度"
+          (pointerdown)="onNoteResizePointerDown($event)"
+          (pointermove)="onNoteResizePointerMove($event)"
+          (pointerup)="onNoteResizePointerEnd($event)"
+          (pointercancel)="onNoteResizePointerEnd($event)"
+        >
+          <span class="material-symbols-outlined text-[14px]">drag_indicator</span>
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -1110,6 +1110,323 @@ paths:
                   code: TTS_SERVICE_ERROR
                   message: 語音服務暫時無法使用，請稍後再試
 
+  # ============================================================
+  # Speaking
+  # ============================================================
+  /speaking/chat:
+    post:
+      operationId: createSpeakingReply
+      tags:
+        - Speaking
+      summary: 建立口說對話回覆
+      description: 依使用者訊息與對話歷史生成口說練習回覆。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingChatRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingChatResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: message 為必填欄位
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: WHITELIST_DENIED
+                  message: 目前僅開放受邀使用者使用
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: AI_SERVICE_ERROR
+                  message: AI 服務暫時無法使用，請稍後再試
+
+  /speaking/chat/audio:
+    post:
+      operationId: createSpeakingAudioReply
+      tags:
+        - Speaking
+      summary: 建立語音口說對話回覆
+      description: 上傳使用者錄音，回傳 AI 語音與逐字稿。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/SpeakingAudioChatMultipartRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingAudioChatResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: audioFile 為必填欄位
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: 請先登入
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: WHITELIST_DENIED
+                  message: 目前僅開放受邀使用者使用
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: AI_SERVICE_ERROR
+                  message: AI 服務暫時無法使用，請稍後再試
+
+  /speaking/summarize:
+    post:
+      operationId: summarizeSpeakingConversation
+      tags:
+        - Speaking
+      summary: 產生口說對話摘要
+      description: 依據對話歷史生成摘要與標題。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingSummarizeRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingSummarizeResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /speaking/translate:
+    post:
+      operationId: translateSpeakingText
+      tags:
+        - Speaking
+      summary: 翻譯口說回覆文字
+      description: 將英語文字翻譯為繁體中文。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingTranslateRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingTranslateResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /speaking/assistant/chat:
+    post:
+      operationId: chatSpeakingAssistant
+      tags:
+        - Speaking
+      summary: 口說 AI 助手對話
+      description: 與口說練習內建 AI 助手對話。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingAssistantChatRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingAssistantChatResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /speaking/voice-preview:
+    post:
+      operationId: previewSpeakingVoice
+      tags:
+        - Speaking
+      summary: 試聽口說語音
+      description: 依指定 voice 產生試聽語音。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingVoicePreviewRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingVoicePreviewResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     cookieAuth:
@@ -1942,6 +2259,371 @@ components:
               description: 生成的詞義列表
               items:
                 $ref: "#/components/schemas/GeneratedMeaning"
+
+    # ============================================================
+    # Speaking
+    # ============================================================
+    SpeakingVoice:
+      type: string
+      enum: [alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer]
+      description: OpenAI 語音角色
+      example: nova
+
+    SpeakingChatMessage:
+      type: object
+      description: 口說聊天歷史訊息
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          description: 訊息角色
+          example: user
+        content:
+          type: string
+          description: 訊息內容
+          minLength: 1
+          maxLength: 1000
+          example: I went jogging this morning.
+
+    SpeakingChatRequest:
+      type: object
+      description: 口說聊天請求
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: 使用者本回合訊息
+          minLength: 1
+          maxLength: 1000
+          example: Hello, I want to practice speaking English.
+        history:
+          type: array
+          description: 對話歷史（純文字）
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/SpeakingChatMessage"
+        systemPrompt:
+          type: string
+          description: 可覆蓋預設提示詞
+          minLength: 1
+          maxLength: 4000
+          example: You are a friendly English speaking tutor for A2 learners.
+
+    SpeakingChatHistoryItem:
+      type: object
+      description: 口說語音端點歷史訊息
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          description: 訊息角色
+          example: user
+        text:
+          type: string
+          nullable: true
+          description: 訊息文字內容（assistant 必填）
+          example: Great! What did you do after jogging?
+        audioBase64:
+          type: string
+          nullable: true
+          description: 使用者語音 base64（user 可用）
+          example: UklGRiQAAABXQVZFZm10IBAAAAABAAEA...
+
+    SpeakingAudioChatMultipartRequest:
+      type: object
+      description: 語音口說對話請求（multipart/form-data）
+      required:
+        - audioFile
+      properties:
+        audioFile:
+          type: string
+          format: binary
+          description: 使用者錄音檔（建議 WAV 16k）
+        history:
+          type: string
+          description: JSON 字串格式的歷史訊息陣列（SpeakingChatHistoryItem[]）
+          example: '[{"role":"assistant","text":"Hi there"}]'
+        voice:
+          $ref: "#/components/schemas/SpeakingVoice"
+        systemPrompt:
+          type: string
+          description: 可覆蓋預設提示詞
+          minLength: 1
+          maxLength: 4000
+          example: You are a friendly English speaking tutor for A2 learners.
+        memory:
+          type: string
+          description: 長期記憶內容（選填）
+          maxLength: 1200
+        autoMemoryEnabled:
+          type: string
+          description: 是否啟用自動記憶更新（true/false）
+          example: "true"
+
+    SpeakingTokenUsage:
+      type: object
+      description: token 使用量
+      required:
+        - promptTokens
+        - completionTokens
+        - totalTokens
+        - promptTextTokens
+        - promptAudioTokens
+        - completionTextTokens
+        - completionAudioTokens
+      properties:
+        promptTokens:
+          type: integer
+          example: 120
+        completionTokens:
+          type: integer
+          example: 45
+        totalTokens:
+          type: integer
+          example: 165
+        promptTextTokens:
+          type: integer
+          example: 20
+        promptAudioTokens:
+          type: integer
+          example: 100
+        completionTextTokens:
+          type: integer
+          example: 15
+        completionAudioTokens:
+          type: integer
+          example: 30
+
+    SpeakingChatResult:
+      type: object
+      description: 口說聊天結果
+      required:
+        - reply
+        - model
+        - usage
+      properties:
+        reply:
+          type: string
+          description: AI 助教回覆
+          example: That's great practice! What did you do after jogging?
+        model:
+          type: string
+          description: 實際使用的模型名稱
+          example: gpt-4o-mini
+        usage:
+          $ref: "#/components/schemas/SpeakingTokenUsage"
+
+    SpeakingChatResponse:
+      type: object
+      description: 口說聊天回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/SpeakingChatResult"
+
+    SpeakingMemoryUpdate:
+      type: object
+      description: 自動記憶更新結果
+      required:
+        - memory
+      properties:
+        memory:
+          type: string
+          description: 更新後的完整記憶內容
+          maxLength: 1200
+        reason:
+          type: string
+          nullable: true
+          description: 更新原因
+
+    SpeakingAudioChatResult:
+      type: object
+      description: 語音口說對話結果
+      required:
+        - transcript
+        - audioBase64
+        - model
+        - usage
+      properties:
+        transcript:
+          type: string
+          description: AI 回覆逐字稿
+          example: Great! What did you do today?
+        audioBase64:
+          type: string
+          description: AI 回覆語音（base64）
+          example: UklGRiQAAABXQVZFZm10IBAAAAABAAEA...
+        model:
+          type: string
+          description: 實際使用的模型名稱
+          example: gpt-4o-mini-audio-preview
+        usage:
+          $ref: "#/components/schemas/SpeakingTokenUsage"
+        memoryUpdate:
+          allOf:
+            - $ref: "#/components/schemas/SpeakingMemoryUpdate"
+          nullable: true
+
+    SpeakingAudioChatResponse:
+      type: object
+      description: 語音口說對話回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/SpeakingAudioChatResult"
+
+    SpeakingSummarizeRequest:
+      type: object
+      description: 口說摘要請求
+      required:
+        - history
+      properties:
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingChatHistoryItem"
+
+    SpeakingSummaryResult:
+      type: object
+      description: 口說摘要結果
+      required:
+        - title
+        - summary
+        - usage
+      properties:
+        title:
+          type: string
+          description: 摘要標題（繁中）
+          example: 晨跑與工作日常
+        summary:
+          type: string
+          description: 對話摘要（英文第一人稱）
+          example: I jogged in the morning and then went to work.
+        usage:
+          $ref: "#/components/schemas/SpeakingTokenUsage"
+
+    SpeakingSummarizeResponse:
+      type: object
+      description: 口說摘要回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/SpeakingSummaryResult"
+
+    SpeakingTranslateRequest:
+      type: object
+      description: 口說翻譯請求
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          example: I want to practice speaking every day.
+
+    SpeakingTranslateResponse:
+      type: object
+      description: 口說翻譯回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - translatedText
+          properties:
+            translatedText:
+              type: string
+              example: 我想每天練習口說。
+
+    SpeakingAssistantMessage:
+      type: object
+      description: AI 助手歷史訊息
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+
+    SpeakingAssistantChatRequest:
+      type: object
+      description: AI 助手對話請求
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingAssistantMessage"
+
+    SpeakingAssistantChatResult:
+      type: object
+      description: AI 助手對話結果
+      required:
+        - reply
+        - model
+        - usage
+      properties:
+        reply:
+          type: string
+          example: 你可以使用 present perfect 來描述經驗。
+        model:
+          type: string
+          example: gpt-4o-mini
+        usage:
+          $ref: "#/components/schemas/SpeakingTokenUsage"
+
+    SpeakingAssistantChatResponse:
+      type: object
+      description: AI 助手對話回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/SpeakingAssistantChatResult"
+
+    SpeakingVoicePreviewRequest:
+      type: object
+      description: 語音試聽請求
+      properties:
+        voice:
+          $ref: "#/components/schemas/SpeakingVoice"
+
+    SpeakingVoicePreviewResponse:
+      type: object
+      description: 語音試聽回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - audioBase64
+          properties:
+            audioBase64:
+              type: string
+              description: MP3 試聽音訊（base64）
+              example: SUQzBAAAAAA...
 
     # ============================================================
     # Study
