@@ -679,8 +679,8 @@ export class SpeakingService {
     return raw
       .replace(/[\r\n\t]+/g, ' ')
       .replace(/\s+/g, ' ')
-      .replace(/^[["'「『（(【]+/, '')
-      .replace(/[]"'」』）)】]+$/, '')
+      .replace(/^["'「『（(【]+/, '')
+      .replace(/["'」』）)】]+$/, '')
       .trim();
   }
 
