@@ -4,11 +4,27 @@
     <ng-content select="[slot=left]"></ng-content>
   </div>
   <div [class]="titleClass()">
-    <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-      {{ title() }}
-    </h1>
+    @if (title()) {
+      @if (titleClickable()) {
+        <button
+          type="button"
+          class="text-lg font-bold tracking-tight text-slate-900 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:text-white"
+          (click)="onTitleClick()"
+        >
+          {{ title() }}
+        </button>
+      } @else {
+        <h1
+          class="text-lg font-bold tracking-tight text-slate-900 dark:text-white"
+        >
+          {{ title() }}
+        </h1>
+      }
+    }
     @if (subtitle()) {
-      <span class="text-xs font-medium text-secondary-text">{{ subtitle() }}</span>
+      <span class="text-xs font-medium text-secondary-text">{{
+        subtitle()
+      }}</span>
     }
   </div>
   <div class="flex items-center gap-2 justify-end">

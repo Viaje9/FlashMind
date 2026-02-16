@@ -35,6 +35,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'home',
+    loadComponent: () =>
+      import('./pages/home/home.component').then((module) => module.HomeComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: 'decks/:id/settings',
     loadComponent: () =>
       import('./pages/deck-settings/deck-settings.component').then(

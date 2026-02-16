@@ -1,6 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { form, FormField, required, email, minLength, validate, submit } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  required,
+  email,
+  minLength,
+  validate,
+  submit,
+} from '@angular/forms/signals';
 import { AuthService } from '../../services/auth.service';
 import {
   FmAlertComponent,
@@ -9,7 +17,7 @@ import {
   FmButtonComponent,
   FmDividerComponent,
   FmLabeledInputComponent,
-  FmSocialLoginRowComponent
+  FmSocialLoginRowComponent,
 } from '@flashmind/ui';
 
 interface RegisterFormData {
@@ -30,10 +38,10 @@ interface RegisterFormData {
     FmButtonComponent,
     FmDividerComponent,
     FmLabeledInputComponent,
-    FmSocialLoginRowComponent
+    FmSocialLoginRowComponent,
   ],
   templateUrl: './register.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
   private readonly authService = inject(AuthService);
@@ -42,7 +50,7 @@ export class RegisterComponent {
   readonly formModel = signal<RegisterFormData>({
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
 
   readonly registerForm = form(this.formModel, (f) => {
@@ -78,13 +86,13 @@ export class RegisterComponent {
       return new Promise<void>((resolve, reject) => {
         this.authService.register(email, password).subscribe({
           next: () => {
-            this.router.navigate(['/decks']);
+            this.router.navigate(['/home']);
             resolve();
           },
           error: (err) => {
             this.apiError.set(err.message);
             reject(err);
-          }
+          },
         });
       });
     }).catch(() => {

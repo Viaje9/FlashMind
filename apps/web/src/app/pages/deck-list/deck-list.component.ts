@@ -1,7 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { FmEmptyStateComponent, FmFabComponent, FmIconButtonComponent, FmPageHeaderComponent, FmSearchInputComponent } from '@flashmind/ui';
+import {
+  FmEmptyStateComponent,
+  FmFabComponent,
+  FmIconButtonComponent,
+  FmPageHeaderComponent,
+  FmSearchInputComponent,
+} from '@flashmind/ui';
 import { FmDeckCardComponent } from '../../components/deck/deck-card/deck-card.component';
 import { DecksService, DeckListItem } from '@flashmind/api-client';
 
@@ -32,11 +45,11 @@ interface DeckPreview {
     FmEmptyStateComponent,
     FmFabComponent,
     RouterLink,
-    ReactiveFormsModule
+    ReactiveFormsModule,
   ],
   templateUrl: './deck-list.component.html',
   styleUrl: './deck-list.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeckListComponent implements OnInit {
   private readonly router = inject(Router);
@@ -52,8 +65,8 @@ export class DeckListComponent implements OnInit {
     const term = this.searchTerm().toLowerCase();
 
     return items
-      .filter(deck => !term || deck.name.toLowerCase().includes(term))
-      .map(deck => this.mapToDeckPreview(deck));
+      .filter((deck) => !term || deck.name.toLowerCase().includes(term))
+      .map((deck) => this.mapToDeckPreview(deck));
   });
 
   readonly isEmpty = computed(() => !this.isLoading() && this.deckItems().length === 0);
@@ -61,7 +74,7 @@ export class DeckListComponent implements OnInit {
 
   ngOnInit() {
     this.loadDecks();
-    this.searchControl.valueChanges.subscribe(value => {
+    this.searchControl.valueChanges.subscribe((value) => {
       this.searchTerm.set(value ?? '');
     });
   }
@@ -75,7 +88,7 @@ export class DeckListComponent implements OnInit {
       },
       error: () => {
         this.isLoading.set(false);
-      }
+      },
     });
   }
 
@@ -91,7 +104,7 @@ export class DeckListComponent implements OnInit {
       progress: deck.progress,
       completed,
       showAction: true,
-      actionLabel: hasStudyItems ? '開始學習' : (completed ? '已完成' : '無待學習'),
+      actionLabel: hasStudyItems ? '開始學習' : completed ? '已完成' : '無待學習',
       actionDisabled: !hasStudyItems,
       enableReverse: deck.enableReverse ?? false,
       dailyNewCards: deck.dailyNewCards,
@@ -103,6 +116,10 @@ export class DeckListComponent implements OnInit {
 
   onCardClick(deckId: string) {
     void this.router.navigate(['/decks', deckId]);
+  }
+
+  onHeaderTitleClick() {
+    void this.router.navigate(['/home']);
   }
 
   onStartStudy(deckId: string) {

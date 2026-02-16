@@ -1,5 +1,10 @@
 <div class="relative min-h-screen pb-24">
-  <fm-page-header title="FlashMind">
+  <fm-page-header
+    title="FlashMind"
+    [titleClickable]="true"
+    (titleClick)="onHeaderTitleClick()"
+    testId="deck-list-header"
+  >
     <fm-icon-button class="fm-header-right" variant="ghost" ariaLabel="設定" routerLink="/settings">
       <span class="material-symbols-outlined text-[22px]">settings</span>
     </fm-icon-button>
@@ -7,7 +12,11 @@
 
   <main class="mx-auto w-full max-w-md px-4 pt-4">
     <div class="mb-6">
-      <fm-search-input [formControl]="searchControl" placeholder="搜尋牌組..." ariaLabel="搜尋牌組"></fm-search-input>
+      <fm-search-input
+        [formControl]="searchControl"
+        placeholder="搜尋牌組..."
+        ariaLabel="搜尋牌組"
+      ></fm-search-input>
     </div>
 
     <div class="flex flex-col gap-4">

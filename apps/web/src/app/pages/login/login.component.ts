@@ -10,7 +10,7 @@ import {
   FmDividerComponent,
   FmLabeledInputComponent,
   FmSocialLoginRowComponent,
-  FmToggleComponent
+  FmToggleComponent,
 } from '@flashmind/ui';
 
 interface LoginFormData {
@@ -32,10 +32,10 @@ interface LoginFormData {
     FmDividerComponent,
     FmLabeledInputComponent,
     FmSocialLoginRowComponent,
-    FmToggleComponent
+    FmToggleComponent,
   ],
   templateUrl: './login.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
   private readonly authService = inject(AuthService);
@@ -44,7 +44,7 @@ export class LoginComponent {
   readonly formModel = signal<LoginFormData>({
     email: '',
     password: '',
-    rememberMe: false
+    rememberMe: false,
   });
 
   readonly loginForm = form(this.formModel, (f) => {
@@ -71,13 +71,13 @@ export class LoginComponent {
       return new Promise<void>((resolve, reject) => {
         this.authService.login(email, password, rememberMe).subscribe({
           next: () => {
-            this.router.navigate(['/decks']);
+            this.router.navigate(['/home']);
             resolve();
           },
           error: (err) => {
             this.apiError.set(err.message);
             reject(err);
-          }
+          },
         });
       });
     }).catch(() => {
