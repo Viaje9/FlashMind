@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Router, RouterLink } from '@angular/router';
 import { form, FormField, required, email, submit } from '@angular/forms/signals';
 import { AuthService } from '../../services/auth.service';
+import { HomeEntryPreferenceService } from '../../services/home-entry-preference.service';
 import {
   FmAlertComponent,
   FmAuthHeaderComponent,
@@ -40,6 +41,7 @@ interface LoginFormData {
 export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly homeEntryPreferenceService = inject(HomeEntryPreferenceService);
 
   readonly formModel = signal<LoginFormData>({
     email: '',
@@ -71,7 +73,9 @@ export class LoginComponent {
       return new Promise<void>((resolve, reject) => {
         this.authService.login(email, password, rememberMe).subscribe({
           next: () => {
-            this.router.navigate(['/home']);
+            const preferredPath =
+              this.homeEntryPreferenceService.getTodayPreferredPath() ?? '/home';
+            this.router.navigate([preferredPath]);
             resolve();
           },
           error: (err) => {

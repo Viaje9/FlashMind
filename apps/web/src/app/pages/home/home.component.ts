@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
+import { HomeEntryPreferenceService } from '../../services/home-entry-preference.service';
 
 @Component({
   selector: 'app-home-page',
@@ -9,4 +10,12 @@ import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
   styleUrl: './home.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent {}
+export class HomeComponent {
+  private readonly router = inject(Router);
+  private readonly homeEntryPreferenceService = inject(HomeEntryPreferenceService);
+
+  onEntryClick(path: '/decks' | '/speaking'): void {
+    this.homeEntryPreferenceService.save(path);
+    void this.router.navigate([path]);
+  }
+}

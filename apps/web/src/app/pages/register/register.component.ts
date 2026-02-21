@@ -10,6 +10,7 @@ import {
   submit,
 } from '@angular/forms/signals';
 import { AuthService } from '../../services/auth.service';
+import { HomeEntryPreferenceService } from '../../services/home-entry-preference.service';
 import {
   FmAlertComponent,
   FmAuthHeaderComponent,
@@ -46,6 +47,7 @@ interface RegisterFormData {
 export class RegisterComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly homeEntryPreferenceService = inject(HomeEntryPreferenceService);
 
   readonly formModel = signal<RegisterFormData>({
     email: '',
@@ -86,7 +88,9 @@ export class RegisterComponent {
       return new Promise<void>((resolve, reject) => {
         this.authService.register(email, password).subscribe({
           next: () => {
-            this.router.navigate(['/home']);
+            const preferredPath =
+              this.homeEntryPreferenceService.getTodayPreferredPath() ?? '/home';
+            this.router.navigate([preferredPath]);
             resolve();
           },
           error: (err) => {
