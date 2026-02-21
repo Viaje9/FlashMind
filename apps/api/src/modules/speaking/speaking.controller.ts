@@ -3,17 +3,17 @@ import {
   Body,
   Controller,
   Post,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
 import {
   CreateSpeakingChatDto,
   SpeakingAssistantChatDto,
-  SpeakingChatHistoryItemDto,
   SpeakingSummarizeDto,
   SpeakingTranslateDto,
   SpeakingVoicePreviewDto,
@@ -53,24 +53,34 @@ export class SpeakingController {
     FileInterceptor('audioFile', {
       limits: {
         fileSize: 8 * 1024 * 1024,
+        fieldSize: 4 * 1024 * 1024,
+        fields: 10,
       },
     }),
   )
   async createSpeakingAudioReply(
     @UploadedFile() audioFile: UploadedAudioFile,
     @Body() body: Record<string, string>,
+    @Req() request: AuthenticatedRequest,
   ) {
     if (!audioFile?.buffer || audioFile.buffer.length === 0) {
       throw this.createValidationError('audioFile 為必填欄位');
     }
 
-    const history = this.parseHistory(body.history);
+    if (typeof body.history !== 'undefined') {
+      throw this.createValidationError(
+        'history 欄位已停用，請改用 conversationId',
+      );
+    }
+
+    const conversationId = this.parseConversationId(body.conversationId);
     const voice = this.parseVoice(body.voice);
     const autoMemoryEnabled = this.parseBoolean(body.autoMemoryEnabled);
 
     const result = await this.speakingService.createAudioReply({
+      userId: request.user.id,
       audioBuffer: audioFile.buffer,
-      history,
+      conversationId,
       voice,
       systemPrompt: body.systemPrompt,
       memory: body.memory,
@@ -108,54 +118,9 @@ export class SpeakingController {
     return { data: result };
   }
 
-  private parseHistory(rawHistory?: string): SpeakingChatHistoryItemDto[] {
-    if (!rawHistory?.trim()) {
-      return [];
-    }
-
-    let parsed: unknown;
-
-    try {
-      parsed = JSON.parse(rawHistory);
-    } catch {
-      throw this.createValidationError('history 格式錯誤，需為 JSON 字串');
-    }
-
-    if (!Array.isArray(parsed)) {
-      throw this.createValidationError('history 必須為陣列');
-    }
-
-    const items: SpeakingChatHistoryItemDto[] = [];
-
-    for (const entry of parsed) {
-      if (!entry || typeof entry !== 'object') {
-        throw this.createValidationError('history 項目格式錯誤');
-      }
-
-      const role = (entry as { role?: string }).role;
-      const text = (entry as { text?: string }).text;
-      const audioBase64 = (entry as { audioBase64?: string }).audioBase64;
-
-      if (role !== 'user' && role !== 'assistant') {
-        throw this.createValidationError(
-          'history.role 必須為 user 或 assistant',
-        );
-      }
-
-      if (!text?.trim() && !audioBase64?.trim()) {
-        throw this.createValidationError(
-          'history 項目至少要有 text 或 audioBase64',
-        );
-      }
-
-      items.push({
-        role,
-        text: text?.trim() || undefined,
-        audioBase64: audioBase64?.trim() || undefined,
-      });
-    }
-
-    return items;
+  private parseConversationId(value?: string): string | undefined {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
   }
 
   private parseVoice(rawVoice?: string): SpeakingVoice | undefined {

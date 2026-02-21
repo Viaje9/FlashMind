@@ -23,10 +23,9 @@ import { SpeakingRepository } from './speaking.repository';
 import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
 
 interface RetryPayload {
-  conversationId: string;
-  userMessageId: string;
-  userAudioKey: string;
-  historyBefore: SpeakingMessage[];
+  localConversationId: string;
+  requestConversationId?: string;
+  userMessage: SpeakingMessage;
   audioBlob: Blob;
 }
 
@@ -52,6 +51,7 @@ export class SpeakingStore {
 
   private readonly speakingSettingsState = signal(this.repository.loadSettings());
   private retryPayload: RetryPayload | null = null;
+  private activeServerConversationId: string | null = null;
 
   readonly conversationId = computed(() => this.state().conversationId);
   readonly messages = computed(() => this.state().messages);
@@ -70,8 +70,9 @@ export class SpeakingStore {
     const assistantMessages = this.state().assistantMessages;
     this.audioPlayer.stop();
     this.retryPayload = null;
+    this.activeServerConversationId = null;
     this.state.set({
-      conversationId: createSpeakingId(),
+      conversationId: null,
       messages: [],
       sending: false,
       summarizing: false,
@@ -90,11 +91,13 @@ export class SpeakingStore {
     try {
       const result = await this.repository.getConversation(conversationId);
       if (!result) {
+        this.activeServerConversationId = null;
         this.state.update((state) => ({ ...state, loadingConversation: false }));
         return false;
       }
 
       this.retryPayload = null;
+      this.activeServerConversationId = conversationId;
       this.state.update((state) => ({
         ...state,
         conversationId,
@@ -105,6 +108,7 @@ export class SpeakingStore {
 
       return true;
     } catch {
+      this.activeServerConversationId = null;
       this.state.update((state) => ({
         ...state,
         loadingConversation: false,
@@ -120,25 +124,16 @@ export class SpeakingStore {
     }
 
     const currentState = this.state();
-    const conversationId = currentState.conversationId ?? createSpeakingId();
+    const localConversationId = currentState.conversationId ?? createSpeakingId();
     const historyBefore = [...currentState.messages];
 
     const normalizedAudioBlob = await this.safeConvertToWav(audioBlob);
     const userMessageId = createSpeakingId();
-    const userAudioKey = await this.repository.saveAudioBlob({
-      conversationId,
-      messageId: userMessageId,
-      blob: normalizedAudioBlob,
-      mimeType: normalizedAudioBlob.type,
-      audioKey: `${userMessageId}:audio`,
-    });
-
     const userMessage: SpeakingMessage = {
       id: userMessageId,
-      conversationId,
+      conversationId: localConversationId,
       role: 'user',
       text: '',
-      audioBlobKey: userAudioKey,
       audioMimeType: normalizedAudioBlob.type || 'audio/wav',
       createdAt: new Date().toISOString(),
     };
@@ -147,21 +142,17 @@ export class SpeakingStore {
 
     this.state.update((state) => ({
       ...state,
-      conversationId,
+      conversationId: localConversationId,
       messages: nextMessages,
       sending: true,
       error: null,
       retryAvailable: false,
     }));
 
-    await this.repository.saveMessage(userMessage);
-    await this.persistConversation(conversationId, nextMessages);
-
     this.retryPayload = {
-      conversationId,
-      userMessageId,
-      userAudioKey,
-      historyBefore,
+      localConversationId,
+      requestConversationId: this.activeServerConversationId ?? undefined,
+      userMessage,
       audioBlob: normalizedAudioBlob,
     };
 
@@ -435,15 +426,10 @@ export class SpeakingStore {
     this.speakingSettingsState.set(settings);
 
     try {
-      const history = await toSpeakingHistory(
-        payload.historyBefore,
-        this.repository.getAudioBase64.bind(this.repository),
-      );
-
       const response = await firstValueFrom(
         this.speakingApi.createSpeakingAudioReply(
           payload.audioBlob,
-          JSON.stringify(history),
+          payload.requestConversationId,
           settings.voice,
           settings.systemPrompt.trim() || undefined,
           settings.memory.trim() || undefined,
@@ -459,10 +445,23 @@ export class SpeakingStore {
         throw new Error('assistant transcript empty');
       }
 
+      const serverConversationId = response.data.conversationId?.trim();
+      if (!serverConversationId) {
+        throw new Error('conversationId missing');
+      }
+
+      const userAudioKey = await this.repository.saveAudioBlob({
+        conversationId: serverConversationId,
+        messageId: payload.userMessage.id,
+        blob: payload.audioBlob,
+        mimeType: payload.audioBlob.type,
+        audioKey: `${payload.userMessage.id}:audio`,
+      });
+
       const assistantMessageId = createSpeakingId();
       const assistantAudioBlob = base64ToBlob(response.data.audioBase64);
       const assistantAudioKey = await this.repository.saveAudioBlob({
-        conversationId: payload.conversationId,
+        conversationId: serverConversationId,
         messageId: assistantMessageId,
         blob: assistantAudioBlob,
         mimeType: assistantAudioBlob.type,
@@ -476,7 +475,7 @@ export class SpeakingStore {
 
       const assistantMessage: SpeakingMessage = {
         id: assistantMessageId,
-        conversationId: payload.conversationId,
+        conversationId: serverConversationId,
         role: 'assistant',
         text: transcript,
         translatedText,
@@ -487,38 +486,46 @@ export class SpeakingStore {
       };
 
       const stateMessages = this.state().messages;
-      const userExists = stateMessages.some((item) => item.id === payload.userMessageId);
-      const ensuredMessages = userExists
-        ? stateMessages
-        : [
-            ...stateMessages,
-            {
-              id: payload.userMessageId,
-              conversationId: payload.conversationId,
-              role: 'user' as const,
-              text: '',
-              audioBlobKey: payload.userAudioKey,
-              audioMimeType: payload.audioBlob.type || 'audio/webm',
-              createdAt: new Date().toISOString(),
-            },
-          ];
+      const updatedUserMessage: SpeakingMessage = {
+        ...payload.userMessage,
+        conversationId: serverConversationId,
+        audioBlobKey: userAudioKey,
+        audioMimeType: payload.audioBlob.type || payload.userMessage.audioMimeType || 'audio/wav',
+      };
 
-      const nextMessages = [...ensuredMessages, assistantMessage];
+      const userExists = stateMessages.some((item) => item.id === payload.userMessage.id);
+      const ensuredMessages = userExists
+        ? stateMessages.map((item) =>
+            item.id === payload.userMessage.id ? updatedUserMessage : item,
+          )
+        : [...stateMessages, updatedUserMessage];
+
+      const normalizedMessages = ensuredMessages.map((message) =>
+        message.conversationId === payload.localConversationId
+          ? {
+              ...message,
+              conversationId: serverConversationId,
+            }
+          : message,
+      );
+
+      const nextMessages = [...normalizedMessages, assistantMessage];
+      this.activeServerConversationId = serverConversationId;
 
       this.state.update((state) => ({
         ...state,
-        conversationId: payload.conversationId,
+        conversationId: serverConversationId,
         messages: nextMessages,
         sending: false,
         retryAvailable: false,
         error: null,
       }));
 
-      await this.repository.saveMessage(assistantMessage);
-      await this.persistConversation(payload.conversationId, nextMessages);
+      await this.repository.saveMessages(nextMessages);
+      await this.persistConversation(serverConversationId, nextMessages);
       await this.repository.enforceConversationStorageLimit(
         SPEAKING_HISTORY_LIMIT_BYTES,
-        payload.conversationId,
+        serverConversationId,
       );
 
       if (response.data.memoryUpdate?.memory?.trim()) {
@@ -537,6 +544,30 @@ export class SpeakingStore {
       this.retryPayload = null;
       return true;
     } catch (error) {
+      if (this.isSessionExpiredError(error)) {
+        const restartedConversationId = createSpeakingId();
+        const restartedUserMessage: SpeakingMessage = {
+          ...payload.userMessage,
+          conversationId: restartedConversationId,
+          audioBlobKey: undefined,
+        };
+
+        payload.localConversationId = restartedConversationId;
+        payload.requestConversationId = undefined;
+        payload.userMessage = restartedUserMessage;
+
+        this.activeServerConversationId = null;
+        this.state.update((state) => ({
+          ...state,
+          conversationId: restartedConversationId,
+          messages: [restartedUserMessage],
+          sending: false,
+          retryAvailable: true,
+          error: '口說會話已過期，已切換新會話，請按重試重新送出剛剛的錄音。',
+        }));
+        return false;
+      }
+
       this.state.update((state) => ({
         ...state,
         sending: false,
@@ -599,6 +630,24 @@ export class SpeakingStore {
     }
   }
 
+  private isSessionExpiredError(error: unknown): boolean {
+    const httpError = error as HttpErrorResponse | undefined;
+    return (
+      httpError?.status === 409 && this.extractApiErrorCode(error) === 'SPEAKING_SESSION_EXPIRED'
+    );
+  }
+
+  private extractApiErrorCode(error: unknown): string | null {
+    const httpError = error as HttpErrorResponse | undefined;
+    if (!httpError?.error || typeof httpError.error !== 'object') {
+      return null;
+    }
+
+    const errorPayload = httpError.error as { error?: { code?: unknown } };
+    const code = errorPayload.error?.code;
+    return typeof code === 'string' ? code : null;
+  }
+
   private resolveSpeakingErrorMessage(error: unknown): string {
     const httpError = error as HttpErrorResponse | undefined;
     const status = httpError?.status;
@@ -619,8 +668,15 @@ export class SpeakingStore {
       return '語音資料格式不正確，請重新錄音後再送出。';
     }
 
+    if (status === 409 && this.extractApiErrorCode(error) === 'SPEAKING_SESSION_EXPIRED') {
+      return '口說會話已過期，請點擊重試以建立新會話。';
+    }
+
     if (status === 0) {
-      return '網路連線異常，請確認網路後重試。';
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return '目前離線，請確認網路後重試。';
+      }
+      return '無法連線到語音服務，請確認 API 是否啟動、CORS 與 HTTPS/HTTP 設定後重試。';
     }
 
     return '語音口說請求失敗，請點擊重試。';

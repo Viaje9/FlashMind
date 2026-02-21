@@ -15,6 +15,10 @@ import { SpeakingMemoryUpdate } from "./speakingMemoryUpdate";
  */
 export interface SpeakingAudioChatResult {
   /**
+   * 口說會話識別碼
+   */
+  conversationId: string;
+  /**
    * AI 回覆逐字稿
    */
   transcript: string;

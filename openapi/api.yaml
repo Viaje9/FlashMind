@@ -1182,7 +1182,7 @@ paths:
       tags:
         - Speaking
       summary: 建立語音口說對話回覆
-      description: 上傳使用者錄音，回傳 AI 語音與逐字稿。
+      description: 上傳使用者錄音並使用 stateful conversation 回傳 AI 語音與逐字稿。
       security:
         - cookieAuth: []
       requestBody:
@@ -1228,6 +1228,16 @@ paths:
                 error:
                   code: WHITELIST_DENIED
                   message: 目前僅開放受邀使用者使用
+        "409":
+          description: 會話已過期或不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: SPEAKING_SESSION_EXPIRED
+                  message: 口說會話已過期，請重新開始對話
         "500":
           description: AI 服務錯誤
           content:
@@ -2345,10 +2355,10 @@ components:
           type: string
           format: binary
           description: 使用者錄音檔（建議 WAV 16k）
-        history:
+        conversationId:
           type: string
-          description: JSON 字串格式的歷史訊息陣列（SpeakingChatHistoryItem[]）
-          example: '[{"role":"assistant","text":"Hi there"}]'
+          description: 口說會話識別碼（首回合可省略）
+          example: 8d6fb03f-2ec2-4bfd-b655-9e442fe9ff6f
         voice:
           $ref: "#/components/schemas/SpeakingVoice"
         systemPrompt:
@@ -2447,11 +2457,16 @@ components:
       type: object
       description: 語音口說對話結果
       required:
+        - conversationId
         - transcript
         - audioBase64
         - model
         - usage
       properties:
+        conversationId:
+          type: string
+          description: 口說會話識別碼
+          example: 8d6fb03f-2ec2-4bfd-b655-9e442fe9ff6f
         transcript:
           type: string
           description: AI 回覆逐字稿

@@ -188,10 +188,10 @@ export class SpeakingService extends BaseService {
 
   /**
    * 建立語音口說對話回覆
-   * 上傳使用者錄音，回傳 AI 語音與逐字稿。
+   * 上傳使用者錄音並使用 stateful conversation 回傳 AI 語音與逐字稿。
    * @endpoint post /speaking/chat/audio
    * @param audioFile 使用者錄音檔（建議 WAV 16k）
-   * @param history JSON 字串格式的歷史訊息陣列（SpeakingChatHistoryItem[]）
+   * @param conversationId 口說會話識別碼（首回合可省略）
    * @param voice
    * @param systemPrompt 可覆蓋預設提示詞
    * @param memory 長期記憶內容（選填）
@@ -202,7 +202,7 @@ export class SpeakingService extends BaseService {
    */
   public createSpeakingAudioReply(
     audioFile: Blob,
-    history?: string,
+    conversationId?: string,
     voice?: SpeakingVoice,
     systemPrompt?: string,
     memory?: string,
@@ -217,7 +217,7 @@ export class SpeakingService extends BaseService {
   ): Observable<SpeakingAudioChatResponse>;
   public createSpeakingAudioReply(
     audioFile: Blob,
-    history?: string,
+    conversationId?: string,
     voice?: SpeakingVoice,
     systemPrompt?: string,
     memory?: string,
@@ -232,7 +232,7 @@ export class SpeakingService extends BaseService {
   ): Observable<HttpResponse<SpeakingAudioChatResponse>>;
   public createSpeakingAudioReply(
     audioFile: Blob,
-    history?: string,
+    conversationId?: string,
     voice?: SpeakingVoice,
     systemPrompt?: string,
     memory?: string,
@@ -247,7 +247,7 @@ export class SpeakingService extends BaseService {
   ): Observable<HttpEvent<SpeakingAudioChatResponse>>;
   public createSpeakingAudioReply(
     audioFile: Blob,
-    history?: string,
+    conversationId?: string,
     voice?: SpeakingVoice,
     systemPrompt?: string,
     memory?: string,
@@ -307,10 +307,12 @@ export class SpeakingService extends BaseService {
         (localVarFormParams.append("audioFile", <any>audioFile) as any) ||
         localVarFormParams;
     }
-    if (history !== undefined) {
+    if (conversationId !== undefined) {
       localVarFormParams =
-        (localVarFormParams.append("history", <any>history) as any) ||
-        localVarFormParams;
+        (localVarFormParams.append(
+          "conversationId",
+          <any>conversationId,
+        ) as any) || localVarFormParams;
     }
     if (voice !== undefined) {
       localVarFormParams =
