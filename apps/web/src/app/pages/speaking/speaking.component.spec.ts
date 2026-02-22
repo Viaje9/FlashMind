@@ -237,7 +237,7 @@ describe('speaking.component selection actions', () => {
     expect(component.assistantInputControl.value).toBe('Hello');
   });
 
-  it('已有對話整理後應隱藏語音輸入按鈕', async () => {
+  it('已有對話整理後應隱藏語音輸入按鈕，但保留整理按鈕', async () => {
     const messages: SpeakingMessage[] = [
       {
         id: 'user-1',
@@ -268,7 +268,7 @@ describe('speaking.component selection actions', () => {
     ) as HTMLButtonElement | null;
 
     expect(micButton).toBeNull();
-    expect(summarizeButton).toBeNull();
+    expect(summarizeButton).toBeTruthy();
   });
 
   it('對話整理卡片右上角按鈕可複製摘要', async () => {
