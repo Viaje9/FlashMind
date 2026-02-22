@@ -9,13 +9,17 @@ import { base64ToBlob, blobToWavBlob } from './speaking-audio.utils';
 import { SpeakingAudioPlayerService } from './speaking-audio-player.service';
 import {
   SPEAKING_HISTORY_LIMIT_BYTES,
+  createSelectionTranslationCacheKey,
   createConversationRecord,
   createSpeakingId,
+  normalizeSelectionTranslationText,
   toSpeakingHistory,
   updateConversationFromMessages,
   type SpeakingAssistantMessage as LocalAssistantMessage,
   type SpeakingConversation,
   type SpeakingMessage,
+  type SpeakingSelectionTranslationRequest,
+  type SpeakingSelectionTranslationResult,
   type SpeakingSettings,
   type SpeakingStoreState,
 } from './speaking.domain';
@@ -51,6 +55,7 @@ export class SpeakingStore {
   });
 
   private readonly speakingSettingsState = signal(this.repository.loadSettings());
+  private readonly selectionTranslationCache = new Map<string, string>();
   private retryPayload: RetryPayload | null = null;
 
   readonly conversationId = computed(() => this.state().conversationId);
@@ -310,6 +315,66 @@ export class SpeakingStore {
         translatingMessageId: null,
         error: '翻譯失敗，請稍後再試',
       }));
+    }
+  }
+
+  async translateSelectedText(
+    input: SpeakingSelectionTranslationRequest,
+  ): Promise<SpeakingSelectionTranslationResult> {
+    const selectedText = normalizeSelectionTranslationText(input.selectedText);
+
+    if (!selectedText) {
+      return {
+        status: 'error',
+        requestToken: input.requestToken,
+        errorMessage: '請先選取要翻譯的文字',
+      };
+    }
+
+    if (selectedText.length > 4000) {
+      return {
+        status: 'error',
+        requestToken: input.requestToken,
+        errorMessage: '選取文字過長，請縮短範圍後再試',
+      };
+    }
+
+    const cacheKey = createSelectionTranslationCacheKey(input.messageId, selectedText);
+    const cached = this.selectionTranslationCache.get(cacheKey);
+    if (cached) {
+      return {
+        status: 'success',
+        requestToken: input.requestToken,
+        translatedText: cached,
+        cached: true,
+      };
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.speakingApi.translateSpeakingText({ text: selectedText }, undefined, undefined, {
+          context: this.skipLoadingContext,
+        }),
+      );
+
+      const translatedText = response.data.translatedText.trim();
+      if (!translatedText) {
+        throw new Error('empty translation');
+      }
+
+      this.selectionTranslationCache.set(cacheKey, translatedText);
+      return {
+        status: 'success',
+        requestToken: input.requestToken,
+        translatedText,
+        cached: false,
+      };
+    } catch {
+      return {
+        status: 'error',
+        requestToken: input.requestToken,
+        errorMessage: '翻譯失敗，請稍後再試',
+      };
     }
   }
 

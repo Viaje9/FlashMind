@@ -162,7 +162,12 @@
                   @if (!settings().showTranscript) {
                     <p class="text-base text-slate-500">已隱藏逐字稿，請播放語音收聽。</p>
                   } @else {
-                    <p class="whitespace-pre-wrap text-base leading-relaxed text-slate-700">
+                    <p
+                      class="whitespace-pre-wrap text-base leading-relaxed text-slate-700"
+                      data-testid="speaking-assistant-transcript"
+                      [attr.data-speaking-assistant-message-id]="message.id"
+                      (contextmenu)="onAssistantTranscriptContextMenu($event)"
+                    >
                       @if (shouldShowTranslation(message) && message.translatedText?.trim()) {
                         {{ message.translatedText }}
                       } @else if (message.text?.trim()) {
@@ -215,6 +220,82 @@
           }
         }
       </section>
+
+      @if (selectionActionVisible() && selectionTranslateTarget()) {
+        <button
+          type="button"
+          class="selection-translate-action"
+          data-testid="speaking-selection-translate-action"
+          data-speaking-selection-overlay="true"
+          [style.left.px]="selectionActionPosition().left"
+          [style.top.px]="selectionActionPosition().top"
+          (mousedown)="onSelectionOverlayMouseDown($event)"
+          (click)="onSelectionTranslateActionClick()"
+        >
+          翻譯
+        </button>
+      }
+
+      @if (selectionTooltipVisible() && selectionTranslateTarget(); as selectionTarget) {
+        <section
+          class="selection-translate-tooltip"
+          data-testid="speaking-selection-translate-tooltip"
+          data-speaking-selection-overlay="true"
+          [style.left.px]="selectionTooltipPosition().left"
+          [style.top.px]="selectionTooltipPosition().top"
+          (mousedown)="onSelectionOverlayMouseDown($event)"
+        >
+          <header class="selection-translate-tooltip-header">
+            <p class="selection-translate-tooltip-title">片段翻譯</p>
+            <button
+              type="button"
+              class="selection-translate-tooltip-close"
+              aria-label="關閉翻譯 tooltip"
+              (click)="onSelectionTooltipClose()"
+            >
+              <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+          </header>
+
+          <p class="selection-translate-source" data-testid="speaking-selection-translate-source">
+            {{ selectionTarget.selectedText }}
+          </p>
+
+          @if (selectionTooltipStatus() === 'loading') {
+            <div
+              class="selection-translate-loading"
+              data-testid="speaking-selection-translate-loading"
+            >
+              <span>翻譯中</span>
+              <span class="dot-bounce [animation-delay:0ms]"></span>
+              <span class="dot-bounce [animation-delay:150ms]"></span>
+              <span class="dot-bounce [animation-delay:300ms]"></span>
+            </div>
+          }
+
+          @if (selectionTooltipStatus() === 'success') {
+            <p class="selection-translate-result" data-testid="speaking-selection-translate-result">
+              {{ selectionTooltipText() }}
+            </p>
+          }
+
+          @if (selectionTooltipStatus() === 'error') {
+            <div class="selection-translate-error-wrap">
+              <p class="selection-translate-error" data-testid="speaking-selection-translate-error">
+                {{ selectionTooltipError() }}
+              </p>
+              <button
+                type="button"
+                class="selection-translate-retry"
+                data-testid="speaking-selection-translate-retry"
+                (click)="onSelectionTranslateRetry()"
+              >
+                重試
+              </button>
+            </div>
+          }
+        </section>
+      }
 
       @if (sendingStatusText(); as statusText) {
         <div

@@ -60,6 +60,29 @@ export interface SpeakingStoreState {
   error: string | null;
 }
 
+export interface SpeakingSelectionTranslationRequest {
+  messageId: string;
+  selectedText: string;
+  requestToken: number;
+}
+
+export interface SpeakingSelectionTranslationSuccessResult {
+  status: 'success';
+  requestToken: number;
+  translatedText: string;
+  cached: boolean;
+}
+
+export interface SpeakingSelectionTranslationErrorResult {
+  status: 'error';
+  requestToken: number;
+  errorMessage: string;
+}
+
+export type SpeakingSelectionTranslationResult =
+  | SpeakingSelectionTranslationSuccessResult
+  | SpeakingSelectionTranslationErrorResult;
+
 export const SPEAKING_HISTORY_LIMIT_BYTES = 200 * 1024 * 1024;
 
 export const SPEAKING_DEFAULT_SETTINGS: SpeakingSettings = {
@@ -86,6 +109,25 @@ export function createConversationTitle(message: string): string {
   }
 
   return normalized.length > 24 ? `${normalized.slice(0, 24)}...` : normalized;
+}
+
+export function normalizeSelectionTranslationText(selectedText: string): string {
+  return selectedText.trim();
+}
+
+export function createSelectionTranslationCacheKey(
+  messageId: string,
+  selectedText: string,
+): string {
+  const normalizedText = normalizeSelectionTranslationText(selectedText);
+  return `${messageId}:${normalizedText}`;
+}
+
+export function isSelectionTranslationResultStale(
+  activeRequestToken: number,
+  responseRequestToken: number,
+): boolean {
+  return activeRequestToken !== responseRequestToken;
 }
 
 export function createConversationRecord(input: {

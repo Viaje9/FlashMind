@@ -2,9 +2,12 @@ import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import {
   SPEAKING_DEFAULT_SETTINGS,
+  createSelectionTranslationCacheKey,
   createConversationRecord,
   createConversationTitle,
   createSpeakingId,
+  isSelectionTranslationResultStale,
+  normalizeSelectionTranslationText,
   toSpeakingHistory,
   updateConversationFromMessages,
   type SpeakingMessage,
@@ -126,5 +129,15 @@ describe('speaking.domain', () => {
     expect(updated.messageCount).toBe(2);
     expect(updated.summary).toBe('summary content');
     expect(updated.updatedAt).not.toBe(base.updatedAt);
+  });
+
+  it('應正規化選取翻譯文字並建立快取鍵', () => {
+    expect(normalizeSelectionTranslationText('  hello world  ')).toBe('hello world');
+    expect(createSelectionTranslationCacheKey('m-1', '  hello world  ')).toBe('m-1:hello world');
+  });
+
+  it('應可判斷 selection translation 回應是否過期', () => {
+    expect(isSelectionTranslationResultStale(5, 4)).toBe(true);
+    expect(isSelectionTranslationResultStale(5, 5)).toBe(false);
   });
 });

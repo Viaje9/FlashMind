@@ -20,6 +20,7 @@ import { SpeakingStore } from '../../components/speaking/speaking.store';
 import {
   type SpeakingAssistantMessage,
   type SpeakingMessage,
+  isSelectionTranslationResultStale,
 } from '../../components/speaking/speaking.domain';
 
 interface DragState {
@@ -34,6 +35,18 @@ interface ResizeState {
   startHeight: number;
   startClientY: number;
 }
+
+interface SelectionTranslateTarget {
+  messageId: string;
+  selectedText: string;
+}
+
+interface SelectionOverlayPosition {
+  left: number;
+  top: number;
+}
+
+type SelectionTooltipStatus = 'idle' | 'loading' | 'success' | 'error';
 
 const NOTE_PANEL_SIDE_GAP = 12;
 const NOTE_PANEL_INITIAL_HEIGHT = 320;
@@ -56,6 +69,12 @@ const AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION = 0.15;
 const AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION = 0.6;
 const AUDIO_MODEL_AUDIO_INPUT_USD_PER_MILLION = 10;
 const AUDIO_MODEL_AUDIO_OUTPUT_USD_PER_MILLION = 20;
+const SELECTION_ACTION_WIDTH = 64;
+const SELECTION_ACTION_HEIGHT = 36;
+const SELECTION_TOOLTIP_WIDTH = 288;
+const SELECTION_TOOLTIP_HEIGHT = 180;
+const SELECTION_OVERLAY_GAP = 10;
+const SELECTION_OVERLAY_SAFE_MARGIN = 8;
 
 @Component({
   selector: 'app-speaking-page',
@@ -98,6 +117,17 @@ export class SpeakingComponent implements OnInit {
   readonly assistantPanelTop = signal(this.loadAssistantPanelTop());
   readonly assistantPanelHeight = signal(this.loadAssistantPanelHeight());
   readonly translationVisibleIds = signal<Set<string>>(new Set());
+  readonly selectionTranslateTarget = signal<SelectionTranslateTarget | null>(null);
+  readonly selectionActionPosition = signal<SelectionOverlayPosition>({ left: 0, top: 0 });
+  readonly selectionTooltipPosition = signal<SelectionOverlayPosition>({ left: 0, top: 0 });
+  readonly selectionTooltipStatus = signal<SelectionTooltipStatus>('idle');
+  readonly selectionTooltipVisible = signal(false);
+  readonly selectionTooltipText = signal('');
+  readonly selectionTooltipError = signal<string | null>(null);
+  readonly isIosStandalonePwa = this.detectIosStandalonePwa();
+  readonly selectionActionVisible = computed(
+    () => !!this.selectionTranslateTarget()?.selectedText && this.settings().showTranscript,
+  );
 
   readonly notePanelOpen = signal(false);
   readonly noteText = signal(this.loadNoteText());
@@ -204,6 +234,7 @@ export class SpeakingComponent implements OnInit {
     startHeight: ASSISTANT_PANEL_INITIAL_HEIGHT,
     startClientY: 0,
   };
+  private selectionRequestToken = 0;
 
   constructor() {
     effect(() => {
@@ -215,6 +246,12 @@ export class SpeakingComponent implements OnInit {
       const messages = this.assistantMessages();
       this.saveAssistantMessages(messages);
       this.scrollAssistantMessagesToBottom();
+    });
+
+    effect(() => {
+      if (!this.settings().showTranscript) {
+        this.dismissSelectionTranslateUi(true);
+      }
     });
   }
 
@@ -242,6 +279,90 @@ export class SpeakingComponent implements OnInit {
   onWindowResize(): void {
     this.clampNotePanelBounds();
     this.clampAssistantPanelBounds();
+    this.repositionSelectionOverlays();
+  }
+
+  @HostListener('window:blur')
+  onWindowBlur(): void {
+    this.dismissSelectionTranslateUi(true);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.dismissSelectionTranslateUi(false);
+  }
+
+  @HostListener('document:selectionchange')
+  onDocumentSelectionChange(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    const selectionHost = this.resolveAssistantSelectionHost(
+      selection.anchorNode,
+      selection.focusNode,
+    );
+    if (!selectionHost) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width <= 0 && rect.height <= 0) {
+      return;
+    }
+
+    const messageId = selectionHost.dataset['speakingAssistantMessageId'];
+    if (!messageId) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    const current = this.selectionTranslateTarget();
+    const selectionChanged =
+      !current || current.messageId !== messageId || current.selectedText !== selectedText;
+
+    if (selectionChanged) {
+      this.bumpSelectionRequestToken();
+      this.selectionTooltipVisible.set(false);
+      this.selectionTooltipStatus.set('idle');
+      this.selectionTooltipText.set('');
+      this.selectionTooltipError.set(null);
+    }
+
+    this.selectionTranslateTarget.set({ messageId, selectedText });
+    this.updateSelectionOverlayPositions(rect);
+  }
+
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentPointerDown(event: PointerEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+
+    if (target.closest('[data-speaking-selection-overlay="true"]')) {
+      return;
+    }
+
+    if (target.closest('[data-speaking-assistant-message-id]')) {
+      return;
+    }
+
+    this.dismissSelectionTranslateUi(false);
   }
 
   async onHeaderTitleClick(): Promise<void> {
@@ -249,6 +370,7 @@ export class SpeakingComponent implements OnInit {
   }
 
   async onStartNewConversation(): Promise<void> {
+    this.dismissSelectionTranslateUi(true);
     this.recorder.cancel();
     await this.speakingStore.startNewConversation();
     await this.router.navigate(['/speaking']);
@@ -337,6 +459,60 @@ export class SpeakingComponent implements OnInit {
 
   shouldShowTranslation(message: SpeakingMessage): boolean {
     return !!message.translatedText?.trim() && this.translationVisibleIds().has(message.id);
+  }
+
+  onAssistantTranscriptContextMenu(event: MouseEvent): void {
+    if (!this.isIosStandalonePwa) {
+      return;
+    }
+
+    event.preventDefault();
+  }
+
+  async onSelectionTranslateActionClick(): Promise<void> {
+    const target = this.selectionTranslateTarget();
+    if (!target) {
+      return;
+    }
+
+    const requestToken = this.bumpSelectionRequestToken();
+    this.selectionTooltipVisible.set(true);
+    this.selectionTooltipStatus.set('loading');
+    this.selectionTooltipText.set('');
+    this.selectionTooltipError.set(null);
+
+    const result = await this.speakingStore.translateSelectedText({
+      messageId: target.messageId,
+      selectedText: target.selectedText,
+      requestToken,
+    });
+
+    if (isSelectionTranslationResultStale(this.selectionRequestToken, result.requestToken)) {
+      return;
+    }
+
+    if (result.status === 'success') {
+      this.selectionTooltipStatus.set('success');
+      this.selectionTooltipText.set(result.translatedText);
+      this.selectionTooltipError.set(null);
+      return;
+    }
+
+    this.selectionTooltipStatus.set('error');
+    this.selectionTooltipText.set('');
+    this.selectionTooltipError.set(result.errorMessage);
+  }
+
+  async onSelectionTranslateRetry(): Promise<void> {
+    await this.onSelectionTranslateActionClick();
+  }
+
+  onSelectionTooltipClose(): void {
+    this.selectionTooltipVisible.set(false);
+  }
+
+  onSelectionOverlayMouseDown(event: MouseEvent): void {
+    event.preventDefault();
   }
 
   async onSummarize(): Promise<void> {
@@ -644,6 +820,134 @@ export class SpeakingComponent implements OnInit {
     return value >= 1 ? value.toFixed(2) : value.toFixed(4);
   }
 
+  private detectIosStandalonePwa(): boolean {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return false;
+    }
+
+    const ua = navigator.userAgent ?? '';
+    const iOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!iOS) {
+      return false;
+    }
+
+    const standaloneViaDisplayMode =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(display-mode: standalone)').matches;
+    const standaloneViaNavigator =
+      'standalone' in navigator &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+    return standaloneViaDisplayMode || standaloneViaNavigator;
+  }
+
+  private resolveAssistantSelectionHost(
+    anchorNode: Node | null,
+    focusNode: Node | null,
+  ): HTMLElement | null {
+    const anchorHost = this.resolveSelectionHostFromNode(anchorNode);
+    const focusHost = this.resolveSelectionHostFromNode(focusNode);
+
+    if (!anchorHost || !focusHost || anchorHost !== focusHost) {
+      return null;
+    }
+
+    return anchorHost;
+  }
+
+  private resolveSelectionHostFromNode(node: Node | null): HTMLElement | null {
+    if (!node) {
+      return null;
+    }
+
+    const element = node instanceof Element ? node : node.parentElement;
+    if (!element) {
+      return null;
+    }
+
+    return element.closest<HTMLElement>('[data-speaking-assistant-message-id]');
+  }
+
+  private updateSelectionOverlayPositions(rect: DOMRect): void {
+    const actionTopCandidate = rect.top - SELECTION_ACTION_HEIGHT - SELECTION_OVERLAY_GAP;
+    const actionTop =
+      actionTopCandidate < SELECTION_OVERLAY_SAFE_MARGIN
+        ? rect.bottom + SELECTION_OVERLAY_GAP
+        : actionTopCandidate;
+
+    const centerX = rect.left + rect.width / 2;
+    const actionLeft = this.clampOverlayCoordinate(
+      centerX - SELECTION_ACTION_WIDTH / 2,
+      SELECTION_ACTION_WIDTH,
+    );
+
+    const tooltipTopCandidate = actionTop - SELECTION_TOOLTIP_HEIGHT - SELECTION_OVERLAY_GAP;
+    const tooltipTop =
+      tooltipTopCandidate < SELECTION_OVERLAY_SAFE_MARGIN
+        ? actionTop + SELECTION_ACTION_HEIGHT + SELECTION_OVERLAY_GAP
+        : tooltipTopCandidate;
+    const tooltipLeft = this.clampOverlayCoordinate(
+      centerX - SELECTION_TOOLTIP_WIDTH / 2,
+      SELECTION_TOOLTIP_WIDTH,
+    );
+
+    this.selectionActionPosition.set({ left: actionLeft, top: actionTop });
+    this.selectionTooltipPosition.set({ left: tooltipLeft, top: tooltipTop });
+  }
+
+  private repositionSelectionOverlays(): void {
+    if (typeof window === 'undefined' || !this.selectionTranslateTarget()) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width <= 0 && rect.height <= 0) {
+      return;
+    }
+
+    this.updateSelectionOverlayPositions(rect);
+  }
+
+  private clampOverlayCoordinate(value: number, width: number): number {
+    if (typeof window === 'undefined') {
+      return value;
+    }
+
+    const max = Math.max(
+      SELECTION_OVERLAY_SAFE_MARGIN,
+      window.innerWidth - width - SELECTION_OVERLAY_SAFE_MARGIN,
+    );
+    return Math.min(Math.max(value, SELECTION_OVERLAY_SAFE_MARGIN), max);
+  }
+
+  private dismissSelectionTranslateUi(clearNativeSelection: boolean): void {
+    this.selectionTranslateTarget.set(null);
+    this.selectionTooltipVisible.set(false);
+    this.selectionTooltipStatus.set('idle');
+    this.selectionTooltipText.set('');
+    this.selectionTooltipError.set(null);
+
+    if (!clearNativeSelection || typeof window === 'undefined') {
+      return;
+    }
+
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+  }
+
+  private bumpSelectionRequestToken(): number {
+    this.selectionRequestToken += 1;
+    return this.selectionRequestToken;
+  }
+
   private isSecureContext(): boolean {
     if (typeof window === 'undefined') {
       return true;
@@ -691,6 +995,7 @@ export class SpeakingComponent implements OnInit {
   }
 
   private async tryLoadConversation(conversationId: string): Promise<void> {
+    this.dismissSelectionTranslateUi(true);
     this.speakingStore.refreshSpeakingSettings();
     const loaded = await this.speakingStore.loadConversation(conversationId);
 
