@@ -48,6 +48,18 @@ interface SelectionOverlayPosition {
 
 type SelectionTooltipStatus = 'idle' | 'loading' | 'success' | 'error';
 
+interface CustomSelectionState {
+  messageId: string;
+  startTokenIndex: number;
+  endTokenIndex: number;
+}
+
+interface CustomSelectionDragState {
+  active: boolean;
+  pointerId: number;
+  messageId: string | null;
+}
+
 const NOTE_PANEL_SIDE_GAP = 12;
 const NOTE_PANEL_INITIAL_HEIGHT = 320;
 const NOTE_PANEL_MIN_HEIGHT = 220;
@@ -71,8 +83,6 @@ const AUDIO_MODEL_AUDIO_INPUT_USD_PER_MILLION = 10;
 const AUDIO_MODEL_AUDIO_OUTPUT_USD_PER_MILLION = 20;
 const SELECTION_ACTION_WIDTH = 64;
 const SELECTION_ACTION_HEIGHT = 36;
-const SELECTION_TOOLTIP_WIDTH = 288;
-const SELECTION_TOOLTIP_HEIGHT = 180;
 const SELECTION_OVERLAY_GAP = 10;
 const SELECTION_OVERLAY_SAFE_MARGIN = 8;
 
@@ -119,12 +129,15 @@ export class SpeakingComponent implements OnInit {
   readonly translationVisibleIds = signal<Set<string>>(new Set());
   readonly selectionTranslateTarget = signal<SelectionTranslateTarget | null>(null);
   readonly selectionActionPosition = signal<SelectionOverlayPosition>({ left: 0, top: 0 });
-  readonly selectionTooltipPosition = signal<SelectionOverlayPosition>({ left: 0, top: 0 });
   readonly selectionTooltipStatus = signal<SelectionTooltipStatus>('idle');
   readonly selectionTooltipVisible = signal(false);
   readonly selectionTooltipText = signal('');
   readonly selectionTooltipError = signal<string | null>(null);
   readonly isIosStandalonePwa = this.detectIosStandalonePwa();
+  readonly useCustomSelectionMode = computed(
+    () => this.isIosStandalonePwa && this.settings().showTranscript,
+  );
+  readonly customSelection = signal<CustomSelectionState | null>(null);
   readonly selectionActionVisible = computed(
     () => !!this.selectionTranslateTarget()?.selectedText && this.settings().showTranscript,
   );
@@ -234,6 +247,12 @@ export class SpeakingComponent implements OnInit {
     startHeight: ASSISTANT_PANEL_INITIAL_HEIGHT,
     startClientY: 0,
   };
+  private customSelectionDragState: CustomSelectionDragState = {
+    active: false,
+    pointerId: -1,
+    messageId: null,
+  };
+  private readonly transcriptTokenCache = new Map<string, string[]>();
   private selectionRequestToken = 0;
 
   constructor() {
@@ -294,7 +313,7 @@ export class SpeakingComponent implements OnInit {
 
   @HostListener('document:selectionchange')
   onDocumentSelectionChange(): void {
-    if (typeof window === 'undefined') {
+    if (this.useCustomSelectionMode() || typeof window === 'undefined') {
       return;
     }
 
@@ -331,20 +350,36 @@ export class SpeakingComponent implements OnInit {
       return;
     }
 
-    const current = this.selectionTranslateTarget();
-    const selectionChanged =
-      !current || current.messageId !== messageId || current.selectedText !== selectedText;
+    this.applySelectionTarget(messageId, selectedText, rect);
+  }
 
-    if (selectionChanged) {
-      this.bumpSelectionRequestToken();
-      this.selectionTooltipVisible.set(false);
-      this.selectionTooltipStatus.set('idle');
-      this.selectionTooltipText.set('');
-      this.selectionTooltipError.set(null);
+  @HostListener('document:pointerup', ['$event'])
+  onDocumentPointerUp(event: PointerEvent): void {
+    if (
+      !this.customSelectionDragState.active ||
+      this.customSelectionDragState.pointerId !== event.pointerId
+    ) {
+      return;
     }
 
-    this.selectionTranslateTarget.set({ messageId, selectedText });
-    this.updateSelectionOverlayPositions(rect);
+    const draggingMessageId = this.customSelectionDragState.messageId;
+    if (draggingMessageId) {
+      const message = this.messages().find((item) => item.id === draggingMessageId);
+      if (message) {
+        this.finalizeCustomSelection(message);
+      }
+    }
+
+    this.endCustomSelectionDrag();
+  }
+
+  @HostListener('document:pointercancel', ['$event'])
+  onDocumentPointerCancel(event: PointerEvent): void {
+    if (this.customSelectionDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    this.endCustomSelectionDrag();
   }
 
   @HostListener('document:pointerdown', ['$event'])
@@ -461,6 +496,140 @@ export class SpeakingComponent implements OnInit {
     return !!message.translatedText?.trim() && this.translationVisibleIds().has(message.id);
   }
 
+  getDisplayedTranscript(message: SpeakingMessage): string {
+    if (this.shouldShowTranslation(message) && message.translatedText?.trim()) {
+      return message.translatedText;
+    }
+
+    return message.text?.trim() ? message.text : '';
+  }
+
+  getTranscriptTokens(message: SpeakingMessage): string[] {
+    const transcript = this.getDisplayedTranscript(message);
+    if (!transcript) {
+      return [];
+    }
+
+    const cacheKey = `${message.id}:${transcript}`;
+    const cached = this.transcriptTokenCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const tokens = transcript.split(/(\s+)/).filter((token) => token.length > 0);
+    this.transcriptTokenCache.set(cacheKey, tokens);
+    return tokens;
+  }
+
+  isCustomTokenSelected(messageId: string, tokenIndex: number): boolean {
+    const selection = this.customSelection();
+    if (!selection || selection.messageId !== messageId) {
+      return false;
+    }
+
+    const [start, end] = this.normalizeTokenRange(
+      selection.startTokenIndex,
+      selection.endTokenIndex,
+    );
+    return tokenIndex >= start && tokenIndex <= end;
+  }
+
+  isWhitespaceToken(token: string): boolean {
+    return token.trim().length === 0;
+  }
+
+  onCustomTranscriptPointerDown(message: SpeakingMessage, event: PointerEvent): void {
+    if (!this.useCustomSelectionMode()) {
+      return;
+    }
+
+    const tokenIndex = this.resolveTokenIndexFromEventTarget(event.target, message.id);
+    if (tokenIndex < 0) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    event.preventDefault();
+
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    if (currentTarget && !currentTarget.hasPointerCapture(event.pointerId)) {
+      currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    this.customSelectionDragState = {
+      active: true,
+      pointerId: event.pointerId,
+      messageId: message.id,
+    };
+
+    this.customSelection.set({
+      messageId: message.id,
+      startTokenIndex: tokenIndex,
+      endTokenIndex: tokenIndex,
+    });
+  }
+
+  onCustomTranscriptPointerMove(message: SpeakingMessage, event: PointerEvent): void {
+    if (
+      !this.customSelectionDragState.active ||
+      this.customSelectionDragState.pointerId !== event.pointerId ||
+      this.customSelectionDragState.messageId !== message.id
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const tokenIndex = this.resolveTokenIndexFromPoint(event.clientX, event.clientY, message.id);
+    if (tokenIndex < 0) {
+      return;
+    }
+
+    this.customSelection.update((selection) => {
+      if (
+        !selection ||
+        selection.messageId !== message.id ||
+        selection.endTokenIndex === tokenIndex
+      ) {
+        return selection;
+      }
+
+      return {
+        ...selection,
+        endTokenIndex: tokenIndex,
+      };
+    });
+  }
+
+  onCustomTranscriptPointerUp(message: SpeakingMessage, event: PointerEvent): void {
+    if (
+      !this.customSelectionDragState.active ||
+      this.customSelectionDragState.pointerId !== event.pointerId ||
+      this.customSelectionDragState.messageId !== message.id
+    ) {
+      return;
+    }
+
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    if (currentTarget?.hasPointerCapture(event.pointerId)) {
+      currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    this.finalizeCustomSelection(message);
+    this.endCustomSelectionDrag();
+  }
+
+  onCustomTranscriptPointerCancel(message: SpeakingMessage, event: PointerEvent): void {
+    if (
+      this.customSelectionDragState.pointerId !== event.pointerId ||
+      this.customSelectionDragState.messageId !== message.id
+    ) {
+      return;
+    }
+
+    this.endCustomSelectionDrag();
+  }
+
   onAssistantTranscriptContextMenu(event: MouseEvent): void {
     if (!this.isIosStandalonePwa) {
       return;
@@ -508,11 +677,16 @@ export class SpeakingComponent implements OnInit {
   }
 
   onSelectionTooltipClose(): void {
-    this.selectionTooltipVisible.set(false);
+    this.dismissSelectionTranslateUi(true);
+  }
+
+  onSelectionModalBackdropClick(): void {
+    this.dismissSelectionTranslateUi(true);
   }
 
   onSelectionOverlayMouseDown(event: MouseEvent): void {
     event.preventDefault();
+    event.stopPropagation();
   }
 
   async onSummarize(): Promise<void> {
@@ -820,6 +994,130 @@ export class SpeakingComponent implements OnInit {
     return value >= 1 ? value.toFixed(2) : value.toFixed(4);
   }
 
+  private applySelectionTarget(messageId: string, selectedText: string, rect: DOMRect): void {
+    const normalizedText = selectedText.trim();
+    if (!normalizedText) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    const current = this.selectionTranslateTarget();
+    const selectionChanged =
+      !current || current.messageId !== messageId || current.selectedText !== normalizedText;
+
+    if (selectionChanged) {
+      this.bumpSelectionRequestToken();
+      this.selectionTooltipVisible.set(false);
+      this.selectionTooltipStatus.set('idle');
+      this.selectionTooltipText.set('');
+      this.selectionTooltipError.set(null);
+    }
+
+    this.selectionTranslateTarget.set({ messageId, selectedText: normalizedText });
+    this.updateSelectionOverlayPositions(rect);
+  }
+
+  private normalizeTokenRange(startTokenIndex: number, endTokenIndex: number): [number, number] {
+    return startTokenIndex <= endTokenIndex
+      ? [startTokenIndex, endTokenIndex]
+      : [endTokenIndex, startTokenIndex];
+  }
+
+  private resolveTokenIndexFromEventTarget(target: EventTarget | null, messageId: string): number {
+    const element = target instanceof Element ? target : null;
+    const tokenElement = element?.closest<HTMLElement>('[data-token-index]');
+    if (!tokenElement) {
+      return -1;
+    }
+
+    const host = tokenElement.closest<HTMLElement>('[data-speaking-assistant-message-id]');
+    if (!host || host.dataset['speakingAssistantMessageId'] !== messageId) {
+      return -1;
+    }
+
+    const index = Number.parseInt(tokenElement.dataset['tokenIndex'] ?? '', 10);
+    return Number.isFinite(index) ? index : -1;
+  }
+
+  private resolveTokenIndexFromPoint(clientX: number, clientY: number, messageId: string): number {
+    if (typeof document === 'undefined') {
+      return -1;
+    }
+
+    const element = document.elementFromPoint(clientX, clientY);
+    return this.resolveTokenIndexFromEventTarget(element, messageId);
+  }
+
+  private finalizeCustomSelection(message: SpeakingMessage): void {
+    const selection = this.customSelection();
+    if (!selection || selection.messageId !== message.id) {
+      return;
+    }
+
+    const tokens = this.getTranscriptTokens(message);
+    if (tokens.length === 0) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    const [start, end] = this.normalizeTokenRange(
+      selection.startTokenIndex,
+      selection.endTokenIndex,
+    );
+    const selectedText = tokens.slice(start, end + 1).join('');
+    const rect = this.resolveCustomSelectionRect(message.id, start, end);
+    if (!rect) {
+      this.dismissSelectionTranslateUi(false);
+      return;
+    }
+
+    this.applySelectionTarget(message.id, selectedText, rect);
+  }
+
+  private endCustomSelectionDrag(): void {
+    this.customSelectionDragState = {
+      active: false,
+      pointerId: -1,
+      messageId: null,
+    };
+  }
+
+  private resolveCustomSelectionRect(
+    messageId: string,
+    startTokenIndex: number,
+    endTokenIndex: number,
+  ): DOMRect | null {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const selectorPrefix = `[data-speaking-assistant-message-id="${messageId}"]`;
+    const startElement = document.querySelector<HTMLElement>(
+      `${selectorPrefix} [data-token-index="${startTokenIndex}"]`,
+    );
+    const endElement = document.querySelector<HTMLElement>(
+      `${selectorPrefix} [data-token-index="${endTokenIndex}"]`,
+    );
+
+    if (!startElement || !endElement) {
+      return null;
+    }
+
+    return this.createRectFromPair(
+      startElement.getBoundingClientRect(),
+      endElement.getBoundingClientRect(),
+    );
+  }
+
+  private createRectFromPair(first: DOMRect, second: DOMRect): DOMRect {
+    const left = Math.min(first.left, second.left);
+    const top = Math.min(first.top, second.top);
+    const right = Math.max(first.right, second.right);
+    const bottom = Math.max(first.bottom, second.bottom);
+
+    return new DOMRect(left, top, Math.max(right - left, 1), Math.max(bottom - top, 1));
+  }
+
   private detectIosStandalonePwa(): boolean {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') {
       return false;
@@ -883,33 +1181,37 @@ export class SpeakingComponent implements OnInit {
       SELECTION_ACTION_WIDTH,
     );
 
-    const tooltipTopCandidate = actionTop - SELECTION_TOOLTIP_HEIGHT - SELECTION_OVERLAY_GAP;
-    const tooltipTop =
-      tooltipTopCandidate < SELECTION_OVERLAY_SAFE_MARGIN
-        ? actionTop + SELECTION_ACTION_HEIGHT + SELECTION_OVERLAY_GAP
-        : tooltipTopCandidate;
-    const tooltipLeft = this.clampOverlayCoordinate(
-      centerX - SELECTION_TOOLTIP_WIDTH / 2,
-      SELECTION_TOOLTIP_WIDTH,
-    );
-
     this.selectionActionPosition.set({ left: actionLeft, top: actionTop });
-    this.selectionTooltipPosition.set({ left: tooltipLeft, top: tooltipTop });
   }
 
   private repositionSelectionOverlays(): void {
-    if (typeof window === 'undefined' || !this.selectionTranslateTarget()) {
+    const target = this.selectionTranslateTarget();
+    if (!target) {
       return;
     }
 
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      return;
+    let rect: DOMRect | null = null;
+
+    if (this.useCustomSelectionMode()) {
+      const selection = this.customSelection();
+      if (!selection || selection.messageId !== target.messageId) {
+        return;
+      }
+
+      const [start, end] = this.normalizeTokenRange(
+        selection.startTokenIndex,
+        selection.endTokenIndex,
+      );
+      rect = this.resolveCustomSelectionRect(target.messageId, start, end);
+    } else if (typeof window !== 'undefined') {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        return;
+      }
+      rect = selection.getRangeAt(0).getBoundingClientRect();
     }
 
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    if (rect.width <= 0 && rect.height <= 0) {
+    if (!rect || (rect.width <= 0 && rect.height <= 0)) {
       return;
     }
 
@@ -930,6 +1232,8 @@ export class SpeakingComponent implements OnInit {
 
   private dismissSelectionTranslateUi(clearNativeSelection: boolean): void {
     this.selectionTranslateTarget.set(null);
+    this.customSelection.set(null);
+    this.endCustomSelectionDrag();
     this.selectionTooltipVisible.set(false);
     this.selectionTooltipStatus.set('idle');
     this.selectionTooltipText.set('');

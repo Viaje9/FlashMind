@@ -60,7 +60,11 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "port": 4280,
-            "host": "0.0.0.0"
+            "host": "0.0.0.0",
+            "ssl": true,
+            "sslCert": ".cert/localhost.pem",
+            "sslKey": ".cert/localhost-key.pem",
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {

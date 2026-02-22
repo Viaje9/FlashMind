@@ -21,7 +21,10 @@ pnpm dev:web
 pnpm --filter ./apps/web start
 ```
 
-開發伺服器啟動後，開啟瀏覽器至 `http://localhost:4280/`。
+開發伺服器啟動後，開啟瀏覽器至 `https://localhost:4280/`。
+
+首次啟動時會自動在 `apps/web/.cert/` 產生本機開發憑證（self-signed）。
+若瀏覽器顯示不受信任警告，屬於本機憑證預期行為。
 
 ### 其他指令
 

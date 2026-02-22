@@ -36,11 +36,14 @@ async function bootstrap() {
         return;
       }
 
-      // 開發環境：允許 localhost 和區網 IP
+      // 開發環境：允許 localhost 與常見區網網段（http / https）
       const allowedPatterns = [
-        /^http:\/\/localhost:\d+$/,
-        /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-        /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,
+        /^https?:\/\/localhost:\d+$/,
+        /^https?:\/\/127\.0\.0\.1:\d+$/,
+        /^https?:\/\/\[::1\]:\d+$/,
+        /^https?:\/\/192\.168\.\d+\.\d+:\d+$/,
+        /^https?:\/\/10\.\d+\.\d+\.\d+:\d+$/,
+        /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+:\d+$/,
       ];
       if (!origin || allowedPatterns.some((pattern) => pattern.test(origin))) {
         callback(null, true);

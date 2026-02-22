@@ -73,6 +73,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
 
   private readonly initialSettings = signal<SpeakingSettings | null>(null);
   private readonly formRevision = signal(0);
+  private readonly bypassUnsavedPromptOnce = signal(false);
 
   readonly hasUnsavedChanges = computed(() => {
     this.formRevision();
@@ -83,7 +84,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     }
 
     const current = this.getCurrentSettings();
-    return JSON.stringify(initial) !== JSON.stringify(current);
+    return !this.isSameSettings(initial, current);
   });
 
   ngOnInit(): void {
@@ -134,7 +135,11 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
 
   async onConfirmDiscard(): Promise<void> {
     this.discardModalOpen.set(false);
-    await this.router.navigate(['/settings']);
+    this.bypassUnsavedPromptOnce.set(true);
+    const navigated = await this.router.navigate(['/settings']);
+    if (!navigated) {
+      this.bypassUnsavedPromptOnce.set(false);
+    }
   }
 
   async onPreviewVoice(): Promise<void> {
@@ -169,6 +174,10 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   }
 
   canDeactivate(): boolean {
+    if (this.bypassUnsavedPromptOnce()) {
+      return true;
+    }
+
     if (!this.hasUnsavedChanges()) {
       return true;
     }
@@ -196,5 +205,17 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
       memory: this.memoryControl.value,
       voice: this.voiceControl.value,
     };
+  }
+
+  private isSameSettings(left: SpeakingSettings, right: SpeakingSettings): boolean {
+    return (
+      left.autoPlayVoice === right.autoPlayVoice &&
+      left.showTranscript === right.showTranscript &&
+      left.autoTranslate === right.autoTranslate &&
+      left.autoMemoryEnabled === right.autoMemoryEnabled &&
+      left.systemPrompt === right.systemPrompt &&
+      left.memory === right.memory &&
+      left.voice === right.voice
+    );
   }
 }
