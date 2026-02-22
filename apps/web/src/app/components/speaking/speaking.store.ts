@@ -530,11 +530,13 @@ export class SpeakingStore {
         this.speakingSettingsState.set(nextSettings);
       }
 
+      this.retryPayload = null;
+
       if (settings.autoPlayVoice) {
-        await this.audioPlayer.play(assistantAudioBlob, assistantAudioKey, { auto: true });
+        // 不阻塞送出流程，收到回應後即可結束 loading，再由背景播放語音。
+        void this.audioPlayer.play(assistantAudioBlob, assistantAudioKey, { auto: true });
       }
 
-      this.retryPayload = null;
       return true;
     } catch (error) {
       this.state.update((state) => ({

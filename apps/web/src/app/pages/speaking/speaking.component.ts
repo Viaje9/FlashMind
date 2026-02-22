@@ -142,6 +142,17 @@ export class SpeakingComponent implements OnInit {
   readonly interactionLocked = computed(
     () => this.sending() || this.summarizing() || this.stoppingAndSending(),
   );
+  readonly sendingStatusText = computed(() => {
+    if (this.sending()) {
+      return '正在送出語音到 API...';
+    }
+
+    if (this.stoppingAndSending()) {
+      return '正在整理錄音...';
+    }
+
+    return null;
+  });
 
   private noteDragState: DragState = {
     active: false,
