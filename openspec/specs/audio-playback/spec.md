@@ -1,8 +1,11 @@
 # audio-playback Specification
 
 ## Purpose
+
 TBD - created by archiving change add-ai-content-features. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: 語音合成服務
 
 系統 SHALL 提供文字轉語音（TTS）服務，支援英文文字的語音播放。此服務專用於句子朗讀（例句），使用 Azure Speech Services。
@@ -27,7 +30,7 @@ TBD - created by archiving change add-ai-content-features. Update Purpose after 
 
 ### Requirement: 前端語音播放
 
-系統 SHALL 在前端提供語音播放功能，讓使用者聆聽英文發音。
+系統 SHALL 在前端提供語音播放功能，讓使用者聆聽英文發音，並支援由 AI 助手選取文字片段觸發播放。
 
 #### Scenario: 點擊播放按鈕
 
@@ -63,6 +66,19 @@ TBD - created by archiving change add-ai-content-features. Update Purpose after 
 - **WHEN** 語音載入或播放失敗
 - **THEN** 顯示錯誤提示
 - **AND** 播放按鈕恢復初始狀態
+
+#### Scenario: AI 助手選取片段播放
+
+- **WHEN** 使用者在 `/speaking` 的 AI 助手面板選取文字並點擊「發音」
+- **THEN** 系統呼叫 `/tts/synthesize` 取得該片段音訊
+- **AND** 音檔回來後系統自動播放
+- **AND** 發音按鈕狀態切換為「暫停 / 播放」
+
+#### Scenario: AI 助手選取片段播放失敗可重試
+
+- **WHEN** AI 助手選取片段的語音播放失敗
+- **THEN** 系統顯示可重試狀態
+- **AND** 使用者再次點擊重試時系統 MUST 重新嘗試播放
 
 ### Requirement: 單字語音合成服務
 
@@ -110,4 +126,3 @@ TBD - created by archiving change add-ai-content-features. Update Purpose after 
 - **AND** 該單字的音訊已在記憶體中快取
 - **THEN** 直接從快取播放
 - **AND** 不再呼叫 API
-

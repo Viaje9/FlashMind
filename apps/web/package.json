@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "0.1.39",
+  "version": "0.1.40",
   "scripts": {
     "ng": "ng",
     "start": "node scripts/generate-dev-cert.mjs && ng serve",

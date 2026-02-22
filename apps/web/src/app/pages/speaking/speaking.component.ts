@@ -17,6 +17,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FmButtonComponent, FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { SpeakingRecorderService } from '../../components/speaking/speaking-recorder.service';
 import { SpeakingStore } from '../../components/speaking/speaking.store';
+import { TtsStore } from '../../components/tts/tts.store';
 import {
   type SpeakingAssistantMessage,
   type SpeakingMessage,
@@ -37,6 +38,7 @@ interface ResizeState {
 }
 
 interface SelectionTranslateTarget {
+  context: SelectionContext;
   messageId: string;
   selectedText: string;
 }
@@ -46,9 +48,12 @@ interface SelectionOverlayPosition {
   top: number;
 }
 
-type SelectionTooltipStatus = 'idle' | 'loading' | 'success' | 'error';
+type SelectionTooltipStatus = 'idle' | 'loading' | 'playing' | 'success' | 'error';
+
+type SelectionContext = 'main-transcript' | 'assistant-panel';
 
 interface CustomSelectionState {
+  context: SelectionContext;
   messageId: string;
   startTokenIndex: number;
   endTokenIndex: number;
@@ -57,6 +62,7 @@ interface CustomSelectionState {
 interface CustomSelectionDragState {
   active: boolean;
   pointerId: number;
+  context: SelectionContext | null;
   messageId: string | null;
 }
 
@@ -85,6 +91,8 @@ const SELECTION_ACTION_WIDTH = 64;
 const SELECTION_ACTION_HEIGHT = 36;
 const SELECTION_OVERLAY_GAP = 10;
 const SELECTION_OVERLAY_SAFE_MARGIN = 8;
+const MAIN_TRANSCRIPT_CONTEXT: SelectionContext = 'main-transcript';
+const ASSISTANT_PANEL_CONTEXT: SelectionContext = 'assistant-panel';
 
 @Component({
   selector: 'app-speaking-page',
@@ -106,6 +114,7 @@ export class SpeakingComponent implements OnInit {
 
   readonly speakingStore = inject(SpeakingStore);
   readonly recorder = inject(SpeakingRecorderService);
+  private readonly ttsStore = inject(TtsStore);
 
   @ViewChild('notePanelRef') private notePanelRef?: ElementRef<HTMLDivElement>;
   @ViewChild('assistantPanelRef') private assistantPanelRef?: ElementRef<HTMLDivElement>;
@@ -134,13 +143,9 @@ export class SpeakingComponent implements OnInit {
   readonly selectionTooltipText = signal('');
   readonly selectionTooltipError = signal<string | null>(null);
   readonly isIosStandalonePwa = this.detectIosStandalonePwa();
-  readonly useCustomSelectionMode = computed(
-    () => this.isIosStandalonePwa && this.settings().showTranscript,
-  );
+  readonly useCustomSelectionMode = computed(() => this.isIosStandalonePwa);
   readonly customSelection = signal<CustomSelectionState | null>(null);
-  readonly selectionActionVisible = computed(
-    () => !!this.selectionTranslateTarget()?.selectedText && this.settings().showTranscript,
-  );
+  readonly selectionActionVisible = computed(() => !!this.selectionTranslateTarget()?.selectedText);
 
   readonly notePanelOpen = signal(false);
   readonly noteText = signal(this.loadNoteText());
@@ -250,9 +255,11 @@ export class SpeakingComponent implements OnInit {
   private customSelectionDragState: CustomSelectionDragState = {
     active: false,
     pointerId: -1,
+    context: null,
     messageId: null,
   };
   private readonly transcriptTokenCache = new Map<string, string[]>();
+  private readonly pronunciationReadyKeys = signal<Set<string>>(new Set());
   private selectionRequestToken = 0;
 
   constructor() {
@@ -268,7 +275,8 @@ export class SpeakingComponent implements OnInit {
     });
 
     effect(() => {
-      if (!this.settings().showTranscript) {
+      const target = this.selectionTranslateTarget();
+      if (!this.settings().showTranscript && target?.context === MAIN_TRANSCRIPT_CONTEXT) {
         this.dismissSelectionTranslateUi(true);
       }
     });
@@ -345,12 +353,13 @@ export class SpeakingComponent implements OnInit {
     }
 
     const messageId = selectionHost.dataset['speakingAssistantMessageId'];
-    if (!messageId) {
+    const context = this.resolveSelectionContextFromHost(selectionHost);
+    if (!messageId || !context) {
       this.dismissSelectionTranslateUi(false);
       return;
     }
 
-    this.applySelectionTarget(messageId, selectedText, rect);
+    this.applySelectionTarget(context, messageId, selectedText, rect);
   }
 
   @HostListener('document:pointerup', ['$event'])
@@ -363,11 +372,9 @@ export class SpeakingComponent implements OnInit {
     }
 
     const draggingMessageId = this.customSelectionDragState.messageId;
-    if (draggingMessageId) {
-      const message = this.messages().find((item) => item.id === draggingMessageId);
-      if (message) {
-        this.finalizeCustomSelection(message);
-      }
+    const draggingContext = this.customSelectionDragState.context;
+    if (draggingMessageId && draggingContext) {
+      this.finalizeCustomSelection(draggingContext, draggingMessageId);
     }
 
     this.endCustomSelectionDrag();
@@ -510,20 +517,21 @@ export class SpeakingComponent implements OnInit {
       return [];
     }
 
-    const cacheKey = `${message.id}:${transcript}`;
-    const cached = this.transcriptTokenCache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    const tokens = transcript.split(/(\s+)/).filter((token) => token.length > 0);
-    this.transcriptTokenCache.set(cacheKey, tokens);
-    return tokens;
+    return this.getTokensWithCache(`${MAIN_TRANSCRIPT_CONTEXT}:${message.id}`, transcript);
   }
 
-  isCustomTokenSelected(messageId: string, tokenIndex: number): boolean {
+  getAssistantMessageTokens(message: SpeakingAssistantMessage): string[] {
+    const content = message.content?.trim();
+    if (!content) {
+      return [];
+    }
+
+    return this.getTokensWithCache(`${ASSISTANT_PANEL_CONTEXT}:${message.id}`, content);
+  }
+
+  isCustomTokenSelected(context: SelectionContext, messageId: string, tokenIndex: number): boolean {
     const selection = this.customSelection();
-    if (!selection || selection.messageId !== messageId) {
+    if (!selection || selection.context !== context || selection.messageId !== messageId) {
       return false;
     }
 
@@ -539,11 +547,162 @@ export class SpeakingComponent implements OnInit {
   }
 
   onCustomTranscriptPointerDown(message: SpeakingMessage, event: PointerEvent): void {
+    this.onCustomSelectionPointerDown(MAIN_TRANSCRIPT_CONTEXT, message.id, event);
+  }
+
+  onCustomTranscriptPointerMove(message: SpeakingMessage, event: PointerEvent): void {
+    this.onCustomSelectionPointerMove(MAIN_TRANSCRIPT_CONTEXT, message.id, event);
+  }
+
+  onCustomTranscriptPointerUp(message: SpeakingMessage, event: PointerEvent): void {
+    this.onCustomSelectionPointerUp(MAIN_TRANSCRIPT_CONTEXT, message.id, event);
+  }
+
+  onCustomTranscriptPointerCancel(message: SpeakingMessage, event: PointerEvent): void {
+    this.onCustomSelectionPointerCancel(MAIN_TRANSCRIPT_CONTEXT, message.id, event);
+  }
+
+  onAssistantPanelMessagePointerDown(message: SpeakingAssistantMessage, event: PointerEvent): void {
+    if (message.role !== 'assistant') {
+      return;
+    }
+
+    this.onCustomSelectionPointerDown(ASSISTANT_PANEL_CONTEXT, message.id, event);
+  }
+
+  onAssistantPanelMessagePointerMove(message: SpeakingAssistantMessage, event: PointerEvent): void {
+    if (message.role !== 'assistant') {
+      return;
+    }
+
+    this.onCustomSelectionPointerMove(ASSISTANT_PANEL_CONTEXT, message.id, event);
+  }
+
+  onAssistantPanelMessagePointerUp(message: SpeakingAssistantMessage, event: PointerEvent): void {
+    if (message.role !== 'assistant') {
+      return;
+    }
+
+    this.onCustomSelectionPointerUp(ASSISTANT_PANEL_CONTEXT, message.id, event);
+  }
+
+  onAssistantPanelMessagePointerCancel(
+    message: SpeakingAssistantMessage,
+    event: PointerEvent,
+  ): void {
+    if (message.role !== 'assistant') {
+      return;
+    }
+
+    this.onCustomSelectionPointerCancel(ASSISTANT_PANEL_CONTEXT, message.id, event);
+  }
+
+  selectionActionLabel(): string {
+    return this.isPronunciationTarget(this.selectionTranslateTarget())
+      ? this.selectionPronunciationButtonText()
+      : '翻譯';
+  }
+
+  selectionTooltipTitle(): string {
+    return this.isPronunciationTarget(this.selectionTranslateTarget()) ? '片段發音' : '片段翻譯';
+  }
+
+  selectionTooltipLoadingLabel(): string {
+    return '翻譯中';
+  }
+
+  shouldShowSelectionTooltip(): boolean {
+    const target = this.selectionTranslateTarget();
+    return !!target && !this.isPronunciationTarget(target) && this.selectionTooltipVisible();
+  }
+
+  isSelectionActionPronunciation(): boolean {
+    return this.isPronunciationTarget(this.selectionTranslateTarget());
+  }
+
+  isSelectionPronunciationLoading(): boolean {
+    const target = this.selectionTranslateTarget();
+    if (!target || target.context !== ASSISTANT_PANEL_CONTEXT) {
+      return false;
+    }
+
+    return this.ttsStore.loadingText() === target.selectedText;
+  }
+
+  isSelectionPronunciationPlaying(): boolean {
+    const target = this.selectionTranslateTarget();
+    if (!target || target.context !== ASSISTANT_PANEL_CONTEXT) {
+      return false;
+    }
+
+    return this.ttsStore.playingText() === target.selectedText;
+  }
+
+  isSelectionPronunciationReady(): boolean {
+    const target = this.selectionTranslateTarget();
+    if (!target || target.context !== ASSISTANT_PANEL_CONTEXT) {
+      return false;
+    }
+
+    return this.pronunciationReadyKeys().has(this.createPronunciationReadyKey(target));
+  }
+
+  shouldShowSelectionPronunciationIcon(): boolean {
+    return this.isSelectionPronunciationPlaying() || this.isSelectionPronunciationReady();
+  }
+
+  selectionPronunciationButtonText(): string {
+    if (!this.isSelectionActionPronunciation()) {
+      return '翻譯';
+    }
+
+    if (this.isSelectionPronunciationPlaying()) {
+      return '暫停';
+    }
+
+    if (this.isSelectionPronunciationReady()) {
+      return '播放';
+    }
+
+    return '發音';
+  }
+
+  selectionActionZIndex(): number {
+    return this.isPronunciationTarget(this.selectionTranslateTarget()) ? 90 : 70;
+  }
+
+  selectionTooltipBackdropZIndex(): number {
+    return this.isPronunciationTarget(this.selectionTranslateTarget()) ? 92 : 72;
+  }
+
+  async onSelectionTranslateActionClick(): Promise<void> {
+    const target = this.selectionTranslateTarget();
+    if (!target) {
+      return;
+    }
+
+    if (this.isPronunciationTarget(target)) {
+      await this.onSelectionPronunciationActionClick(target);
+      return;
+    }
+
+    await this.onSelectionTranslationActionClick(target);
+  }
+
+  async onSelectionTranslateRetry(): Promise<void> {
+    await this.onSelectionTranslateActionClick();
+  }
+
+  private onCustomSelectionPointerDown(
+    context: SelectionContext,
+    messageId: string,
+    event: PointerEvent,
+  ): void {
     if (!this.useCustomSelectionMode()) {
       return;
     }
 
-    const tokenIndex = this.resolveTokenIndexFromEventTarget(event.target, message.id);
+    const tokenIndex = this.resolveTokenIndexFromEventTarget(event.target, context, messageId);
     if (tokenIndex < 0) {
       this.dismissSelectionTranslateUi(false);
       return;
@@ -559,28 +718,40 @@ export class SpeakingComponent implements OnInit {
     this.customSelectionDragState = {
       active: true,
       pointerId: event.pointerId,
-      messageId: message.id,
+      context,
+      messageId,
     };
 
     this.customSelection.set({
-      messageId: message.id,
+      context,
+      messageId,
       startTokenIndex: tokenIndex,
       endTokenIndex: tokenIndex,
     });
   }
 
-  onCustomTranscriptPointerMove(message: SpeakingMessage, event: PointerEvent): void {
+  private onCustomSelectionPointerMove(
+    context: SelectionContext,
+    messageId: string,
+    event: PointerEvent,
+  ): void {
     if (
       !this.customSelectionDragState.active ||
       this.customSelectionDragState.pointerId !== event.pointerId ||
-      this.customSelectionDragState.messageId !== message.id
+      this.customSelectionDragState.context !== context ||
+      this.customSelectionDragState.messageId !== messageId
     ) {
       return;
     }
 
     event.preventDefault();
 
-    const tokenIndex = this.resolveTokenIndexFromPoint(event.clientX, event.clientY, message.id);
+    const tokenIndex = this.resolveTokenIndexFromPoint(
+      event.clientX,
+      event.clientY,
+      context,
+      messageId,
+    );
     if (tokenIndex < 0) {
       return;
     }
@@ -588,7 +759,8 @@ export class SpeakingComponent implements OnInit {
     this.customSelection.update((selection) => {
       if (
         !selection ||
-        selection.messageId !== message.id ||
+        selection.context !== context ||
+        selection.messageId !== messageId ||
         selection.endTokenIndex === tokenIndex
       ) {
         return selection;
@@ -601,11 +773,16 @@ export class SpeakingComponent implements OnInit {
     });
   }
 
-  onCustomTranscriptPointerUp(message: SpeakingMessage, event: PointerEvent): void {
+  private onCustomSelectionPointerUp(
+    context: SelectionContext,
+    messageId: string,
+    event: PointerEvent,
+  ): void {
     if (
       !this.customSelectionDragState.active ||
       this.customSelectionDragState.pointerId !== event.pointerId ||
-      this.customSelectionDragState.messageId !== message.id
+      this.customSelectionDragState.context !== context ||
+      this.customSelectionDragState.messageId !== messageId
     ) {
       return;
     }
@@ -615,14 +792,19 @@ export class SpeakingComponent implements OnInit {
       currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    this.finalizeCustomSelection(message);
+    this.finalizeCustomSelection(context, messageId);
     this.endCustomSelectionDrag();
   }
 
-  onCustomTranscriptPointerCancel(message: SpeakingMessage, event: PointerEvent): void {
+  private onCustomSelectionPointerCancel(
+    context: SelectionContext,
+    messageId: string,
+    event: PointerEvent,
+  ): void {
     if (
       this.customSelectionDragState.pointerId !== event.pointerId ||
-      this.customSelectionDragState.messageId !== message.id
+      this.customSelectionDragState.context !== context ||
+      this.customSelectionDragState.messageId !== messageId
     ) {
       return;
     }
@@ -638,12 +820,7 @@ export class SpeakingComponent implements OnInit {
     event.preventDefault();
   }
 
-  async onSelectionTranslateActionClick(): Promise<void> {
-    const target = this.selectionTranslateTarget();
-    if (!target) {
-      return;
-    }
-
+  private async onSelectionTranslationActionClick(target: SelectionTranslateTarget): Promise<void> {
     const requestToken = this.bumpSelectionRequestToken();
     this.selectionTooltipVisible.set(true);
     this.selectionTooltipStatus.set('loading');
@@ -672,8 +849,27 @@ export class SpeakingComponent implements OnInit {
     this.selectionTooltipError.set(result.errorMessage);
   }
 
-  async onSelectionTranslateRetry(): Promise<void> {
-    await this.onSelectionTranslateActionClick();
+  private async onSelectionPronunciationActionClick(
+    target: SelectionTranslateTarget,
+  ): Promise<void> {
+    const requestToken = this.bumpSelectionRequestToken();
+    this.selectionTooltipVisible.set(false);
+    this.selectionTooltipStatus.set('idle');
+    this.selectionTooltipText.set('');
+    this.selectionTooltipError.set(null);
+    this.ttsStore.clearError();
+
+    await this.ttsStore.play(target.selectedText);
+
+    if (isSelectionTranslationResultStale(this.selectionRequestToken, requestToken)) {
+      return;
+    }
+
+    if (this.ttsStore.error()) {
+      return;
+    }
+
+    this.markPronunciationReady(target);
   }
 
   onSelectionTooltipClose(): void {
@@ -998,7 +1194,12 @@ export class SpeakingComponent implements OnInit {
     return value >= 1 ? value.toFixed(2) : value.toFixed(4);
   }
 
-  private applySelectionTarget(messageId: string, selectedText: string, rect: DOMRect): void {
+  private applySelectionTarget(
+    context: SelectionContext,
+    messageId: string,
+    selectedText: string,
+    rect: DOMRect,
+  ): void {
     const normalizedText = selectedText.trim();
     if (!normalizedText) {
       this.dismissSelectionTranslateUi(false);
@@ -1007,7 +1208,10 @@ export class SpeakingComponent implements OnInit {
 
     const current = this.selectionTranslateTarget();
     const selectionChanged =
-      !current || current.messageId !== messageId || current.selectedText !== normalizedText;
+      !current ||
+      current.context !== context ||
+      current.messageId !== messageId ||
+      current.selectedText !== normalizedText;
 
     if (selectionChanged) {
       this.bumpSelectionRequestToken();
@@ -1017,7 +1221,7 @@ export class SpeakingComponent implements OnInit {
       this.selectionTooltipError.set(null);
     }
 
-    this.selectionTranslateTarget.set({ messageId, selectedText: normalizedText });
+    this.selectionTranslateTarget.set({ context, messageId, selectedText: normalizedText });
     this.updateSelectionOverlayPositions(rect);
   }
 
@@ -1027,7 +1231,11 @@ export class SpeakingComponent implements OnInit {
       : [endTokenIndex, startTokenIndex];
   }
 
-  private resolveTokenIndexFromEventTarget(target: EventTarget | null, messageId: string): number {
+  private resolveTokenIndexFromEventTarget(
+    target: EventTarget | null,
+    context: SelectionContext,
+    messageId: string,
+  ): number {
     const element = target instanceof Element ? target : null;
     const tokenElement = element?.closest<HTMLElement>('[data-token-index]');
     if (!tokenElement) {
@@ -1039,26 +1247,36 @@ export class SpeakingComponent implements OnInit {
       return -1;
     }
 
+    const hostContext = this.resolveSelectionContextFromHost(host);
+    if (hostContext !== context) {
+      return -1;
+    }
+
     const index = Number.parseInt(tokenElement.dataset['tokenIndex'] ?? '', 10);
     return Number.isFinite(index) ? index : -1;
   }
 
-  private resolveTokenIndexFromPoint(clientX: number, clientY: number, messageId: string): number {
+  private resolveTokenIndexFromPoint(
+    clientX: number,
+    clientY: number,
+    context: SelectionContext,
+    messageId: string,
+  ): number {
     if (typeof document === 'undefined') {
       return -1;
     }
 
     const element = document.elementFromPoint(clientX, clientY);
-    return this.resolveTokenIndexFromEventTarget(element, messageId);
+    return this.resolveTokenIndexFromEventTarget(element, context, messageId);
   }
 
-  private finalizeCustomSelection(message: SpeakingMessage): void {
+  private finalizeCustomSelection(context: SelectionContext, messageId: string): void {
     const selection = this.customSelection();
-    if (!selection || selection.messageId !== message.id) {
+    if (!selection || selection.context !== context || selection.messageId !== messageId) {
       return;
     }
 
-    const tokens = this.getTranscriptTokens(message);
+    const tokens = this.resolveSelectionTokens(context, messageId);
     if (tokens.length === 0) {
       this.dismissSelectionTranslateUi(false);
       return;
@@ -1069,24 +1287,26 @@ export class SpeakingComponent implements OnInit {
       selection.endTokenIndex,
     );
     const selectedText = tokens.slice(start, end + 1).join('');
-    const rect = this.resolveCustomSelectionRect(message.id, start, end);
+    const rect = this.resolveCustomSelectionRect(context, messageId, start, end);
     if (!rect) {
       this.dismissSelectionTranslateUi(false);
       return;
     }
 
-    this.applySelectionTarget(message.id, selectedText, rect);
+    this.applySelectionTarget(context, messageId, selectedText, rect);
   }
 
   private endCustomSelectionDrag(): void {
     this.customSelectionDragState = {
       active: false,
       pointerId: -1,
+      context: null,
       messageId: null,
     };
   }
 
   private resolveCustomSelectionRect(
+    context: SelectionContext,
     messageId: string,
     startTokenIndex: number,
     endTokenIndex: number,
@@ -1095,7 +1315,9 @@ export class SpeakingComponent implements OnInit {
       return null;
     }
 
-    const selectorPrefix = `[data-speaking-assistant-message-id="${messageId}"]`;
+    const selectorPrefix =
+      `[data-speaking-selection-context="${context}"]` +
+      `[data-speaking-assistant-message-id="${messageId}"]`;
     const startElement = document.querySelector<HTMLElement>(
       `${selectorPrefix} [data-token-index="${startTokenIndex}"]`,
     );
@@ -1172,6 +1394,19 @@ export class SpeakingComponent implements OnInit {
     return element.closest<HTMLElement>('[data-speaking-assistant-message-id]');
   }
 
+  private resolveSelectionContextFromHost(host: HTMLElement): SelectionContext | null {
+    const rawContext = host.dataset['speakingSelectionContext'];
+    if (!rawContext || rawContext === MAIN_TRANSCRIPT_CONTEXT) {
+      return MAIN_TRANSCRIPT_CONTEXT;
+    }
+
+    if (rawContext === ASSISTANT_PANEL_CONTEXT) {
+      return ASSISTANT_PANEL_CONTEXT;
+    }
+
+    return null;
+  }
+
   private updateSelectionOverlayPositions(rect: DOMRect): void {
     const actionTopCandidate = rect.top - SELECTION_ACTION_HEIGHT - SELECTION_OVERLAY_GAP;
     const actionTop =
@@ -1198,7 +1433,11 @@ export class SpeakingComponent implements OnInit {
 
     if (this.useCustomSelectionMode()) {
       const selection = this.customSelection();
-      if (!selection || selection.messageId !== target.messageId) {
+      if (
+        !selection ||
+        selection.context !== target.context ||
+        selection.messageId !== target.messageId
+      ) {
         return;
       }
 
@@ -1206,7 +1445,7 @@ export class SpeakingComponent implements OnInit {
         selection.startTokenIndex,
         selection.endTokenIndex,
       );
-      rect = this.resolveCustomSelectionRect(target.messageId, start, end);
+      rect = this.resolveCustomSelectionRect(target.context, target.messageId, start, end);
     } else if (typeof window !== 'undefined') {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
@@ -1254,6 +1493,47 @@ export class SpeakingComponent implements OnInit {
   private bumpSelectionRequestToken(): number {
     this.selectionRequestToken += 1;
     return this.selectionRequestToken;
+  }
+
+  private getTokensWithCache(cachePrefix: string, sourceText: string): string[] {
+    const cacheKey = `${cachePrefix}:${sourceText}`;
+    const cached = this.transcriptTokenCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const tokens = sourceText.split(/(\s+)/).filter((token) => token.length > 0);
+    this.transcriptTokenCache.set(cacheKey, tokens);
+    return tokens;
+  }
+
+  private resolveSelectionTokens(context: SelectionContext, messageId: string): string[] {
+    if (context === MAIN_TRANSCRIPT_CONTEXT) {
+      const message = this.messages().find((item) => item.id === messageId);
+      return message ? this.getTranscriptTokens(message) : [];
+    }
+
+    const assistantMessage = this.assistantMessages().find(
+      (item) => item.id === messageId && item.role === 'assistant',
+    );
+    return assistantMessage ? this.getAssistantMessageTokens(assistantMessage) : [];
+  }
+
+  private isPronunciationTarget(target: SelectionTranslateTarget | null): boolean {
+    return target?.context === ASSISTANT_PANEL_CONTEXT;
+  }
+
+  private createPronunciationReadyKey(target: SelectionTranslateTarget): string {
+    return `${target.context}:${target.messageId}:${target.selectedText}`;
+  }
+
+  private markPronunciationReady(target: SelectionTranslateTarget): void {
+    const key = this.createPronunciationReadyKey(target);
+    this.pronunciationReadyKeys.update((current) => {
+      const next = new Set(current);
+      next.add(key);
+      return next;
+    });
   }
 
   private isSecureContext(): boolean {

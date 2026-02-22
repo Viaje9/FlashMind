@@ -171,6 +171,7 @@
                           class="custom-selection-transcript text-base leading-relaxed text-slate-700"
                           data-testid="speaking-assistant-transcript"
                           [attr.data-speaking-assistant-message-id]="message.id"
+                          data-speaking-selection-context="main-transcript"
                           (contextmenu)="onAssistantTranscriptContextMenu($event)"
                           (pointerdown)="onCustomTranscriptPointerDown(message, $event)"
                           (pointermove)="onCustomTranscriptPointerMove(message, $event)"
@@ -181,7 +182,7 @@
                             <span
                               class="selection-token"
                               [class.selection-token-selected]="
-                                isCustomTokenSelected(message.id, $index)
+                                isCustomTokenSelected('main-transcript', message.id, $index)
                               "
                               [class.selection-token-space]="isWhitespaceToken(token)"
                               [attr.data-token-index]="$index"
@@ -198,6 +199,7 @@
                         class="whitespace-pre-wrap text-base leading-relaxed text-slate-700"
                         data-testid="speaking-assistant-transcript"
                         [attr.data-speaking-assistant-message-id]="message.id"
+                        data-speaking-selection-context="main-transcript"
                         (contextmenu)="onAssistantTranscriptContextMenu($event)"
                       >
                         @if (shouldShowTranslation(message) && message.translatedText?.trim()) {
@@ -260,19 +262,49 @@
           class="selection-translate-action"
           data-testid="speaking-selection-translate-action"
           data-speaking-selection-overlay="true"
+          [style.z-index]="selectionActionZIndex()"
           [style.left.px]="selectionActionPosition().left"
           [style.top.px]="selectionActionPosition().top"
           (mousedown)="onSelectionOverlayMouseDown($event)"
           (click)="onSelectionTranslateActionClick()"
         >
-          翻譯
+          @if (isSelectionActionPronunciation()) {
+            @if (isSelectionPronunciationLoading()) {
+              <span class="inline-flex items-center gap-1" aria-label="發音載入中">
+                <span
+                  class="dot-bounce [animation-delay:0ms]"
+                  style="background-color: #ffffff"
+                ></span>
+                <span
+                  class="dot-bounce [animation-delay:150ms]"
+                  style="background-color: #ffffff"
+                ></span>
+                <span
+                  class="dot-bounce [animation-delay:300ms]"
+                  style="background-color: #ffffff"
+                ></span>
+              </span>
+            } @else {
+              <span class="inline-flex items-center gap-1.5">
+                @if (shouldShowSelectionPronunciationIcon()) {
+                  <span class="material-symbols-outlined text-[16px] leading-none">
+                    {{ isSelectionPronunciationPlaying() ? 'pause' : 'play_arrow' }}
+                  </span>
+                }
+                <span>{{ selectionActionLabel() }}</span>
+              </span>
+            }
+          } @else {
+            {{ selectionActionLabel() }}
+          }
         </button>
       }
 
-      @if (selectionTooltipVisible() && selectionTranslateTarget(); as selectionTarget) {
+      @if (shouldShowSelectionTooltip() && selectionTranslateTarget(); as selectionTarget) {
         <div
           class="selection-translate-modal-backdrop"
           data-speaking-selection-overlay="true"
+          [style.z-index]="selectionTooltipBackdropZIndex()"
           (mousedown)="onSelectionModalBackdropClick()"
         >
           <section
@@ -282,7 +314,7 @@
             (mousedown)="onSelectionOverlayMouseDown($event)"
           >
             <header class="selection-translate-tooltip-header">
-              <p class="selection-translate-tooltip-title">片段翻譯</p>
+              <p class="selection-translate-tooltip-title">{{ selectionTooltipTitle() }}</p>
               <button
                 type="button"
                 class="selection-translate-tooltip-close"
@@ -297,12 +329,12 @@
               {{ selectionTarget.selectedText }}
             </p>
 
-            @if (selectionTooltipStatus() === 'loading') {
+            @if (selectionTooltipStatus() === 'loading' || selectionTooltipStatus() === 'playing') {
               <div
                 class="selection-translate-loading"
                 data-testid="speaking-selection-translate-loading"
               >
-                <span>翻譯中</span>
+                <span>{{ selectionTooltipLoadingLabel() }}</span>
                 <span class="dot-bounce [animation-delay:0ms]"></span>
                 <span class="dot-bounce [animation-delay:150ms]"></span>
                 <span class="dot-bounce [animation-delay:300ms]"></span>
@@ -597,7 +629,44 @@
                 [class.bg-primary/10]="message.role === 'assistant'"
                 [class.text-slate-700]="message.role === 'assistant'"
               >
-                <p class="whitespace-pre-wrap">{{ message.content }}</p>
+                @if (message.role === 'assistant') {
+                  @if (useCustomSelectionMode() && message.content.trim()) {
+                    <p
+                      class="custom-selection-transcript whitespace-pre-wrap text-base leading-relaxed"
+                      [attr.data-speaking-assistant-message-id]="message.id"
+                      data-speaking-selection-context="assistant-panel"
+                      (contextmenu)="onAssistantTranscriptContextMenu($event)"
+                      (pointerdown)="onAssistantPanelMessagePointerDown(message, $event)"
+                      (pointermove)="onAssistantPanelMessagePointerMove(message, $event)"
+                      (pointerup)="onAssistantPanelMessagePointerUp(message, $event)"
+                      (pointercancel)="onAssistantPanelMessagePointerCancel(message, $event)"
+                    >
+                      @for (token of getAssistantMessageTokens(message); track $index) {
+                        <span
+                          class="selection-token"
+                          [class.selection-token-selected]="
+                            isCustomTokenSelected('assistant-panel', message.id, $index)
+                          "
+                          [class.selection-token-space]="isWhitespaceToken(token)"
+                          [attr.data-token-index]="$index"
+                        >
+                          {{ token }}
+                        </span>
+                      }
+                    </p>
+                  } @else {
+                    <p
+                      class="whitespace-pre-wrap"
+                      [attr.data-speaking-assistant-message-id]="message.id"
+                      data-speaking-selection-context="assistant-panel"
+                      (contextmenu)="onAssistantTranscriptContextMenu($event)"
+                    >
+                      {{ message.content }}
+                    </p>
+                  }
+                } @else {
+                  <p class="whitespace-pre-wrap">{{ message.content }}</p>
+                }
               </div>
             </article>
           }

@@ -21,6 +21,7 @@ import {
 } from '@flashmind/ui';
 import { base64ToBlob } from '../../../components/speaking/speaking-audio.utils';
 import {
+  SPEAKING_DEFAULT_SYSTEM_PROMPT,
   SPEAKING_DEFAULT_SETTINGS,
   type SpeakingSettings,
 } from '../../../components/speaking/speaking.domain';
@@ -129,6 +130,10 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     this.formRevision.update((revision) => revision + 1);
   }
 
+  onResetSystemPrompt(): void {
+    this.systemPromptControl.setValue(SPEAKING_DEFAULT_SYSTEM_PROMPT);
+  }
+
   onCancelDiscard(): void {
     this.discardModalOpen.set(false);
   }
@@ -190,18 +195,23 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     this.showTranscriptControl.setValue(settings.showTranscript, { emitEvent: false });
     this.autoTranslateControl.setValue(settings.autoTranslate, { emitEvent: false });
     this.autoMemoryEnabledControl.setValue(settings.autoMemoryEnabled, { emitEvent: false });
-    this.systemPromptControl.setValue(settings.systemPrompt, { emitEvent: false });
+    this.systemPromptControl.setValue(
+      settings.systemPrompt.trim() || SPEAKING_DEFAULT_SYSTEM_PROMPT,
+      { emitEvent: false },
+    );
     this.memoryControl.setValue(settings.memory, { emitEvent: false });
     this.voiceControl.setValue(settings.voice, { emitEvent: false });
   }
 
   private getCurrentSettings(): SpeakingSettings {
+    const normalizedPrompt = this.normalizeSystemPromptForStorage(this.systemPromptControl.value);
+
     return {
       autoPlayVoice: this.autoPlayVoiceControl.value,
       showTranscript: this.showTranscriptControl.value,
       autoTranslate: this.autoTranslateControl.value,
       autoMemoryEnabled: this.autoMemoryEnabledControl.value,
-      systemPrompt: this.systemPromptControl.value,
+      systemPrompt: normalizedPrompt,
       memory: this.memoryControl.value,
       voice: this.voiceControl.value,
     };
@@ -217,5 +227,18 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
       left.memory === right.memory &&
       left.voice === right.voice
     );
+  }
+
+  private normalizeSystemPromptForStorage(prompt: string): string {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) {
+      return '';
+    }
+
+    if (trimmedPrompt === SPEAKING_DEFAULT_SYSTEM_PROMPT.trim()) {
+      return '';
+    }
+
+    return prompt;
   }
 }

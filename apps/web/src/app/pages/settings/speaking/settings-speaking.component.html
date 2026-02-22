@@ -102,15 +102,24 @@
       <fm-section-heading text="AI 對話提示詞"></fm-section-heading>
       <div class="rounded-2xl bg-surface-light p-4 shadow-sm dark:bg-surface-dark">
         <p class="mb-2 text-sm text-slate-500 dark:text-slate-300">
-          可覆蓋預設 A2 英語夥伴提示詞。留空則使用系統預設。
+          這裡顯示目前生效的提示詞；你可以直接修改。按「重設」可回到系統預設。
         </p>
         <textarea
           [formControl]="systemPromptControl"
-          rows="6"
-          class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm focus:border-primary focus:outline-none dark:border-white/10 dark:bg-slate-900"
-          placeholder="例如：你是一位友善的英語口說教練..."
+          rows="10"
+          class="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-relaxed focus:border-primary focus:outline-none dark:border-white/10 dark:bg-slate-900"
           data-testid="speaking-settings-system-prompt"
         ></textarea>
+        <div class="mt-3 flex justify-end">
+          <fm-button
+            variant="primary"
+            size="sm"
+            (click)="onResetSystemPrompt()"
+            testId="speaking-settings-system-prompt-reset"
+          >
+            重設
+          </fm-button>
+        </div>
       </div>
     </section>
 

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { SpeakingService as SpeakingApiService, SpeakingVoice } from '@flashmind/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  SPEAKING_DEFAULT_SYSTEM_PROMPT,
   type SpeakingSettings,
   SPEAKING_DEFAULT_SETTINGS,
 } from '../../../components/speaking/speaking.domain';
@@ -90,5 +91,39 @@ describe('SettingsSpeakingComponent', () => {
 
     expect(component.canDeactivate()).toBe(true);
     expect(confirmSpy).toHaveBeenCalledWith('你有未儲存的口說設定，確定要離開嗎？');
+  });
+
+  it('載入空提示詞時，欄位應顯示預設提示詞', () => {
+    repositoryMock.loadSettings.mockReturnValue({
+      ...loadedSettings,
+      systemPrompt: '',
+    });
+
+    const nextFixture = TestBed.createComponent(SettingsSpeakingComponent);
+    const nextComponent = nextFixture.componentInstance;
+    nextFixture.detectChanges();
+
+    expect(nextComponent.systemPromptControl.value).toBe(SPEAKING_DEFAULT_SYSTEM_PROMPT);
+    nextFixture.destroy();
+  });
+
+  it('重設提示詞時應填入預設提示詞', () => {
+    component.systemPromptControl.setValue('my custom prompt');
+
+    component.onResetSystemPrompt();
+
+    expect(component.systemPromptControl.value).toBe(SPEAKING_DEFAULT_SYSTEM_PROMPT);
+  });
+
+  it('儲存時若提示詞等於預設值，應轉成空字串以沿用後端預設', async () => {
+    component.systemPromptControl.setValue(SPEAKING_DEFAULT_SYSTEM_PROMPT);
+
+    await component.onSave();
+
+    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemPrompt: '',
+      }),
+    );
   });
 });
