@@ -70,6 +70,7 @@ export class SpeakingStore {
   readonly error = computed(() => this.state().error ?? this.audioPlayer.error());
   readonly speakingSettings = computed(() => this.speakingSettingsState());
   readonly playingAudioKey = computed(() => this.audioPlayer.playingKey());
+  readonly pausedAudioKey = computed(() => this.audioPlayer.pausedKey());
 
   async startNewConversation(): Promise<void> {
     const assistantMessages = this.state().assistantMessages;
@@ -470,6 +471,16 @@ export class SpeakingStore {
   async playMessageAudio(messageId: string): Promise<void> {
     const message = this.state().messages.find((item) => item.id === messageId);
     if (!message?.audioBlobKey) {
+      return;
+    }
+
+    if (this.audioPlayer.playingKey() === message.audioBlobKey) {
+      this.audioPlayer.pause();
+      return;
+    }
+
+    if (this.audioPlayer.pausedKey() === message.audioBlobKey) {
+      await this.audioPlayer.resume();
       return;
     }
 

@@ -1,7 +1,7 @@
 // 此檔案由 scripts/bump-version.mjs 自動生成，請勿手動修改
 export const VERSION = {
-  version: '0.1.36',
+  version: '0.1.37',
   buildDate: '2026-02-22',
-  commitHash: 'f163617',
-  displayString: `FlashMind v0.1.36 (Build 2026-02-22)`,
+  commitHash: '65ca07c',
+  displayString: `FlashMind v0.1.37 (Build 2026-02-22)`,
 } as const;

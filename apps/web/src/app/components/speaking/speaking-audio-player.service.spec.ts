@@ -3,25 +3,42 @@ import { SpeakingAudioPlayerService } from './speaking-audio-player.service';
 
 class MockAudio {
   static playResults: Array<'ok' | Error> = [];
+  static instances: MockAudio[] = [];
+  static autoEnd = true;
 
   onended: (() => void) | null = null;
   onerror: (() => void) | null = null;
   currentTime = 0;
+  paused = true;
 
   readonly play = vi.fn(async () => {
+    this.paused = false;
     const next = MockAudio.playResults.shift() ?? 'ok';
     if (next instanceof Error) {
+      this.paused = true;
       throw next;
     }
 
-    window.setTimeout(() => {
-      this.onended?.();
-    }, 0);
+    if (MockAudio.autoEnd) {
+      window.setTimeout(() => {
+        this.paused = true;
+        this.onended?.();
+      }, 0);
+    }
   });
 
-  readonly pause = vi.fn(() => undefined);
+  readonly pause = vi.fn(() => {
+    this.paused = true;
+  });
 
-  constructor(public readonly src: string) {}
+  constructor(public readonly src: string) {
+    MockAudio.instances.push(this);
+  }
+
+  triggerEnd(): void {
+    this.paused = true;
+    this.onended?.();
+  }
 }
 
 describe('speaking-audio-player.service', () => {
@@ -30,6 +47,8 @@ describe('speaking-audio-player.service', () => {
 
   beforeEach(() => {
     MockAudio.playResults = [];
+    MockAudio.instances = [];
+    MockAudio.autoEnd = true;
     createObjectURL.mockClear();
     revokeObjectURL.mockClear();
 
@@ -62,6 +81,7 @@ describe('speaking-audio-player.service', () => {
       auto: true,
       maxRetryAttempts: 2,
     });
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(service.error()).toBeNull();
     expect(service.playingKey()).toBeNull();
@@ -78,5 +98,27 @@ describe('speaking-audio-player.service', () => {
 
     expect(service.error()).toBe('語音播放失敗，請再試一次。');
     expect(service.playingKey()).toBeNull();
+  });
+
+  it('同一則音訊重複點擊應在播放與暫停間切換', async () => {
+    MockAudio.autoEnd = false;
+    const service = new SpeakingAudioPlayerService();
+    const blob = new Blob(['audio']);
+
+    await service.play(blob, 'assistant-3');
+    expect(service.playingKey()).toBe('assistant-3');
+    expect(service.pausedKey()).toBeNull();
+
+    await service.play(blob, 'assistant-3');
+    expect(service.playingKey()).toBeNull();
+    expect(service.pausedKey()).toBe('assistant-3');
+
+    await service.play(blob, 'assistant-3');
+    expect(service.playingKey()).toBe('assistant-3');
+    expect(service.pausedKey()).toBeNull();
+
+    MockAudio.instances[0]?.triggerEnd();
+    expect(service.playingKey()).toBeNull();
+    expect(service.pausedKey()).toBeNull();
   });
 });

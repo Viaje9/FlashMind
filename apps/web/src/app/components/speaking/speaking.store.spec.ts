@@ -38,7 +38,10 @@ describe('speaking.store selection translate', () => {
           useValue: {
             error: signal<string | null>(null),
             playingKey: signal<string | null>(null),
+            pausedKey: signal<string | null>(null),
             stop: vi.fn(),
+            pause: vi.fn(),
+            resume: vi.fn(async () => undefined),
             play: vi.fn().mockResolvedValue(undefined),
             clearError: vi.fn(),
           },

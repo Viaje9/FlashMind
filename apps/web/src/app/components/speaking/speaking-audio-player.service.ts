@@ -14,9 +14,11 @@ export class SpeakingAudioPlayerService {
   private unlockInitialized = false;
 
   private readonly playingKeyState = signal<string | null>(null);
+  private readonly pausedKeyState = signal<string | null>(null);
   private readonly errorState = signal<string | null>(null);
 
   readonly playingKey = computed(() => this.playingKeyState());
+  readonly pausedKey = computed(() => this.pausedKeyState());
   readonly error = computed(() => this.errorState());
 
   constructor() {
@@ -28,7 +30,6 @@ export class SpeakingAudioPlayerService {
   }
 
   async play(blob: Blob, key: string, options: PlayOptions = {}): Promise<void> {
-    this.stop();
     this.errorState.set(null);
 
     if (!blob || blob.size === 0) {
@@ -36,12 +37,32 @@ export class SpeakingAudioPlayerService {
       return;
     }
 
+    if (this.currentAudio && this.currentKey === key) {
+      if (this.currentAudio.paused) {
+        await this.resume(options);
+      } else {
+        this.pause();
+      }
+      return;
+    }
+
+    this.stop();
+
     const audio = this.createAudioForKey(blob, key);
     this.currentAudio = audio;
     this.currentKey = key;
     this.playingKeyState.set(key);
+    this.pausedKeyState.set(null);
 
     const maxRetryAttempts = options.maxRetryAttempts ?? 6;
+
+    audio.onended = () => {
+      this.cleanupPlaybackStateForKey(key);
+    };
+    audio.onerror = () => {
+      this.errorState.set('語音播放失敗，請再試一次。');
+      this.cleanupPlaybackStateForKey(key);
+    };
 
     try {
       if (options.auto) {
@@ -49,31 +70,55 @@ export class SpeakingAudioPlayerService {
       } else {
         await audio.play();
       }
-
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => resolve();
-        audio.onerror = () => reject(new Error('audio playback error'));
-      });
     } catch {
       this.errorState.set('語音播放失敗，請再試一次。');
-    } finally {
-      if (this.currentKey === key) {
-        this.playingKeyState.set(null);
-        this.currentAudio = null;
-        this.currentKey = null;
+      this.cleanupPlaybackStateForKey(key);
+    }
+  }
+
+  pause(): void {
+    if (!this.currentAudio || !this.currentKey || this.currentAudio.paused) {
+      return;
+    }
+
+    this.currentAudio.pause();
+    this.playingKeyState.set(null);
+    this.pausedKeyState.set(this.currentKey);
+  }
+
+  async resume(options: PlayOptions = {}): Promise<void> {
+    if (!this.currentAudio || !this.currentKey || !this.currentAudio.paused) {
+      return;
+    }
+
+    this.errorState.set(null);
+    const maxRetryAttempts = options.maxRetryAttempts ?? 6;
+    const key = this.currentKey;
+
+    try {
+      if (options.auto) {
+        await this.playWithFallback(this.currentAudio, maxRetryAttempts);
+      } else {
+        await this.currentAudio.play();
       }
+
+      this.playingKeyState.set(key);
+      this.pausedKeyState.set(null);
+    } catch {
+      this.errorState.set('語音播放失敗，請再試一次。');
+      this.cleanupPlaybackStateForKey(key);
     }
   }
 
   stop(): void {
     if (this.currentAudio) {
+      this.currentAudio.onended = null;
+      this.currentAudio.onerror = null;
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
     }
 
-    this.currentAudio = null;
-    this.currentKey = null;
-    this.playingKeyState.set(null);
+    this.clearPlaybackState();
   }
 
   clearError(): void {
@@ -229,5 +274,25 @@ export class SpeakingAudioPlayerService {
         this.objectUrlCache.delete(oldestKey);
       }
     }
+  }
+
+  private cleanupPlaybackStateForKey(key: string): void {
+    if (this.currentKey !== key) {
+      return;
+    }
+
+    if (this.currentAudio) {
+      this.currentAudio.onended = null;
+      this.currentAudio.onerror = null;
+    }
+
+    this.clearPlaybackState();
+  }
+
+  private clearPlaybackState(): void {
+    this.currentAudio = null;
+    this.currentKey = null;
+    this.playingKeyState.set(null);
+    this.pausedKeyState.set(null);
   }
 }
