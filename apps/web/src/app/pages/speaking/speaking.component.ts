@@ -182,6 +182,11 @@ export class SpeakingComponent implements OnInit {
 
   constructor() {
     effect(() => {
+      this.messages();
+      this.scrollSpeakingMessagesToBottom();
+    });
+
+    effect(() => {
       const messages = this.assistantMessages();
       this.saveAssistantMessages(messages);
       this.scrollAssistantMessagesToBottom();
@@ -662,6 +667,21 @@ export class SpeakingComponent implements OnInit {
 
     queueMicrotask(() => {
       container.scrollTop = container.scrollHeight;
+    });
+  }
+
+  private scrollSpeakingMessagesToBottom(): void {
+    queueMicrotask(() => {
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return;
+      }
+
+      const scrollingElement = document.scrollingElement;
+      if (!scrollingElement) {
+        return;
+      }
+
+      window.scrollTo({ top: scrollingElement.scrollHeight });
     });
   }
 
