@@ -9,7 +9,7 @@ async function bootstrap() {
     bodyParser: false,
   });
 
-  app.useBodyParser('json', { limit: '5mb' });
+  app.useBodyParser('json', { limit: '2gb' });
 
   app.setGlobalPrefix('api');
 

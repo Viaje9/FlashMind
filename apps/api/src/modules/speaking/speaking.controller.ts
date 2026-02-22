@@ -111,7 +111,7 @@ export class SpeakingController {
   @UseInterceptors(
     FileInterceptor('audioFile', {
       limits: {
-        fileSize: 8 * 1024 * 1024,
+        fileSize: 2 * 1024 * 1024 * 1024,
         fieldSize: 2 * 1024 * 1024 * 1024,
       },
     }),
