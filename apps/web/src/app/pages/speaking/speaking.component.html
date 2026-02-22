@@ -371,6 +371,10 @@
           </div>
         </div>
       </footer>
+      <p class="mt-2 px-1 text-[11px] text-slate-500" data-testid="speaking-cost-summary">
+        總花費：約 NT$ {{ formatCostTwd(spending().totalCostTwd) }} ｜ 單次花費：約 NT$
+        {{ formatCostTwd(spending().lastRequestCostTwd) }}
+      </p>
     }
   </main>
 

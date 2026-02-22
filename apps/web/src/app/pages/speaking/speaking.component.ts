@@ -51,6 +51,11 @@ const ASSISTANT_PANEL_MARGIN = 12;
 const ASSISTANT_MESSAGES_STORAGE_KEY = 'flashmind.speaking.assistant.messages';
 const ASSISTANT_TOP_STORAGE_KEY = 'flashmind.speaking.assistant.top';
 const ASSISTANT_HEIGHT_STORAGE_KEY = 'flashmind.speaking.assistant.height';
+const USD_TO_TWD = 32;
+const AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION = 0.15;
+const AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION = 0.6;
+const AUDIO_MODEL_AUDIO_INPUT_USD_PER_MILLION = 10;
+const AUDIO_MODEL_AUDIO_OUTPUT_USD_PER_MILLION = 20;
 
 @Component({
   selector: 'app-speaking-page',
@@ -152,6 +157,26 @@ export class SpeakingComponent implements OnInit {
     }
 
     return null;
+  });
+  readonly spending = computed(() => {
+    let totalCostTwd = 0;
+    let lastRequestCostTwd = 0;
+
+    for (const message of this.messages()) {
+      const costUsd = this.calculateUsageCostUsd(message.usage);
+      if (costUsd <= 0) {
+        continue;
+      }
+
+      const costTwd = costUsd * USD_TO_TWD;
+      totalCostTwd += costTwd;
+      lastRequestCostTwd = costTwd;
+    }
+
+    return {
+      totalCostTwd,
+      lastRequestCostTwd,
+    };
   });
 
   private noteDragState: DragState = {
@@ -611,12 +636,58 @@ export class SpeakingComponent implements OnInit {
     return `${minutes}:${seconds}`;
   }
 
+  formatCostTwd(value: number): string {
+    if (!Number.isFinite(value) || value <= 0) {
+      return '0.0000';
+    }
+
+    return value >= 1 ? value.toFixed(2) : value.toFixed(4);
+  }
+
   private isSecureContext(): boolean {
     if (typeof window === 'undefined') {
       return true;
     }
 
     return window.isSecureContext;
+  }
+
+  private calculateUsageCostUsd(usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    promptTextTokens: number;
+    promptAudioTokens: number;
+    completionTextTokens: number;
+    completionAudioTokens: number;
+  }): number {
+    if (!usage) {
+      return 0;
+    }
+
+    const hasDetailedTokenBreakdown =
+      usage.promptTextTokens > 0 ||
+      usage.promptAudioTokens > 0 ||
+      usage.completionTextTokens > 0 ||
+      usage.completionAudioTokens > 0;
+
+    if (!hasDetailedTokenBreakdown) {
+      return (
+        (usage.promptTokens / 1_000_000) * AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION +
+        (usage.completionTokens / 1_000_000) * AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION
+      );
+    }
+
+    const promptTextCost =
+      (usage.promptTextTokens / 1_000_000) * AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION;
+    const promptAudioCost =
+      (usage.promptAudioTokens / 1_000_000) * AUDIO_MODEL_AUDIO_INPUT_USD_PER_MILLION;
+    const completionTextCost =
+      (usage.completionTextTokens / 1_000_000) * AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION;
+    const completionAudioCost =
+      (usage.completionAudioTokens / 1_000_000) * AUDIO_MODEL_AUDIO_OUTPUT_USD_PER_MILLION;
+
+    return promptTextCost + promptAudioCost + completionTextCost + completionAudioCost;
   }
 
   private async tryLoadConversation(conversationId: string): Promise<void> {
