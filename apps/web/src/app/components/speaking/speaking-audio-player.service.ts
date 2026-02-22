@@ -5,21 +5,59 @@ interface PlayOptions {
   maxRetryAttempts?: number;
 }
 
+function createSilentWavBlob(durationMs = 250): Blob {
+  const sampleRate = 8000;
+  const channels = 1;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const sampleCount = Math.max(1, Math.floor((sampleRate * durationMs) / 1000));
+  const dataSize = sampleCount * channels * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeAscii = (offset: number, value: string): void => {
+    for (let i = 0; i < value.length; i += 1) {
+      view.setUint8(offset + i, value.charCodeAt(i));
+    }
+  };
+
+  writeAscii(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeAscii(8, 'WAVE');
+  writeAscii(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * channels * bytesPerSample, true);
+  view.setUint16(32, channels * bytesPerSample, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeAscii(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 @Injectable({ providedIn: 'root' })
 export class SpeakingAudioPlayerService {
-  private currentAudio: HTMLAudioElement | null = null;
+  private trackAudio: HTMLAudioElement | null = null;
   private currentKey: string | null = null;
   private readonly objectUrlCache = new Map<string, string>();
   private readonly objectUrlOrder: string[] = [];
   private unlockInitialized = false;
+  private keepAliveUrl: string | null = null;
+  private keepAliveActive = false;
+  private sharedTrackEnabled = false;
 
   private readonly playingKeyState = signal<string | null>(null);
   private readonly pausedKeyState = signal<string | null>(null);
   private readonly errorState = signal<string | null>(null);
+  private readonly mutedState = signal(false);
 
   readonly playingKey = computed(() => this.playingKeyState());
   readonly pausedKey = computed(() => this.pausedKeyState());
   readonly error = computed(() => this.errorState());
+  readonly muted = computed(() => this.mutedState());
 
   constructor() {
     this.initializeAutoplayUnlock();
@@ -27,6 +65,37 @@ export class SpeakingAudioPlayerService {
 
   isPlaying(key: string): boolean {
     return this.playingKeyState() === key;
+  }
+
+  async activateSharedTrack(): Promise<void> {
+    this.errorState.set(null);
+    this.sharedTrackEnabled = true;
+    await this.enterKeepAliveMode();
+  }
+
+  deactivateSharedTrack(): void {
+    this.sharedTrackEnabled = false;
+
+    if (!this.trackAudio) {
+      return;
+    }
+
+    this.trackAudio.onended = null;
+    this.trackAudio.onerror = null;
+    this.trackAudio.pause();
+    this.trackAudio.currentTime = 0;
+    this.trackAudio.removeAttribute('src');
+    this.trackAudio.load();
+
+    this.keepAliveActive = false;
+    this.clearPlaybackState();
+  }
+
+  setMuted(muted: boolean): void {
+    this.mutedState.set(muted);
+    if (this.trackAudio) {
+      this.trackAudio.muted = muted;
+    }
   }
 
   async play(blob: Blob, key: string, options: PlayOptions = {}): Promise<void> {
@@ -37,8 +106,10 @@ export class SpeakingAudioPlayerService {
       return;
     }
 
-    if (this.currentAudio && this.currentKey === key) {
-      if (this.currentAudio.paused) {
+    const audio = this.ensureTrackAudio();
+
+    if (this.currentKey === key) {
+      if (audio.paused) {
         await this.resume(options);
       } else {
         this.pause();
@@ -46,11 +117,13 @@ export class SpeakingAudioPlayerService {
       return;
     }
 
-    this.stop();
+    this.stopCurrentClip();
 
-    const audio = this.createAudioForKey(blob, key);
-    this.currentAudio = audio;
+    const sourceUrl = this.getSourceUrlForKey(blob, key);
+    this.applySource(audio, sourceUrl, false);
+
     this.currentKey = key;
+    this.keepAliveActive = false;
     this.playingKeyState.set(key);
     this.pausedKeyState.set(null);
 
@@ -58,10 +131,16 @@ export class SpeakingAudioPlayerService {
 
     audio.onended = () => {
       this.cleanupPlaybackStateForKey(key);
+      if (this.sharedTrackEnabled) {
+        void this.enterKeepAliveMode();
+      }
     };
     audio.onerror = () => {
       this.errorState.set('語音播放失敗，請再試一次。');
       this.cleanupPlaybackStateForKey(key);
+      if (this.sharedTrackEnabled) {
+        void this.enterKeepAliveMode();
+      }
     };
 
     try {
@@ -73,21 +152,24 @@ export class SpeakingAudioPlayerService {
     } catch {
       this.errorState.set('語音播放失敗，請再試一次。');
       this.cleanupPlaybackStateForKey(key);
+      if (this.sharedTrackEnabled) {
+        void this.enterKeepAliveMode();
+      }
     }
   }
 
   pause(): void {
-    if (!this.currentAudio || !this.currentKey || this.currentAudio.paused) {
+    if (!this.trackAudio || !this.currentKey || this.trackAudio.paused) {
       return;
     }
 
-    this.currentAudio.pause();
+    this.trackAudio.pause();
     this.playingKeyState.set(null);
     this.pausedKeyState.set(this.currentKey);
   }
 
   async resume(options: PlayOptions = {}): Promise<void> {
-    if (!this.currentAudio || !this.currentKey || !this.currentAudio.paused) {
+    if (!this.trackAudio || !this.currentKey || !this.trackAudio.paused) {
       return;
     }
 
@@ -97,9 +179,9 @@ export class SpeakingAudioPlayerService {
 
     try {
       if (options.auto) {
-        await this.playWithFallback(this.currentAudio, maxRetryAttempts);
+        await this.playWithFallback(this.trackAudio, maxRetryAttempts);
       } else {
-        await this.currentAudio.play();
+        await this.trackAudio.play();
       }
 
       this.playingKeyState.set(key);
@@ -107,18 +189,17 @@ export class SpeakingAudioPlayerService {
     } catch {
       this.errorState.set('語音播放失敗，請再試一次。');
       this.cleanupPlaybackStateForKey(key);
+      if (this.sharedTrackEnabled) {
+        void this.enterKeepAliveMode();
+      }
     }
   }
 
   stop(): void {
-    if (this.currentAudio) {
-      this.currentAudio.onended = null;
-      this.currentAudio.onerror = null;
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
+    this.stopCurrentClip();
+    if (this.sharedTrackEnabled) {
+      void this.enterKeepAliveMode();
     }
-
-    this.clearPlaybackState();
   }
 
   clearError(): void {
@@ -131,19 +212,99 @@ export class SpeakingAudioPlayerService {
     }
     this.objectUrlCache.clear();
     this.objectUrlOrder.length = 0;
+
+    if (this.keepAliveUrl) {
+      URL.revokeObjectURL(this.keepAliveUrl);
+      this.keepAliveUrl = null;
+    }
   }
 
-  private createAudioForKey(blob: Blob, key: string): HTMLAudioElement {
-    const cachedUrl = this.objectUrlCache.get(key);
-    const objectUrl = cachedUrl ?? URL.createObjectURL(blob);
-
-    if (!cachedUrl) {
-      this.objectUrlCache.set(key, objectUrl);
-      this.objectUrlOrder.push(key);
-      this.evictUrlCacheIfNeeded();
+  private ensureTrackAudio(): HTMLAudioElement {
+    if (this.trackAudio) {
+      return this.trackAudio;
     }
 
-    return new Audio(objectUrl);
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.muted = this.mutedState();
+    this.trackAudio = audio;
+    return audio;
+  }
+
+  private async enterKeepAliveMode(): Promise<void> {
+    if (!this.sharedTrackEnabled) {
+      return;
+    }
+
+    const audio = this.ensureTrackAudio();
+    const keepAliveUrl = this.getKeepAliveUrl();
+
+    if (this.currentKey) {
+      return;
+    }
+
+    if (!this.keepAliveActive) {
+      this.applySource(audio, keepAliveUrl, true);
+      this.keepAliveActive = true;
+    }
+
+    if (!audio.paused) {
+      return;
+    }
+
+    try {
+      await audio.play();
+    } catch {
+      // ignore keep-alive failure; next user interaction/playback can recover
+    }
+  }
+
+  private getKeepAliveUrl(): string {
+    if (this.keepAliveUrl) {
+      return this.keepAliveUrl;
+    }
+
+    this.keepAliveUrl = URL.createObjectURL(createSilentWavBlob());
+    return this.keepAliveUrl;
+  }
+
+  private getSourceUrlForKey(blob: Blob, key: string): string {
+    const cachedUrl = this.objectUrlCache.get(key);
+    if (cachedUrl) {
+      return cachedUrl;
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    this.objectUrlCache.set(key, objectUrl);
+    this.objectUrlOrder.push(key);
+    this.evictUrlCacheIfNeeded();
+
+    return objectUrl;
+  }
+
+  private applySource(audio: HTMLAudioElement, sourceUrl: string, loop: boolean): void {
+    if (audio.src === sourceUrl && audio.loop === loop) {
+      return;
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+    audio.src = sourceUrl;
+    audio.loop = loop;
+  }
+
+  private stopCurrentClip(): void {
+    if (!this.trackAudio) {
+      this.clearPlaybackState();
+      return;
+    }
+
+    this.trackAudio.onended = null;
+    this.trackAudio.onerror = null;
+    this.trackAudio.pause();
+    this.trackAudio.currentTime = 0;
+
+    this.clearPlaybackState();
   }
 
   private async playWithFallback(audio: HTMLAudioElement, maxRetryAttempts: number): Promise<void> {
@@ -246,6 +407,9 @@ export class SpeakingAudioPlayerService {
 
     const unlock = () => {
       void this.resumeAudioContextIfAny();
+      if (this.sharedTrackEnabled) {
+        void this.enterKeepAliveMode();
+      }
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
     };
@@ -281,16 +445,15 @@ export class SpeakingAudioPlayerService {
       return;
     }
 
-    if (this.currentAudio) {
-      this.currentAudio.onended = null;
-      this.currentAudio.onerror = null;
+    if (this.trackAudio) {
+      this.trackAudio.onended = null;
+      this.trackAudio.onerror = null;
     }
 
     this.clearPlaybackState();
   }
 
   private clearPlaybackState(): void {
-    this.currentAudio = null;
     this.currentKey = null;
     this.playingKeyState.set(null);
     this.pausedKeyState.set(null);

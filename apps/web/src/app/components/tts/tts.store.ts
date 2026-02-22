@@ -1,6 +1,7 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { TTSService } from '@flashmind/api-client';
 import { firstValueFrom } from 'rxjs';
+import { SpeakingAudioPlayerService } from '../speaking/speaking-audio-player.service';
 import { createAudioCacheKey, createWordAudioCacheKey } from './tts.domain';
 
 export interface TtsStoreState {
@@ -12,8 +13,9 @@ export interface TtsStoreState {
 @Injectable({ providedIn: 'root' })
 export class TtsStore {
   private readonly ttsService = inject(TTSService);
-  private readonly audioCache = new Map<string, string>();
-  private currentAudio: HTMLAudioElement | null = null;
+  private readonly audioPlayer = inject(SpeakingAudioPlayerService);
+  private readonly audioCache = new Map<string, Blob>();
+  private currentPlaybackKey: string | null = null;
 
   private readonly state = signal<TtsStoreState>({
     playingText: null,
@@ -24,6 +26,26 @@ export class TtsStore {
   readonly playingText = computed(() => this.state().playingText);
   readonly loadingText = computed(() => this.state().loadingText);
   readonly error = computed(() => this.state().error);
+
+  constructor() {
+    effect(() => {
+      const activeKey = this.currentPlaybackKey;
+      if (!activeKey) {
+        return;
+      }
+
+      const playingKey = this.audioPlayer.playingKey();
+      const pausedKey = this.audioPlayer.pausedKey();
+      if (playingKey === activeKey || pausedKey === activeKey) {
+        return;
+      }
+
+      this.currentPlaybackKey = null;
+      if (this.state().playingText) {
+        this.state.update((s) => ({ ...s, playingText: null }));
+      }
+    });
+  }
 
   isPlaying(text: string): boolean {
     return this.state().playingText === text;
@@ -36,14 +58,22 @@ export class TtsStore {
   async play(text: string): Promise<void> {
     const trimmedText = text.trim();
     if (!trimmedText) return;
+    const cacheKey = createAudioCacheKey(trimmedText);
+    this.audioPlayer.clearError();
 
-    // 如果正在播放相同的文字，停止播放
-    if (this.state().playingText === trimmedText) {
-      this.stop();
+    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.playingKey() === cacheKey) {
+      this.audioPlayer.pause();
+      this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
       return;
     }
 
-    // 停止目前的播放
+    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.pausedKey() === cacheKey) {
+      this.errorStateClear();
+      await this.audioPlayer.resume();
+      this.state.update((s) => ({ ...s, playingText: trimmedText, loadingText: null }));
+      return;
+    }
+
     this.stop();
 
     this.state.update((s) => ({
@@ -53,13 +83,17 @@ export class TtsStore {
     }));
 
     try {
-      const audioUrl = await this.getSentenceAudioUrl(trimmedText);
+      const audioBlob = await this.getSentenceAudioBlob(trimmedText);
       this.state.update((s) => ({
         ...s,
         loadingText: null,
+      }));
+      await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
+      this.currentPlaybackKey = cacheKey;
+      this.state.update((s) => ({
+        ...s,
         playingText: trimmedText,
       }));
-      await this.playAudio(audioUrl, trimmedText);
     } catch {
       this.state.update((s) => ({
         ...s,
@@ -67,20 +101,29 @@ export class TtsStore {
         playingText: null,
         error: '語音播放失敗',
       }));
+      this.audioPlayer.clearError();
     }
   }
 
   async playWord(text: string): Promise<void> {
     const trimmedText = text.trim();
     if (!trimmedText) return;
+    const cacheKey = createWordAudioCacheKey(trimmedText);
+    this.audioPlayer.clearError();
 
-    // 如果正在播放相同的文字，停止播放
-    if (this.state().playingText === trimmedText) {
-      this.stop();
+    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.playingKey() === cacheKey) {
+      this.audioPlayer.pause();
+      this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
       return;
     }
 
-    // 停止目前的播放
+    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.pausedKey() === cacheKey) {
+      this.errorStateClear();
+      await this.audioPlayer.resume();
+      this.state.update((s) => ({ ...s, playingText: trimmedText, loadingText: null }));
+      return;
+    }
+
     this.stop();
 
     this.state.update((s) => ({
@@ -90,13 +133,17 @@ export class TtsStore {
     }));
 
     try {
-      const audioUrl = await this.getWordAudioUrl(trimmedText);
+      const audioBlob = await this.getWordAudioBlob(trimmedText);
       this.state.update((s) => ({
         ...s,
         loadingText: null,
+      }));
+      await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
+      this.currentPlaybackKey = cacheKey;
+      this.state.update((s) => ({
+        ...s,
         playingText: trimmedText,
       }));
-      await this.playAudio(audioUrl, trimmedText);
     } catch {
       this.state.update((s) => ({
         ...s,
@@ -104,77 +151,56 @@ export class TtsStore {
         playingText: null,
         error: '語音播放失敗',
       }));
+      this.audioPlayer.clearError();
     }
   }
 
   stop(): void {
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      this.currentAudio = null;
+    if (this.currentPlaybackKey) {
+      const playingKey = this.audioPlayer.playingKey();
+      const pausedKey = this.audioPlayer.pausedKey();
+      if (playingKey === this.currentPlaybackKey || pausedKey === this.currentPlaybackKey) {
+        this.audioPlayer.stop();
+      }
     }
+    this.currentPlaybackKey = null;
     this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
   }
 
   clearError(): void {
-    this.state.update((s) => ({ ...s, error: null }));
+    this.errorStateClear();
+    this.audioPlayer.clearError();
   }
 
-  private async getSentenceAudioUrl(text: string): Promise<string> {
+  private async getSentenceAudioBlob(text: string): Promise<Blob> {
     const cacheKey = createAudioCacheKey(text);
 
-    // 檢查快取
     const cached = this.audioCache.get(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // 從 API 取得音訊（Azure TTS）
     const blob = await firstValueFrom(this.ttsService.synthesizeSpeech({ text }));
-    const url = URL.createObjectURL(blob);
+    this.audioCache.set(cacheKey, blob);
 
-    // 存入快取
-    this.audioCache.set(cacheKey, url);
-
-    return url;
+    return blob;
   }
 
-  private async getWordAudioUrl(text: string): Promise<string> {
+  private async getWordAudioBlob(text: string): Promise<Blob> {
     const cacheKey = createWordAudioCacheKey(text);
 
-    // 檢查快取
     const cached = this.audioCache.get(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // 從 API 取得音訊（Google Translate TTS）
     const blob = await firstValueFrom(this.ttsService.synthesizeWord({ text }));
-    const url = URL.createObjectURL(blob);
+    this.audioCache.set(cacheKey, blob);
 
-    // 存入快取
-    this.audioCache.set(cacheKey, url);
-
-    return url;
+    return blob;
   }
 
-  private playAudio(url: string, text: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const audio = new Audio(url);
-      this.currentAudio = audio;
-
-      audio.onended = () => {
-        if (this.state().playingText === text) {
-          this.state.update((s) => ({ ...s, playingText: null }));
-        }
-        resolve();
-      };
-
-      audio.onerror = () => {
-        reject(new Error('Audio playback failed'));
-      };
-
-      audio.play().catch(reject);
-    });
+  private errorStateClear(): void {
+    this.state.update((s) => ({ ...s, error: null }));
   }
 }

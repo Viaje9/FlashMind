@@ -10,6 +10,10 @@ class MockAudio {
   onerror: (() => void) | null = null;
   currentTime = 0;
   paused = true;
+  loop = false;
+  muted = false;
+  preload = 'auto';
+  src = '';
 
   readonly play = vi.fn(async () => {
     this.paused = false;
@@ -31,7 +35,16 @@ class MockAudio {
     this.paused = true;
   });
 
-  constructor(public readonly src: string) {
+  readonly removeAttribute = vi.fn((name: string) => {
+    if (name === 'src') {
+      this.src = '';
+    }
+  });
+
+  readonly load = vi.fn();
+
+  constructor(src = '') {
+    this.src = src;
     MockAudio.instances.push(this);
   }
 
@@ -120,5 +133,21 @@ describe('speaking-audio-player.service', () => {
     MockAudio.instances[0]?.triggerEnd();
     expect(service.playingKey()).toBeNull();
     expect(service.pausedKey()).toBeNull();
+  });
+
+  it('啟用共享音軌後應重用同一個 Audio 實例，並支援靜音切換', async () => {
+    MockAudio.autoEnd = false;
+    const service = new SpeakingAudioPlayerService();
+    const blob = new Blob(['audio']);
+
+    await service.activateSharedTrack();
+    expect(MockAudio.instances).toHaveLength(1);
+
+    service.setMuted(true);
+    expect(service.muted()).toBe(true);
+    expect(MockAudio.instances[0]?.muted).toBe(true);
+
+    await service.play(blob, 'assistant-keepalive');
+    expect(MockAudio.instances).toHaveLength(1);
   });
 });

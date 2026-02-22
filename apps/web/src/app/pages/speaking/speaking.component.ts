@@ -4,6 +4,7 @@ import {
   DestroyRef,
   ElementRef,
   HostListener,
+  OnDestroy,
   OnInit,
   ViewChild,
   computed,
@@ -107,7 +108,7 @@ const ASSISTANT_PANEL_CONTEXT: SelectionContext = 'assistant-panel';
   styleUrl: './speaking.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SpeakingComponent implements OnInit {
+export class SpeakingComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -280,6 +281,16 @@ export class SpeakingComponent implements OnInit {
         this.dismissSelectionTranslateUi(true);
       }
     });
+
+    effect(() => {
+      const status = this.recorderStatus();
+      const muted =
+        status === 'recording' ||
+        status === 'paused' ||
+        this.sending() ||
+        this.stoppingAndSending();
+      this.speakingStore.setAudioPlaybackMuted(muted);
+    });
   }
 
   ngOnInit(): void {
@@ -300,6 +311,10 @@ export class SpeakingComponent implements OnInit {
 
     this.clampNotePanelBounds();
     this.clampAssistantPanelBounds();
+  }
+
+  ngOnDestroy(): void {
+    this.speakingStore.deactivateSharedAudioTrack();
   }
 
   @HostListener('window:resize')
@@ -419,6 +434,7 @@ export class SpeakingComponent implements OnInit {
   }
 
   async onStartRecording(): Promise<void> {
+    await this.speakingStore.activateSharedAudioTrack();
     await this.recorder.start();
   }
 

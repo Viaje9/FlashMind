@@ -72,6 +72,18 @@ export class SpeakingStore {
   readonly playingAudioKey = computed(() => this.audioPlayer.playingKey());
   readonly pausedAudioKey = computed(() => this.audioPlayer.pausedKey());
 
+  async activateSharedAudioTrack(): Promise<void> {
+    await this.audioPlayer.activateSharedTrack();
+  }
+
+  deactivateSharedAudioTrack(): void {
+    this.audioPlayer.deactivateSharedTrack();
+  }
+
+  setAudioPlaybackMuted(muted: boolean): void {
+    this.audioPlayer.setMuted(muted);
+  }
+
   async startNewConversation(): Promise<void> {
     const assistantMessages = this.state().assistantMessages;
     this.audioPlayer.stop();
