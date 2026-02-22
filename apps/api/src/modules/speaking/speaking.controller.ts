@@ -1,13 +1,18 @@
 import {
+  ArgumentsHost,
   BadRequestException,
   Body,
+  Catch,
   Controller,
+  ExceptionFilter,
   Post,
   UploadedFile,
   UseGuards,
+  UseFilters,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Request, Response } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
 import {
@@ -37,6 +42,59 @@ const SPEAKING_VOICES: readonly SpeakingVoice[] = [
   'shimmer',
 ] as const;
 
+@Catch(BadRequestException)
+class SpeakingAudioBadRequestLogFilter implements ExceptionFilter<BadRequestException> {
+  catch(exception: BadRequestException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const request = ctx.getRequest<Request>();
+    const response = ctx.getResponse<Response>();
+    const payload = exception.getResponse();
+    const message = this.getMessage(payload);
+
+    if (message.includes('Field value too long')) {
+      const headers = request.headers as Record<string, unknown>;
+      const contentLength = this.readHeaderValue(headers['content-length']);
+      const contentType = this.readHeaderValue(headers['content-type']);
+      const field = message.split(' - ')[1] ?? 'unknown';
+
+      console.error('[SpeakingController] Multipart field value too long', {
+        field,
+        method: request.method,
+        path: request.originalUrl ?? request.url,
+        contentLength,
+        contentType,
+      });
+    }
+
+    response.status(exception.getStatus()).json(payload);
+  }
+
+  private getMessage(payload: unknown): string {
+    if (!payload || typeof payload !== 'object') {
+      return '';
+    }
+
+    const message = (payload as { message?: string | string[] }).message;
+    if (Array.isArray(message)) {
+      return message.join(', ');
+    }
+
+    return typeof message === 'string' ? message : '';
+  }
+
+  private readHeaderValue(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (Array.isArray(value) && typeof value[0] === 'string') {
+      return value[0];
+    }
+
+    return undefined;
+  }
+}
+
 @Controller('speaking')
 @UseGuards(AuthGuard, WhitelistGuard)
 export class SpeakingController {
@@ -49,10 +107,12 @@ export class SpeakingController {
   }
 
   @Post('chat/audio')
+  @UseFilters(SpeakingAudioBadRequestLogFilter)
   @UseInterceptors(
     FileInterceptor('audioFile', {
       limits: {
         fileSize: 8 * 1024 * 1024,
+        fieldSize: 2 * 1024 * 1024 * 1024,
       },
     }),
   )
