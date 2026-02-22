@@ -261,6 +261,8 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   };
   private readonly transcriptTokenCache = new Map<string, string[]>();
   private readonly pronunciationReadyKeys = signal<Set<string>>(new Set());
+  private safeAreaInsetTop = 0;
+  private safeAreaInsetMeasured = false;
   private selectionRequestToken = 0;
 
   constructor() {
@@ -319,6 +321,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   onWindowResize(): void {
+    this.safeAreaInsetMeasured = false;
     this.clampNotePanelBounds();
     this.clampAssistantPanelBounds();
     this.repositionSelectionOverlays();
@@ -971,13 +974,14 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
     event.preventDefault();
 
+    const topMargin = this.getAssistantTopMargin();
     const maxTop = Math.max(
-      ASSISTANT_PANEL_MARGIN,
+      topMargin,
       window.innerHeight - this.assistantPanelHeight() - ASSISTANT_PANEL_SAFE_BOTTOM,
     );
 
     const nextTop = event.clientY - this.assistantDragState.offsetY;
-    this.assistantPanelTop.set(Math.min(Math.max(nextTop, ASSISTANT_PANEL_MARGIN), maxTop));
+    this.assistantPanelTop.set(Math.min(Math.max(nextTop, topMargin), maxTop));
   }
 
   onAssistantPanelPointerEnd(event: PointerEvent): void {
@@ -1104,13 +1108,14 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
     event.preventDefault();
 
+    const topMargin = this.getNoteTopMargin();
     const maxTop = Math.max(
-      NOTE_PANEL_MARGIN,
+      topMargin,
       window.innerHeight - this.notePanelHeight() - NOTE_PANEL_SAFE_BOTTOM,
     );
 
     const nextTop = event.clientY - this.noteDragState.offsetY;
-    this.notePanelTop.set(Math.min(Math.max(nextTop, NOTE_PANEL_MARGIN), maxTop));
+    this.notePanelTop.set(Math.min(Math.max(nextTop, topMargin), maxTop));
   }
 
   onNotePanelPointerEnd(event: PointerEvent): void {
@@ -1696,7 +1701,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return this.initialAssistantPanelTop();
     }
 
-    return Math.max(ASSISTANT_PANEL_MARGIN, parsed);
+    return Math.max(this.getAssistantTopMargin(), parsed);
   }
 
   private saveAssistantPanelTop(value: number): void {
@@ -1712,12 +1717,13 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return 96;
     }
 
+    const topMargin = this.getAssistantTopMargin();
     const maxTop = Math.max(
-      ASSISTANT_PANEL_MARGIN,
+      topMargin,
       window.innerHeight - ASSISTANT_PANEL_INITIAL_HEIGHT - ASSISTANT_PANEL_SAFE_BOTTOM,
     );
 
-    return Math.min(Math.max(96, ASSISTANT_PANEL_MARGIN), maxTop);
+    return Math.min(Math.max(96, topMargin), maxTop);
   }
 
   private clampAssistantPanelBounds(): void {
@@ -1744,11 +1750,9 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   private clampAssistantTop(top: number, height: number): number {
-    const maxTop = Math.max(
-      ASSISTANT_PANEL_MARGIN,
-      window.innerHeight - height - ASSISTANT_PANEL_SAFE_BOTTOM,
-    );
-    return Math.min(Math.max(top, ASSISTANT_PANEL_MARGIN), maxTop);
+    const topMargin = this.getAssistantTopMargin();
+    const maxTop = Math.max(topMargin, window.innerHeight - height - ASSISTANT_PANEL_SAFE_BOTTOM);
+    return Math.min(Math.max(top, topMargin), maxTop);
   }
 
   private loadNoteText(): string {
@@ -1793,12 +1797,13 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return 96;
     }
 
+    const topMargin = this.getNoteTopMargin();
     const maxTop = Math.max(
-      NOTE_PANEL_MARGIN,
+      topMargin,
       window.innerHeight - NOTE_PANEL_INITIAL_HEIGHT - NOTE_PANEL_SAFE_BOTTOM,
     );
 
-    return Math.min(Math.max(96, NOTE_PANEL_MARGIN), maxTop);
+    return Math.min(Math.max(96, topMargin), maxTop);
   }
 
   private clampNotePanelBounds(): void {
@@ -1822,11 +1827,48 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   private clampNoteTop(top: number, height: number): number {
-    const maxTop = Math.max(
-      NOTE_PANEL_MARGIN,
-      window.innerHeight - height - NOTE_PANEL_SAFE_BOTTOM,
-    );
-    return Math.min(Math.max(top, NOTE_PANEL_MARGIN), maxTop);
+    const topMargin = this.getNoteTopMargin();
+    const maxTop = Math.max(topMargin, window.innerHeight - height - NOTE_PANEL_SAFE_BOTTOM);
+    return Math.min(Math.max(top, topMargin), maxTop);
+  }
+
+  private getAssistantTopMargin(): number {
+    return this.getTopMarginWithSafeArea(ASSISTANT_PANEL_MARGIN);
+  }
+
+  private getNoteTopMargin(): number {
+    return this.getTopMarginWithSafeArea(NOTE_PANEL_MARGIN);
+  }
+
+  private getTopMarginWithSafeArea(baseMargin: number): number {
+    return Math.max(baseMargin, Math.ceil(this.getSafeAreaInsetTop() + baseMargin));
+  }
+
+  private getSafeAreaInsetTop(): number {
+    if (this.safeAreaInsetMeasured) {
+      return this.safeAreaInsetTop;
+    }
+
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return 0;
+    }
+
+    const host = document.body ?? document.documentElement;
+    if (!host) {
+      return 0;
+    }
+
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);';
+    host.appendChild(probe);
+    const parsed = Number.parseFloat(window.getComputedStyle(probe).paddingTop);
+    host.removeChild(probe);
+
+    this.safeAreaInsetTop = Number.isFinite(parsed) ? parsed : 0;
+    this.safeAreaInsetMeasured = true;
+
+    return this.safeAreaInsetTop;
   }
 
   protected readonly ASSISTANT_PANEL_SIDE_GAP = ASSISTANT_PANEL_SIDE_GAP;

@@ -156,9 +156,11 @@
 
 .assistant-textarea {
   min-height: 2.4rem;
-  max-height: 5rem;
+  max-height: 6rem;
   flex: 1;
   resize: none;
+  overflow-y: auto;
+  field-sizing: content;
   border-radius: 0.75rem;
   border: 1px solid color-mix(in srgb, var(--color-primary) 18%, rgb(226 232 240));
   background: color-mix(in srgb, var(--color-primary) 5%, rgb(248 250 252));
