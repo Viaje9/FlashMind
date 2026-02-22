@@ -148,6 +148,37 @@ describe('speaking.component selection translate', () => {
     expect(component.shouldShowTranslation(assistantMessage)).toBe(false);
     expect(storeMock.translateMessage).not.toHaveBeenCalled();
   });
+
+  it('assistant 輸入框按 Enter 應保留換行，不直接送出', () => {
+    component.assistantInputControl.setValue('Hello');
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      cancelable: true,
+    });
+
+    component.onAssistantInputKeydown(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(storeMock.sendAssistantMessage).not.toHaveBeenCalled();
+    expect(component.assistantInputControl.value).toBe('Hello');
+  });
+
+  it('assistant 輸入框按 Ctrl/Cmd + Enter 應送出訊息', () => {
+    component.assistantInputControl.setValue('  Hello  ');
+
+    const ctrlEnterEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      ctrlKey: true,
+      cancelable: true,
+    });
+
+    component.onAssistantInputKeydown(ctrlEnterEvent);
+
+    expect(ctrlEnterEvent.defaultPrevented).toBe(true);
+    expect(storeMock.sendAssistantMessage).toHaveBeenCalledWith('Hello');
+    expect(component.assistantInputControl.value).toBe('');
+  });
 });
 
 function createSpeakingStoreMock() {

@@ -699,7 +699,11 @@ export class SpeakingComponent implements OnInit {
   }
 
   onAssistantInputKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) {
+    if (event.key !== 'Enter' || event.isComposing) {
+      return;
+    }
+
+    if (!event.metaKey && !event.ctrlKey) {
       return;
     }
 
