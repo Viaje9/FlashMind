@@ -237,6 +237,77 @@ describe('speaking.component selection actions', () => {
     expect(component.assistantInputControl.value).toBe('Hello');
   });
 
+  it('已有對話整理後應隱藏語音輸入按鈕', async () => {
+    const messages: SpeakingMessage[] = [
+      {
+        id: 'user-1',
+        conversationId: 'conversation-1',
+        role: 'user',
+        text: 'I went jogging.',
+        createdAt: '2026-02-22T11:10:00.000Z',
+      },
+      {
+        id: 'summary-1',
+        conversationId: 'conversation-1',
+        role: 'summary',
+        text: 'I went jogging and worked in the afternoon.',
+        createdAt: '2026-02-22T11:11:00.000Z',
+      },
+    ];
+
+    storeMock.messages.set(messages);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const micButton = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-mic-main"]',
+    ) as HTMLButtonElement | null;
+    const summarizeButton = fixture.nativeElement.querySelector(
+      '[aria-label="整理對話"]',
+    ) as HTMLButtonElement | null;
+
+    expect(micButton).toBeNull();
+    expect(summarizeButton).toBeNull();
+  });
+
+  it('對話整理卡片右上角按鈕可複製摘要', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+
+    const summaryMessage: SpeakingMessage = {
+      id: 'summary-copy-1',
+      conversationId: 'conversation-1',
+      role: 'summary',
+      text: 'I practiced ordering food and talked about my weekend plan.',
+      createdAt: '2026-02-22T11:20:00.000Z',
+    };
+
+    storeMock.messages.set([summaryMessage]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const copyButton = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-summary-copy"]',
+    ) as HTMLButtonElement | null;
+    expect(copyButton).toBeTruthy();
+    expect(copyButton?.classList.contains('text-primary')).toBe(true);
+    expect(copyButton?.classList.contains('text-emerald-600')).toBe(false);
+
+    copyButton?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(writeText).toHaveBeenCalledWith(summaryMessage.text);
+    expect(copyButton?.classList.contains('text-primary')).toBe(false);
+    expect(copyButton?.classList.contains('text-emerald-600')).toBe(true);
+    expect(copyButton?.getAttribute('aria-label')).toBe('摘要已複製');
+  });
+
   it('assistant 輸入框按 Ctrl/Cmd + Enter 應送出訊息', () => {
     component.assistantInputControl.setValue('  Hello  ');
 

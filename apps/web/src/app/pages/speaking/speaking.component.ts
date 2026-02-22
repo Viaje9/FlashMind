@@ -154,10 +154,12 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly notePanelTop = signal(this.initialNotePanelTop());
   readonly noteEditing = signal(false);
   readonly stoppingAndSending = signal(false);
+  readonly copiedSummaryMessageId = signal<string | null>(null);
 
   readonly canSummarize = computed(
     () =>
       this.messages().length > 0 &&
+      !this.hasConversationSummary() &&
       !this.summarizing() &&
       !this.sending() &&
       !this.loadingConversation(),
@@ -165,6 +167,12 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
   readonly hasUserMessages = computed(() =>
     this.messages().some((message) => message.role === 'user'),
+  );
+  readonly hasConversationSummary = computed(() =>
+    this.messages().some((message) => message.role === 'summary' && !!message.text?.trim()),
+  );
+  readonly canShowSummarizeAction = computed(
+    () => this.hasUserMessages() && !this.hasConversationSummary(),
   );
 
   readonly recorderStatus = this.recorder.status;
@@ -264,6 +272,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   private safeAreaInsetTop = 0;
   private safeAreaInsetMeasured = false;
   private selectionRequestToken = 0;
+  private copySummaryResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(() => {
@@ -316,6 +325,10 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.copySummaryResetTimer) {
+      clearTimeout(this.copySummaryResetTimer);
+      this.copySummaryResetTimer = null;
+    }
     this.speakingStore.deactivateSharedAudioTrack();
   }
 
@@ -437,6 +450,10 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   async onStartRecording(): Promise<void> {
+    if (this.hasConversationSummary()) {
+      return;
+    }
+
     await this.speakingStore.activateSharedAudioTrack();
     await this.recorder.start();
   }
@@ -905,7 +922,38 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   async onSummarize(): Promise<void> {
+    if (this.hasConversationSummary()) {
+      return;
+    }
+
     await this.speakingStore.summarizeCurrentConversation();
+  }
+
+  async onCopySummary(message: SpeakingMessage): Promise<void> {
+    const summary = message.text?.trim();
+    if (!summary) {
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(summary);
+      this.copiedSummaryMessageId.set(message.id);
+
+      if (this.copySummaryResetTimer) {
+        clearTimeout(this.copySummaryResetTimer);
+      }
+
+      this.copySummaryResetTimer = setTimeout(() => {
+        this.copiedSummaryMessageId.update((current) => (current === message.id ? null : current));
+        this.copySummaryResetTimer = null;
+      }, 1500);
+    } catch {
+      // Ignore clipboard failures to keep speaking flow uninterrupted.
+    }
   }
 
   toggleAssistantPanel(): void {

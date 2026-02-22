@@ -20,6 +20,15 @@ Guidelines:
 - After your reply, ask one simple follow-up question to keep the conversation going
 - Be warm and encouraging, but do not use long explanations unless the user asks`;
 
+const SUMMARIZE_SYSTEM_PROMPT = `You are a precise conversation summarizer.
+Your task is to summarize only what the USER said in the previous conversation turns.
+
+Hard output constraints:
+- Return ONLY valid JSON with this exact shape: {"title":"...", "summary":"..."}
+- "summary" must be English only, written in first person ("I"), and must not contain Chinese characters
+- "title" must be Traditional Chinese (繁體中文), concise and specific (about 8-20 Chinese characters)
+- Do not include markdown, code fences, or extra keys`;
+
 const SUMMARIZE_PROMPT = `Based on the conversation above, summarize everything the USER said in first person.
 - Preserve completeness: include all meaningful details, examples, preferences, plans, feelings, and constraints mentioned by the user
 - Do not omit information just to make it shorter; prioritize fidelity over brevity
@@ -29,7 +38,8 @@ const SUMMARIZE_PROMPT = `Based on the conversation above, summarize everything 
 - Organize naturally in a coherent flow (prefer chronological order when possible)
 - Write in first person as if the user is writing about themselves
 - Fix grammar and improve phrasing naturally, but keep the original meaning
-- Write in English only
+- Write the "summary" field in English only, even if the user spoke Chinese
+- Do not output Chinese characters in "summary"
 - Do not include anything the assistant said
 - Also create a concise conversation title in Traditional Chinese that best represents the user's topic
 - The title should be specific and clear (roughly 8-20 Chinese characters), no quotes, no punctuation-only title
@@ -302,6 +312,7 @@ export class SpeakingService {
 
     const messages = this.buildAudioMessages({
       history,
+      systemPrompt: SUMMARIZE_SYSTEM_PROMPT,
       currentTextInput: SUMMARIZE_PROMPT,
     });
 
@@ -310,6 +321,7 @@ export class SpeakingService {
         model: this.audioModel,
         modalities: ['text'],
         messages,
+        temperature: 0.2,
       });
 
       const content = data.choices?.[0]?.message?.content?.trim() ?? '';

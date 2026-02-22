@@ -169,6 +169,28 @@ describe('SpeakingService', () => {
 
     expect(result.title).toBe('晨跑與工作日常');
     expect(result.summary).toContain('jogged');
+
+    const requestBody = JSON.parse(
+      fetchMock.mock.calls[0][1].body as string,
+    ) as {
+      messages: Array<{ role: string; content: string }>;
+      temperature?: number;
+    };
+
+    const systemPrompt = requestBody.messages.find(
+      (item) => item.role === 'system',
+    )?.content;
+    const summarizePrompt =
+      requestBody.messages[requestBody.messages.length - 1]?.content;
+
+    expect(requestBody.temperature).toBe(0.2);
+    expect(systemPrompt).toContain('"summary" must be English only');
+    expect(systemPrompt).toContain(
+      '"title" must be Traditional Chinese (繁體中文)',
+    );
+    expect(summarizePrompt).toContain(
+      'Write the "summary" field in English only',
+    );
   });
 
   it('translateToTraditionalChinese 應回傳翻譯', async () => {
