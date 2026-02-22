@@ -1,21 +1,10 @@
-import {
-  ConflictException,
-  Injectable,
-  Inject,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'node:crypto';
 import {
   CreateSpeakingChatDto,
   SpeakingAssistantChatDto,
   SpeakingChatHistoryItemDto,
 } from './dto';
-import {
-  SPEAKING_SESSION_STORE,
-  type SpeakingSessionStore,
-} from './speaking-session.store';
 
 const DEFAULT_SPEAKING_PROMPT = `You are a friendly and patient English conversation partner for a CEFR A2 learner.
 Your job is to help the user practice speaking English with simple, clear language.
@@ -86,9 +75,6 @@ const UPDATE_MEMORY_TOOL = {
   },
 } as const;
 
-const DEFAULT_SESSION_HISTORY_ITEMS = 20;
-const DEFAULT_SESSION_SERIALIZED_BYTES = 900 * 1024;
-
 const SPEAKING_VOICES = [
   'alloy',
   'ash',
@@ -147,9 +133,8 @@ interface OpenAISpeechRequest {
 }
 
 interface SpeakingAudioChatPayload {
-  userId: string;
   audioBuffer: Buffer;
-  conversationId?: string;
+  history: SpeakingChatHistoryItemDto[];
   voice?: SpeakingVoice;
   systemPrompt?: string;
   memory?: string;
@@ -173,7 +158,6 @@ export interface SpeakingChatResult {
 }
 
 export interface SpeakingAudioChatResult {
-  conversationId: string;
   transcript: string;
   audioBase64: string;
   model: string;
@@ -210,18 +194,12 @@ export class SpeakingService {
   private readonly textModel: string;
   private readonly audioModel: string;
   private readonly defaultVoice: SpeakingVoice;
-  private readonly maxSessionHistoryItems: number;
-  private readonly maxSessionSerializedBytes: number;
 
   private readonly chatCompletionsUrl =
     'https://api.openai.com/v1/chat/completions';
   private readonly speechUrl = 'https://api.openai.com/v1/audio/speech';
 
-  constructor(
-    private readonly configService: ConfigService,
-    @Inject(SPEAKING_SESSION_STORE)
-    private readonly sessionStore: SpeakingSessionStore,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('OPENAI_API_KEY') ?? '';
     this.textModel =
       this.configService.get<string>('OPENAI_SPEAKING_TEXT_MODEL') ??
@@ -236,19 +214,6 @@ export class SpeakingService {
     this.defaultVoice = this.isSpeakingVoice(configuredVoice)
       ? configuredVoice
       : 'nova';
-
-    this.maxSessionHistoryItems = this.parsePositiveInt(
-      this.configService.get<string>(
-        'OPENAI_SPEAKING_SESSION_MAX_HISTORY_ITEMS',
-      ),
-      DEFAULT_SESSION_HISTORY_ITEMS,
-    );
-    this.maxSessionSerializedBytes = this.parsePositiveInt(
-      this.configService.get<string>(
-        'OPENAI_SPEAKING_SESSION_MAX_SERIALIZED_BYTES',
-      ),
-      DEFAULT_SESSION_SERIALIZED_BYTES,
-    );
   }
 
   async createReply(dto: CreateSpeakingChatDto): Promise<SpeakingChatResult> {
@@ -288,11 +253,7 @@ export class SpeakingService {
     this.assertApiKey();
 
     const audioBase64 = payload.audioBuffer.toString('base64');
-    const conversationId = payload.conversationId?.trim() || randomUUID();
-    const history = this.resolveConversationHistory(
-      payload.userId,
-      payload.conversationId?.trim(),
-    );
+    const history = payload.history ?? [];
     const voice = payload.voice ?? this.defaultVoice;
     const messages = this.buildAudioMessages({
       history,
@@ -319,26 +280,7 @@ export class SpeakingService {
         throw this.createServiceError();
       }
 
-      const updatedHistory = this.trimSessionHistory([
-        ...history,
-        {
-          role: 'user',
-          audioBase64,
-        },
-        {
-          role: 'assistant',
-          text: transcript,
-        },
-      ]);
-
-      this.sessionStore.saveSession({
-        userId: payload.userId,
-        conversationId,
-        history: updatedHistory,
-      });
-
       return {
-        conversationId,
         transcript,
         audioBase64: responseAudioBase64,
         model: data.model ?? this.audioModel,
@@ -502,77 +444,6 @@ export class SpeakingService {
 
   private isSpeakingVoice(value: string): value is SpeakingVoice {
     return (SPEAKING_VOICES as readonly string[]).includes(value);
-  }
-
-  private resolveConversationHistory(
-    userId: string,
-    conversationId?: string,
-  ): SpeakingChatHistoryItemDto[] {
-    const normalizedUserId = userId.trim();
-    if (!conversationId) {
-      return [];
-    }
-
-    const lookup = this.sessionStore.getSession(
-      normalizedUserId,
-      conversationId,
-    );
-
-    if (lookup.status === 'found') {
-      return lookup.session.history;
-    }
-
-    if (lookup.status === 'forbidden') {
-      throw this.createSessionNotFoundError();
-    }
-
-    throw this.createSessionExpiredError();
-  }
-
-  private trimSessionHistory(
-    history: SpeakingChatHistoryItemDto[],
-  ): SpeakingChatHistoryItemDto[] {
-    if (!Array.isArray(history) || history.length === 0) {
-      return [];
-    }
-
-    const normalized = history
-      .map((item) => ({
-        role: item.role,
-        text: item.text?.trim() || undefined,
-        audioBase64: item.audioBase64?.trim() || undefined,
-      }))
-      .filter(
-        (item) =>
-          (item.role === 'user' || item.role === 'assistant') &&
-          (item.text || item.audioBase64),
-      );
-
-    let candidate =
-      normalized.length > this.maxSessionHistoryItems
-        ? normalized.slice(-this.maxSessionHistoryItems)
-        : normalized;
-
-    while (
-      candidate.length > 0 &&
-      Buffer.byteLength(JSON.stringify(candidate), 'utf8') >
-        this.maxSessionSerializedBytes
-    ) {
-      candidate = candidate.slice(1);
-    }
-
-    return candidate;
-  }
-
-  private parsePositiveInt(
-    rawValue: string | undefined,
-    fallback: number,
-  ): number {
-    const parsed = Number.parseInt(rawValue ?? '', 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return fallback;
-    }
-    return parsed;
   }
 
   private buildTextMessages(dto: CreateSpeakingChatDto): Array<{
@@ -821,24 +692,6 @@ export class SpeakingService {
 
     const sentence = plain.split(/[.!?]/)[0]?.trim() || plain;
     return sentence.length > 32 ? `${sentence.slice(0, 32)}...` : sentence;
-  }
-
-  private createSessionExpiredError() {
-    return new ConflictException({
-      error: {
-        code: 'SPEAKING_SESSION_EXPIRED',
-        message: '口說會話已過期，請重新開始對話',
-      },
-    });
-  }
-
-  private createSessionNotFoundError() {
-    return new NotFoundException({
-      error: {
-        code: 'SPEAKING_SESSION_NOT_FOUND',
-        message: '口說會話不存在',
-      },
-    });
   }
 
   private createServiceError() {

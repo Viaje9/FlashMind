@@ -1,24 +1,16 @@
-import {
-  ConflictException,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { type SpeakingSessionStore } from './speaking-session.store';
 import { SpeakingService } from './speaking.service';
 
 describe('SpeakingService', () => {
   let service: SpeakingService;
   const fetchMock = jest.fn();
 
-  const sessionStoreMock: jest.Mocked<SpeakingSessionStore> = {
-    getSession: jest.fn(),
-    saveSession: jest.fn(),
-    clearSession: jest.fn(),
-  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = fetchMock as unknown as typeof fetch;
 
-  const createConfigService = (overrides?: Record<string, string>) =>
-    ({
+    const configService = {
       get: jest.fn((key: string) => {
         const config: Record<string, string> = {
           OPENAI_API_KEY: 'test-openai-key',
@@ -26,18 +18,12 @@ describe('SpeakingService', () => {
           OPENAI_SPEAKING_TEXT_MODEL: 'gpt-4o-mini',
           OPENAI_SPEAKING_AUDIO_MODEL: 'gpt-4o-mini-audio-preview',
           OPENAI_SPEAKING_DEFAULT_VOICE: 'nova',
-          OPENAI_SPEAKING_SESSION_MAX_HISTORY_ITEMS: '20',
-          OPENAI_SPEAKING_SESSION_MAX_SERIALIZED_BYTES: String(900 * 1024),
-          ...(overrides ?? {}),
         };
         return config[key];
       }),
-    }) as unknown as ConfigService;
+    } as unknown as ConfigService;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = fetchMock as unknown as typeof fetch;
-    service = new SpeakingService(createConfigService(), sessionStoreMock);
+    service = new SpeakingService(configService);
   });
 
   it('createReply 應成功回傳 reply 與 usage', async () => {
@@ -63,7 +49,7 @@ describe('SpeakingService', () => {
     expect(result.usage.totalTokens).toBe(18);
   });
 
-  it('createAudioReply 首回合應建立新會話並回傳 conversationId', async () => {
+  it('createAudioReply 應回傳 transcript、audio 與 memoryUpdate', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
@@ -102,147 +88,18 @@ describe('SpeakingService', () => {
     });
 
     const result = await service.createAudioReply({
-      userId: 'user-1',
       audioBuffer: Buffer.from('audio-bytes'),
+      history: [{ role: 'assistant', text: 'Hi there' }],
       autoMemoryEnabled: true,
     });
 
-    expect(result.conversationId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    );
     expect(result.transcript).toBe('Great! What did you do today?');
     expect(result.audioBase64).toBe('BASE64_AUDIO');
     expect(result.memoryUpdate?.memory).toBe('User likes jogging.');
     expect(result.usage.promptAudioTokens).toBe(15);
-
-    expect(sessionStoreMock.getSession).not.toHaveBeenCalled();
-    expect(sessionStoreMock.saveSession).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 'user-1',
-        conversationId: result.conversationId,
-      }),
-    );
-  });
-
-  it('createAudioReply 應使用既有會話歷史並沿用 conversationId', async () => {
-    sessionStoreMock.getSession.mockReturnValue({
-      status: 'found',
-      session: {
-        userId: 'user-1',
-        conversationId: 'conv-1',
-        history: [{ role: 'assistant', text: 'Hi there' }],
-        expiresAt: Date.now() + 60_000,
-      },
-    });
-
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          model: 'gpt-4o-mini-audio-preview',
-          choices: [
-            {
-              message: {
-                audio: {
-                  transcript: 'Sounds good.',
-                  data: 'BASE64_AUDIO',
-                },
-              },
-            },
-          ],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
-        }),
-    });
-
-    const result = await service.createAudioReply({
-      userId: 'user-1',
-      audioBuffer: Buffer.from('RIFF-test-wav'),
-      conversationId: 'conv-1',
-    });
-
-    expect(result.conversationId).toBe('conv-1');
-
-    const requestBody = JSON.parse(
-      fetchMock.mock.calls[0][1].body as string,
-    ) as {
-      messages: Array<{ role: string; content: unknown }>;
-    };
-
-    expect(requestBody.messages).toEqual(
-      expect.arrayContaining([
-        {
-          role: 'assistant',
-          content: 'Hi there',
-        },
-      ]),
-    );
-
-    expect(sessionStoreMock.saveSession).toHaveBeenCalledWith(
-      expect.objectContaining({
-        conversationId: 'conv-1',
-      }),
-    );
-  });
-
-  it('createAudioReply 會話不存在或過期時應回傳 SPEAKING_SESSION_EXPIRED (409)', async () => {
-    sessionStoreMock.getSession.mockReturnValue({ status: 'missing' });
-
-    await expect(
-      service.createAudioReply({
-        userId: 'user-1',
-        audioBuffer: Buffer.from('audio'),
-        conversationId: 'missing-conv',
-      }),
-    ).rejects.toBeInstanceOf(ConflictException);
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('createAudioReply 會話已過期時應回傳 SPEAKING_SESSION_EXPIRED (409)', async () => {
-    sessionStoreMock.getSession.mockReturnValue({ status: 'expired' });
-
-    await expect(
-      service.createAudioReply({
-        userId: 'user-1',
-        audioBuffer: Buffer.from('audio'),
-        conversationId: 'expired-conv',
-      }),
-    ).rejects.toBeInstanceOf(ConflictException);
-
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('createAudioReply 會話不屬於該使用者時應回傳 404', async () => {
-    sessionStoreMock.getSession.mockReturnValue({ status: 'forbidden' });
-
-    await expect(
-      service.createAudioReply({
-        userId: 'user-2',
-        audioBuffer: Buffer.from('audio'),
-        conversationId: 'conv-user-1',
-      }),
-    ).rejects.toBeInstanceOf(NotFoundException);
-
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('createAudioReply 應忽略非 wav 的歷史音訊並退回文字內容', async () => {
-    sessionStoreMock.getSession.mockReturnValue({
-      status: 'found',
-      session: {
-        userId: 'user-1',
-        conversationId: 'conv-1',
-        history: [
-          {
-            role: 'user',
-            audioBase64: 'GkXfWEBM_HEADER',
-            text: 'fallback text',
-          },
-        ],
-        expiresAt: Date.now() + 60_000,
-      },
-    });
-
     fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
@@ -263,9 +120,14 @@ describe('SpeakingService', () => {
     });
 
     await service.createAudioReply({
-      userId: 'user-1',
       audioBuffer: Buffer.from('RIFF-test-wav'),
-      conversationId: 'conv-1',
+      history: [
+        {
+          role: 'user',
+          audioBase64: 'GkXfWEBM_HEADER',
+          text: 'fallback text',
+        },
+      ],
     });
 
     const requestBody = JSON.parse(
@@ -279,64 +141,6 @@ describe('SpeakingService', () => {
 
     expect(userHistory).toBeDefined();
     expect(userHistory?.content).toBe('fallback text');
-  });
-
-  it('createAudioReply 應依 maxHistoryItems 與 maxSerializedBytes 裁切會話內容', async () => {
-    const limitedService = new SpeakingService(
-      createConfigService({
-        OPENAI_SPEAKING_SESSION_MAX_HISTORY_ITEMS: '3',
-        OPENAI_SPEAKING_SESSION_MAX_SERIALIZED_BYTES: '220',
-      }),
-      sessionStoreMock,
-    );
-
-    sessionStoreMock.getSession.mockReturnValue({
-      status: 'found',
-      session: {
-        userId: 'user-1',
-        conversationId: 'conv-1',
-        history: [
-          { role: 'assistant', text: 'old-message-1-' + 'x'.repeat(60) },
-          { role: 'assistant', text: 'old-message-2-' + 'x'.repeat(60) },
-          { role: 'assistant', text: 'old-message-3-' + 'x'.repeat(60) },
-          { role: 'assistant', text: 'old-message-4-' + 'x'.repeat(60) },
-        ],
-        expiresAt: Date.now() + 60_000,
-      },
-    });
-
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          model: 'gpt-4o-mini-audio-preview',
-          choices: [
-            {
-              message: {
-                audio: {
-                  transcript: 'ok',
-                  data: 'BASE64_AUDIO',
-                },
-              },
-            },
-          ],
-          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
-        }),
-    });
-
-    await limitedService.createAudioReply({
-      userId: 'user-1',
-      audioBuffer: Buffer.from('RIFF-test-wav'),
-      conversationId: 'conv-1',
-    });
-
-    const savedHistory =
-      sessionStoreMock.saveSession.mock.calls.at(-1)?.[0].history;
-    expect(savedHistory).toBeDefined();
-    expect(savedHistory?.length).toBeLessThanOrEqual(3);
-    expect(
-      Buffer.byteLength(JSON.stringify(savedHistory), 'utf8'),
-    ).toBeLessThanOrEqual(220);
   });
 
   it('summarizeConversation 應回傳 title 與 summary', async () => {

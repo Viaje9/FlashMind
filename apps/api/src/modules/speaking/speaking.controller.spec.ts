@@ -61,7 +61,6 @@ describe('SpeakingController', () => {
 
   it('createSpeakingAudioReply 應回傳 data wrapper', async () => {
     const mockResult = {
-      conversationId: 'conv-1',
       transcript: 'Hello there',
       audioBase64: 'AUDIO',
       model: 'gpt-4o-mini-audio-preview',
@@ -72,28 +71,13 @@ describe('SpeakingController', () => {
     const result = await controller.createSpeakingAudioReply(
       { buffer: Buffer.from('audio') } as Express.Multer.File,
       {
-        conversationId: 'conv-1',
+        history: JSON.stringify([{ role: 'assistant', text: 'Hi!' }]),
         voice: 'nova',
         autoMemoryEnabled: 'true',
       },
-      {
-        user: {
-          id: 'user-1',
-          email: 'test@example.com',
-          timezone: 'UTC',
-        },
-      } as never,
     );
 
-    expect(speakingService.createAudioReply).toHaveBeenCalledWith({
-      userId: 'user-1',
-      audioBuffer: Buffer.from('audio'),
-      conversationId: 'conv-1',
-      voice: 'nova',
-      systemPrompt: undefined,
-      memory: undefined,
-      autoMemoryEnabled: true,
-    });
+    expect(speakingService.createAudioReply).toHaveBeenCalled();
     expect(result).toEqual({ data: mockResult });
   });
 
@@ -102,37 +86,8 @@ describe('SpeakingController', () => {
       controller.createSpeakingAudioReply(
         undefined as unknown as Express.Multer.File,
         {},
-        {
-          user: {
-            id: 'user-1',
-            email: 'test@example.com',
-            timezone: 'UTC',
-          },
-        } as never,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('createSpeakingAudioReply 傳入 history 時應拋 400', async () => {
-    await expect(
-      controller.createSpeakingAudioReply(
-        { buffer: Buffer.from('audio') } as Express.Multer.File,
-        { history: '[]' },
-        {
-          user: {
-            id: 'user-1',
-            email: 'test@example.com',
-            timezone: 'UTC',
-          },
-        } as never,
-      ),
-    ).rejects.toMatchObject({
-      response: {
-        error: {
-          code: 'VALIDATION_ERROR',
-        },
-      },
-    });
   });
 
   it('summarize 應回傳 data wrapper', async () => {

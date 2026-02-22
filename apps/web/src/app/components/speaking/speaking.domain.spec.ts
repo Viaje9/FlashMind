@@ -5,7 +5,6 @@ import {
   createConversationRecord,
   createConversationTitle,
   createSpeakingId,
-  trimSpeakingHistoryByBytes,
   toSpeakingHistory,
   updateConversationFromMessages,
   type SpeakingMessage,
@@ -92,25 +91,6 @@ describe('speaking.domain', () => {
     const history = await toSpeakingHistory(messages, resolveAudio);
 
     expect(history).toEqual([{ role: 'user', text: 'This should be used as fallback' }]);
-  });
-
-  it('應在歷史 payload 過大時裁切最舊訊息', () => {
-    const history = [
-      { role: 'assistant' as const, text: 'oldest message' },
-      { role: 'assistant' as const, text: 'keep this message' },
-    ];
-
-    const maxBytes = new TextEncoder().encode(JSON.stringify([history[1]])).length;
-    const trimmed = trimSpeakingHistoryByBytes(history, maxBytes);
-
-    expect(trimmed).toEqual([history[1]]);
-  });
-
-  it('若單一歷史項目也超出限制時應回傳空陣列', () => {
-    const history = [{ role: 'assistant' as const, text: 'x'.repeat(200) }];
-    const trimmed = trimSpeakingHistoryByBytes(history, 10);
-
-    expect(trimmed).toEqual([]);
   });
 
   it('應可建立與更新 conversation metadata', () => {

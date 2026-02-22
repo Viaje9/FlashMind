@@ -61,7 +61,6 @@ export interface SpeakingStoreState {
 }
 
 export const SPEAKING_HISTORY_LIMIT_BYTES = 200 * 1024 * 1024;
-export const SPEAKING_REQUEST_HISTORY_MAX_BYTES = 700 * 1024;
 
 export const SPEAKING_DEFAULT_SETTINGS: SpeakingSettings = {
   autoPlayVoice: true,
@@ -172,29 +171,6 @@ export async function toSpeakingHistory(
   }
 
   return history;
-}
-
-export function trimSpeakingHistoryByBytes(
-  history: SpeakingChatHistoryItem[],
-  maxBytes: number = SPEAKING_REQUEST_HISTORY_MAX_BYTES,
-): SpeakingChatHistoryItem[] {
-  if (!Array.isArray(history) || history.length === 0 || maxBytes <= 0) {
-    return [];
-  }
-
-  const encoder = new TextEncoder();
-
-  for (let start = 0; start < history.length; start += 1) {
-    const candidate = history.slice(start);
-    const serialized = JSON.stringify(candidate);
-    const bytes = encoder.encode(serialized).length;
-
-    if (bytes <= maxBytes) {
-      return candidate;
-    }
-  }
-
-  return [];
 }
 
 function isSupportedHistoryAudioMime(mimeType?: string): boolean {
