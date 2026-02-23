@@ -1,6 +1,11 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService as ApiAuthService, User, UserResponse, Configuration } from '@flashmind/api-client';
+import {
+  AuthService as ApiAuthService,
+  User,
+  UserResponse,
+  Configuration,
+} from '@flashmind/api-client';
 import { catchError, tap, Observable, of, map } from 'rxjs';
 import { LoadingService } from './loading.service';
 
@@ -65,7 +70,7 @@ export class AuthService {
     );
   }
 
-  loginWithGoogle(rememberMe = false): void {
+  loginWithGoogle(rememberMe = true): void {
     const basePath = this.config.basePath || '';
     window.location.href = `${basePath}/auth/google?rememberMe=${rememberMe}`;
   }

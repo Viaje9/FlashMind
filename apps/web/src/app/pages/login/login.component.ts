@@ -46,7 +46,7 @@ export class LoginComponent {
   readonly formModel = signal<LoginFormData>({
     email: '',
     password: '',
-    rememberMe: false,
+    rememberMe: true,
   });
 
   readonly loginForm = form(this.formModel, (f) => {
