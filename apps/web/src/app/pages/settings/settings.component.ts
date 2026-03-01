@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
   FmButtonComponent,
@@ -29,6 +29,7 @@ export class SettingsComponent {
   private readonly router = inject(Router);
 
   readonly version = VERSION;
+  readonly refreshing = signal(false);
 
   readonly user = this.authService.user;
   readonly loading = this.authService.loading;
@@ -46,6 +47,32 @@ export class SettingsComponent {
 
   goToSpeakingSettings() {
     void this.router.navigate(['/settings/speaking']);
+  }
+
+  async refreshApp(): Promise<void> {
+    if (this.refreshing()) {
+      return;
+    }
+
+    this.refreshing.set(true);
+    try {
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((cacheKey) => caches.delete(cacheKey)));
+      }
+
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+      }
+    } catch (error) {
+      console.warn('手動更新時清除快取失敗，改為直接重整', error);
+    } finally {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set('appVersion', this.version.version);
+      nextUrl.searchParams.set('ts', Date.now().toString());
+      window.location.replace(nextUrl.toString());
+    }
   }
 
   logout() {

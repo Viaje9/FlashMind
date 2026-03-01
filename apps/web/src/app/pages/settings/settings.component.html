@@ -49,6 +49,19 @@
     <div
       class="mx-auto w-full max-w-lg space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3"
     >
+      <fm-button
+        variant="ghost"
+        [fullWidth]="true"
+        [disabled]="refreshing()"
+        testId="settings-refresh-app"
+        (click)="refreshApp()"
+      >
+        @if (refreshing()) {
+          更新中...
+        } @else {
+          重新載入最新版本
+        }
+      </fm-button>
       <fm-button variant="danger" [fullWidth]="true" (click)="logout()" [disabled]="loading()">
         @if (loading()) {
           登出中...
