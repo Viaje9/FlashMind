@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -8,16 +15,28 @@ import {
   FmFabComponent,
   FmIconButtonComponent,
   FmPageHeaderComponent,
-  FmSearchInputComponent
+  FmSearchInputComponent,
 } from '@flashmind/ui';
 import { FmCardListItemComponent } from './components/card-list-item/card-list-item.component';
 import { FmDeckStatsCardComponent } from './components/deck-stats-card/deck-stats-card.component';
-import { DecksService, DeckDetail, DeckService, CardListItem, StudyService, StudySummary } from '@flashmind/api-client';
+import {
+  DecksService,
+  DeckDetail,
+  DeckService,
+  CardListItem,
+  StudyService,
+  StudySummary,
+} from '@flashmind/api-client';
 import { CardStore } from '../../components/card/card.store';
+import {
+  DECK_DETAIL_CARD_FILTER,
+  type DeckDetailCardFilter,
+  filterDeckCards,
+} from './deck-detail-filter.domain';
 import {
   DailyOverrideDialogComponent,
   DailyOverrideDialogData,
-  DailyOverrideDialogResult
+  DailyOverrideDialogResult,
 } from './components/daily-override-dialog/daily-override-dialog.component';
 
 @Component({
@@ -31,11 +50,11 @@ import {
     FmEmptyStateComponent,
     FmFabComponent,
     RouterLink,
-    ReactiveFormsModule
+    ReactiveFormsModule,
   ],
   providers: [DialogService],
   templateUrl: './deck-detail.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeckDetailComponent implements OnInit {
   private readonly router = inject(Router);
@@ -47,25 +66,31 @@ export class DeckDetailComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
 
   readonly deckId = signal('');
-  readonly searchControl = new FormControl('');
+  readonly searchControl = new FormControl('', { nonNullable: true });
+  readonly filterControl = new FormControl<DeckDetailCardFilter>(DECK_DETAIL_CARD_FILTER.ALL, {
+    nonNullable: true,
+  });
   readonly searchTerm = signal('');
+  readonly selectedFilter = signal<DeckDetailCardFilter>(DECK_DETAIL_CARD_FILTER.ALL);
   readonly deck = signal<DeckDetail | null>(null);
   readonly isLoading = signal(true);
   readonly studySummary = signal<StudySummary | null>(null);
   readonly overrideActive = signal(false);
+  readonly filterOptions: ReadonlyArray<{ label: string; value: DeckDetailCardFilter }> = [
+    { label: '全部卡片', value: DECK_DETAIL_CARD_FILTER.ALL },
+    { label: '七天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS },
+    { label: '尚未練習的新卡片', value: DECK_DETAIL_CARD_FILTER.NEW },
+    { label: '三天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS },
+  ];
 
   readonly cards = this.cardStore.cards;
   readonly cardsLoading = this.cardStore.loading;
 
   readonly filteredCards = computed(() => {
-    const allCards = this.cards();
-    const term = this.searchTerm().toLowerCase();
-    if (!term) return allCards;
-    return allCards.filter(
-      (card) =>
-        card.front.toLowerCase().includes(term) ||
-        card.summary.toLowerCase().includes(term)
-    );
+    return filterDeckCards(this.cards(), {
+      searchTerm: this.searchTerm(),
+      filter: this.selectedFilter(),
+    });
   });
 
   readonly isEmpty = computed(() => !this.cardsLoading() && this.cards().length === 0);
@@ -83,7 +108,10 @@ export class DeckDetailComponent implements OnInit {
       void this.cardStore.loadCards(id);
     }
     this.searchControl.valueChanges.subscribe((value) => {
-      this.searchTerm.set(value ?? '');
+      this.searchTerm.set(value);
+    });
+    this.filterControl.valueChanges.subscribe((value) => {
+      this.selectedFilter.set(value);
     });
   }
 
@@ -96,7 +124,7 @@ export class DeckDetailComponent implements OnInit {
       },
       error: () => {
         this.isLoading.set(false);
-      }
+      },
     });
   }
 
@@ -108,7 +136,7 @@ export class DeckDetailComponent implements OnInit {
       },
       error: () => {
         // 靜默處理錯誤，進度條不顯示即可
-      }
+      },
     });
   }
 
@@ -117,8 +145,7 @@ export class DeckDetailComponent implements OnInit {
     if (!d) return;
     // summary 回傳的是 effective limit，與牌組原始設定比較即可判斷覆寫狀態
     const isOverridden =
-      summary.dailyNewCards > d.dailyNewCards ||
-      summary.dailyReviewCards > d.dailyReviewCards;
+      summary.dailyNewCards > d.dailyNewCards || summary.dailyReviewCards > d.dailyReviewCards;
     this.overrideActive.set(isOverridden);
   }
 
@@ -126,7 +153,7 @@ export class DeckDetailComponent implements OnInit {
     const d = this.deck();
     if (!d) return;
     void this.router.navigate(['/decks', this.deckId(), 'study'], {
-      queryParams: { name: d.name }
+      queryParams: { name: d.name },
     });
   }
 
@@ -140,8 +167,8 @@ export class DeckDetailComponent implements OnInit {
         title: '刪除卡片',
         message: `確定要刪除「${card.front}」嗎？此操作無法復原。`,
         confirmText: '刪除',
-        cancelText: '取消'
-      }
+        cancelText: '取消',
+      },
     });
 
     dialogRef.afterClosed().subscribe(async (confirmed) => {
@@ -167,20 +194,22 @@ export class DeckDetailComponent implements OnInit {
       data: {
         dailyNewCards: summary.dailyNewCards,
         dailyReviewCards: summary.dailyReviewCards,
-      }
+      },
     });
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        this.deckService.setDailyOverride(this.deckId(), {
-          newCards: result.newCards,
-          reviewCards: result.reviewCards,
-        }).subscribe({
-          next: () => {
-            this.overrideActive.set(true);
-            this.loadStudySummary(this.deckId());
-          }
-        });
+        this.deckService
+          .setDailyOverride(this.deckId(), {
+            newCards: result.newCards,
+            reviewCards: result.reviewCards,
+          })
+          .subscribe({
+            next: () => {
+              this.overrideActive.set(true);
+              this.loadStudySummary(this.deckId());
+            },
+          });
       }
     });
   }

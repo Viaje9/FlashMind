@@ -1,17 +1,26 @@
 # card-management Specification
 
 ## Purpose
+
 TBD - created by archiving change add-card-management. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: 檢視牌組內卡片
 
-使用者 SHALL 能夠檢視牌組內的所有卡片。
+使用者 SHALL 能夠檢視牌組內的所有卡片，並透過搜尋與篩選縮小結果。
 
 #### Scenario: 顯示牌組摘要
 
 - **WHEN** 使用者進入牌組詳情頁
 - **THEN** 顯示牌組摘要資訊
 - **AND** 摘要包含：新卡數、待複習數、建立時間、上次複習時間
+
+#### Scenario: 顯示搜尋與篩選控制項
+
+- **WHEN** 使用者進入牌組詳情頁
+- **THEN** 顯示卡片搜尋輸入框
+- **AND** 在搜尋輸入框右側顯示 `Filter` 控制項
 
 #### Scenario: 顯示卡片列表
 
@@ -20,6 +29,32 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **AND** 每張卡片顯示正面文字
 - **AND** 每張卡片顯示第一筆詞義的中文解釋（作為摘要）
 - **AND** 每張卡片顯示複習時間資訊（行內式，位於摘要下方）
+
+#### Scenario: 未選擇篩選時顯示全部卡片
+
+- **WHEN** 使用者尚未選擇任何篩選條件
+- **THEN** 卡片列表顯示所有可見卡片
+
+#### Scenario: 過濾七天內到期的卡片
+
+- **WHEN** 使用者選擇「七天內到期」篩選
+- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 7 天（含邊界）的卡片
+
+#### Scenario: 過濾三天內到期的卡片
+
+- **WHEN** 使用者選擇「三天內到期」篩選
+- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 3 天（含邊界）的卡片
+
+#### Scenario: 過濾尚未練習的新卡片
+
+- **WHEN** 使用者選擇「尚未練習的新卡片」篩選
+- **THEN** 卡片列表僅顯示學習狀態為 NEW 的卡片
+
+#### Scenario: 搜尋與篩選同時生效
+
+- **WHEN** 使用者輸入搜尋關鍵字
+- **AND** 使用者選擇任一篩選條件
+- **THEN** 卡片列表僅顯示同時符合搜尋條件與篩選條件的卡片
 
 #### Scenario: 卡片複習時間顯示 — 新卡片
 
@@ -237,6 +272,7 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 
 - **WHEN** 使用者準備匯入 JSON
 - **THEN** JSON 格式符合以下結構：
+
 ```json
 {
   "cards": [
@@ -253,6 +289,7 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
   ]
 }
 ```
+
 - **AND** `cards` 為陣列，每個元素代表一張卡片
 - **AND** `front` 為必填欄位
 - **AND** `meanings` 為陣列，至少需要一筆詞義
@@ -312,4 +349,3 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **WHEN** 使用者在匯入頁面
 - **THEN** 頁首顯示「匯入卡片」標題
 - **AND** 頁首左側顯示返回按鈕
-
