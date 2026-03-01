@@ -52,32 +52,94 @@
     }
 
     @if (!isEmpty()) {
-      <div class="flex items-center gap-2" data-testid="deck-detail-search-filter-row">
+      <div class="flex items-center gap-2" data-testid="deck-detail-filter-sort-row">
         <div class="min-w-0 flex-1">
-          <fm-search-input
-            [formControl]="searchControl"
-            placeholder="搜尋牌組內的卡片..."
-            ariaLabel="搜尋牌組內的卡片"
-            testId="deck-detail-search"
-          ></fm-search-input>
-        </div>
-        <div class="w-36 shrink-0">
-          <label
-            for="deck-detail-filter"
-            class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300"
-            >Filter</label
-          >
-          <select
+          <button
             id="deck-detail-filter"
-            [formControl]="filterControl"
-            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-white/10 dark:bg-slate-900"
-            data-testid="deck-detail-filter"
+            type="button"
+            cdkOverlayOrigin
+            #filterTrigger="cdkOverlayOrigin"
+            class="group flex w-full items-center gap-2 rounded-xl bg-surface-light px-3 py-3 text-left ring-1 ring-slate-200 transition-all hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary dark:bg-surface-dark dark:ring-gray-800"
+            data-testid="deck-detail-filter-trigger"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="filterOverlayOpen()"
+            aria-label="Filter"
+            (click)="toggleFilterOverlay()"
           >
-            @for (option of filterOptions; track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
+            <span
+              class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+            >
+              <span class="material-symbols-outlined text-[16px]">filter_alt</span>
+            </span>
+            <span class="min-w-0 flex-1 truncate text-sm text-slate-800 dark:text-slate-100">{{
+              selectedFilterLabel()
+            }}</span>
+            <span
+              class="material-symbols-outlined text-[18px] text-slate-500 transition-transform dark:text-slate-300"
+              [class.rotate-180]="filterOverlayOpen()"
+              >arrow_drop_down</span
+            >
+          </button>
+
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOpen]="filterOverlayOpen()"
+            [cdkConnectedOverlayOrigin]="filterTrigger"
+            [cdkConnectedOverlayHasBackdrop]="true"
+            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            [cdkConnectedOverlayPositions]="filterOverlayPositions"
+            (backdropClick)="closeFilterOverlay()"
+            (detach)="closeFilterOverlay()"
+          >
+            <div
+              class="w-56 rounded-xl bg-surface-light p-1.5 shadow-lg ring-1 ring-slate-200 dark:bg-surface-dark dark:ring-gray-800"
+              role="listbox"
+              data-testid="deck-detail-filter-overlay"
+            >
+              @for (option of filterOptions; track option.value) {
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
+                  [class.text-primary]="isSelectedFilterOption(option.value)"
+                  [class.font-medium]="isSelectedFilterOption(option.value)"
+                  [attr.data-testid]="'deck-detail-filter-option-' + option.value"
+                  (click)="selectFilterOption(option.value)"
+                >
+                  <span>{{ option.label }}</span>
+                  @if (isSelectedFilterOption(option.value)) {
+                    <span class="material-symbols-outlined text-[16px]">check</span>
+                  }
+                </button>
+              }
+            </div>
+          </ng-template>
         </div>
+        <button
+          type="button"
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-light text-slate-600 ring-1 ring-slate-200 transition-all hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary dark:bg-surface-dark dark:text-slate-200 dark:ring-gray-800"
+          data-testid="deck-detail-sort-toggle"
+          [attr.aria-label]="
+            sortDirection() === 'asc'
+              ? '目前為升冪排序，點擊切換為降冪排序'
+              : '目前為降冪排序，點擊切換為升冪排序'
+          "
+          (click)="toggleSortDirection()"
+        >
+          @if (sortDirection() === 'asc') {
+            <span class="material-symbols-outlined text-[20px]">arrow_upward</span>
+          } @else {
+            <span class="material-symbols-outlined text-[20px]">arrow_downward</span>
+          }
+        </button>
+      </div>
+
+      <div class="min-w-0">
+        <fm-search-input
+          [formControl]="searchControl"
+          placeholder="搜尋牌組內的卡片..."
+          ariaLabel="搜尋牌組內的卡片"
+          testId="deck-detail-search"
+        ></fm-search-input>
       </div>
 
       <div class="flex flex-col gap-3 pb-6">

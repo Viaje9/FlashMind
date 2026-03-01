@@ -9,6 +9,11 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
+  CdkConnectedOverlay,
+  CdkOverlayOrigin,
+  type ConnectedPosition,
+} from '@angular/cdk/overlay';
+import {
   DialogService,
   FmConfirmDialogComponent,
   FmEmptyStateComponent,
@@ -51,6 +56,8 @@ import {
     FmFabComponent,
     RouterLink,
     ReactiveFormsModule,
+    CdkOverlayOrigin,
+    CdkConnectedOverlay,
   ],
   providers: [DialogService],
   templateUrl: './deck-detail.component.html',
@@ -67,11 +74,10 @@ export class DeckDetailComponent implements OnInit {
 
   readonly deckId = signal('');
   readonly searchControl = new FormControl('', { nonNullable: true });
-  readonly filterControl = new FormControl<DeckDetailCardFilter>(DECK_DETAIL_CARD_FILTER.ALL, {
-    nonNullable: true,
-  });
   readonly searchTerm = signal('');
   readonly selectedFilter = signal<DeckDetailCardFilter>(DECK_DETAIL_CARD_FILTER.ALL);
+  readonly sortDirection = signal<'asc' | 'desc'>('asc');
+  readonly filterOverlayOpen = signal(false);
   readonly deck = signal<DeckDetail | null>(null);
   readonly isLoading = signal(true);
   readonly studySummary = signal<StudySummary | null>(null);
@@ -82,15 +88,47 @@ export class DeckDetailComponent implements OnInit {
     { label: '尚未練習的新卡片', value: DECK_DETAIL_CARD_FILTER.NEW },
     { label: '三天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS },
   ];
+  readonly filterOverlayPositions: ConnectedPosition[] = [
+    {
+      originX: 'end',
+      originY: 'bottom',
+      overlayX: 'end',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+    {
+      originX: 'end',
+      originY: 'top',
+      overlayX: 'end',
+      overlayY: 'bottom',
+      offsetY: -6,
+    },
+  ];
 
   readonly cards = this.cardStore.cards;
   readonly cardsLoading = this.cardStore.loading;
+  readonly selectedFilterLabel = computed(() => {
+    return (
+      this.filterOptions.find((option) => option.value === this.selectedFilter())?.label ??
+      '全部卡片'
+    );
+  });
 
   readonly filteredCards = computed(() => {
-    return filterDeckCards(this.cards(), {
+    const filtered = filterDeckCards(this.cards(), {
       searchTerm: this.searchTerm(),
       filter: this.selectedFilter(),
     });
+
+    const sorted = [...filtered].sort((left, right) =>
+      left.front.localeCompare(right.front, 'zh-Hant', { numeric: true, sensitivity: 'base' }),
+    );
+
+    if (this.sortDirection() === 'desc') {
+      sorted.reverse();
+    }
+
+    return sorted;
   });
 
   readonly isEmpty = computed(() => !this.cardsLoading() && this.cards().length === 0);
@@ -109,9 +147,6 @@ export class DeckDetailComponent implements OnInit {
     }
     this.searchControl.valueChanges.subscribe((value) => {
       this.searchTerm.set(value);
-    });
-    this.filterControl.valueChanges.subscribe((value) => {
-      this.selectedFilter.set(value);
     });
   }
 
@@ -212,6 +247,27 @@ export class DeckDetailComponent implements OnInit {
           });
       }
     });
+  }
+
+  toggleFilterOverlay(): void {
+    this.filterOverlayOpen.update((open) => !open);
+  }
+
+  toggleSortDirection(): void {
+    this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+  }
+
+  closeFilterOverlay(): void {
+    this.filterOverlayOpen.set(false);
+  }
+
+  selectFilterOption(filter: DeckDetailCardFilter): void {
+    this.selectedFilter.set(filter);
+    this.closeFilterOverlay();
+  }
+
+  isSelectedFilterOption(filter: DeckDetailCardFilter): boolean {
+    return this.selectedFilter() === filter;
   }
 
   formatDate(dateStr: string | null | undefined): string {

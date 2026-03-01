@@ -84,25 +84,26 @@ describe('DeckDetailComponent filters', () => {
 
   it('預設應顯示所有卡片', () => {
     expect(component.selectedFilter()).toBe(DECK_DETAIL_CARD_FILTER.ALL);
+    expect(component.sortDirection()).toBe('asc');
     expect(getRenderedCardIds(fixture)).toEqual([
-      'new-card',
-      'due-2',
-      'due-3',
-      'due-7',
       'due-8',
+      'due-3',
       'overdue',
+      'due-2',
+      'due-7',
+      'new-card',
     ]);
   });
 
   it('選擇七天內到期應僅顯示 7 天內非 NEW 卡片', () => {
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS);
 
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'due-3', 'due-7']);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-3', 'due-2', 'due-7']);
   });
 
   it('選擇三天內到期與新卡片應套用對應篩選', () => {
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS);
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'due-3']);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-3', 'due-2']);
 
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.NEW);
     expect(getRenderedCardIds(fixture)).toEqual(['new-card']);
@@ -113,6 +114,20 @@ describe('DeckDetailComponent filters', () => {
     setSearch(fixture, 'target');
 
     expect(getRenderedCardIds(fixture)).toEqual(['due-2']);
+  });
+
+  it('點擊排序按鈕後應切換為降冪排序', () => {
+    toggleSort(fixture);
+
+    expect(component.sortDirection()).toBe('desc');
+    expect(getRenderedCardIds(fixture)).toEqual([
+      'new-card',
+      'due-7',
+      'due-2',
+      'overdue',
+      'due-3',
+      'due-8',
+    ]);
   });
 });
 
@@ -200,15 +215,25 @@ function createStudySummary(): StudySummary {
 }
 
 function setFilter(fixture: ComponentFixture<DeckDetailComponent>, value: string): void {
-  const select = fixture.nativeElement.querySelector(
-    '[data-testid="deck-detail-filter"]',
-  ) as HTMLSelectElement | null;
-  if (!select) {
-    throw new Error('deck-detail-filter not found');
+  const root = fixture.nativeElement as HTMLElement;
+  const trigger = root.querySelector(
+    '[data-testid="deck-detail-filter-trigger"]',
+  ) as HTMLButtonElement | null;
+  if (!trigger) {
+    throw new Error('deck-detail-filter-trigger not found');
   }
 
-  select.value = value;
-  select.dispatchEvent(new Event('change'));
+  trigger.click();
+  fixture.detectChanges();
+
+  const option = document.querySelector(
+    `[data-testid="deck-detail-filter-option-${value}"]`,
+  ) as HTMLButtonElement | null;
+  if (!option) {
+    throw new Error(`deck-detail-filter-option-${value} not found`);
+  }
+
+  option.click();
   fixture.detectChanges();
 }
 
@@ -222,6 +247,19 @@ function setSearch(fixture: ComponentFixture<DeckDetailComponent>, value: string
 
   input.value = value;
   input.dispatchEvent(new Event('input'));
+  fixture.detectChanges();
+}
+
+function toggleSort(fixture: ComponentFixture<DeckDetailComponent>): void {
+  const root = fixture.nativeElement as HTMLElement;
+  const button = root.querySelector(
+    '[data-testid="deck-detail-sort-toggle"]',
+  ) as HTMLButtonElement | null;
+  if (!button) {
+    throw new Error('deck-detail-sort-toggle not found');
+  }
+
+  button.click();
   fixture.detectChanges();
 }
 
