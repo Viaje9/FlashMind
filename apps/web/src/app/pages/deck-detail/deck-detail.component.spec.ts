@@ -86,11 +86,11 @@ describe('DeckDetailComponent filters', () => {
     expect(component.selectedFilter()).toBe(DECK_DETAIL_CARD_FILTER.ALL);
     expect(component.sortDirection()).toBe('asc');
     expect(getRenderedCardIds(fixture)).toEqual([
-      'due-8',
-      'due-3',
       'overdue',
       'due-2',
+      'due-3',
       'due-7',
+      'due-8',
       'new-card',
     ]);
   });
@@ -98,12 +98,12 @@ describe('DeckDetailComponent filters', () => {
   it('選擇七天內到期應僅顯示 7 天內非 NEW 卡片', () => {
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS);
 
-    expect(getRenderedCardIds(fixture)).toEqual(['due-3', 'due-2', 'due-7']);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'due-3', 'due-7']);
   });
 
   it('選擇三天內到期與新卡片應套用對應篩選', () => {
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS);
-    expect(getRenderedCardIds(fixture)).toEqual(['due-3', 'due-2']);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'due-3']);
 
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.NEW);
     expect(getRenderedCardIds(fixture)).toEqual(['new-card']);
@@ -122,11 +122,11 @@ describe('DeckDetailComponent filters', () => {
     expect(component.sortDirection()).toBe('desc');
     expect(getRenderedCardIds(fixture)).toEqual([
       'new-card',
+      'due-8',
       'due-7',
+      'due-3',
       'due-2',
       'overdue',
-      'due-3',
-      'due-8',
     ]);
   });
 });

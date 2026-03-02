@@ -4,6 +4,7 @@ import {
   filterDeckCards,
   type DeckDetailCardFilter,
   DECK_DETAIL_CARD_FILTER,
+  sortDeckCards,
 } from './deck-detail-filter.domain';
 
 function createCard(
@@ -114,5 +115,29 @@ describe('deck-detail-filter.domain', () => {
     const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS, 'target');
 
     expect(result.map((card) => card.id)).toEqual(['due-match']);
+  });
+
+  it('排序應以到期時間升冪，並將沒有 due 的卡片放在最後', () => {
+    const cards = [
+      createCard('no-due', { front: 'No Due', due: null }),
+      createCard('due-late', { front: 'Late', due: '2026-03-05T00:00:00.000Z' }),
+      createCard('due-early', { front: 'Early', due: '2026-03-02T00:00:00.000Z' }),
+    ];
+
+    const result = sortDeckCards(cards, 'asc');
+
+    expect(result.map((card) => card.id)).toEqual(['due-early', 'due-late', 'no-due']);
+  });
+
+  it('排序應以到期時間降冪（由升冪反轉）', () => {
+    const cards = [
+      createCard('no-due', { front: 'No Due', due: null }),
+      createCard('due-late', { front: 'Late', due: '2026-03-05T00:00:00.000Z' }),
+      createCard('due-early', { front: 'Early', due: '2026-03-02T00:00:00.000Z' }),
+    ];
+
+    const result = sortDeckCards(cards, 'desc');
+
+    expect(result.map((card) => card.id)).toEqual(['no-due', 'due-late', 'due-early']);
   });
 });

@@ -37,6 +37,7 @@ import {
   DECK_DETAIL_CARD_FILTER,
   type DeckDetailCardFilter,
   filterDeckCards,
+  sortDeckCards,
 } from './deck-detail-filter.domain';
 import {
   DailyOverrideDialogComponent,
@@ -120,15 +121,7 @@ export class DeckDetailComponent implements OnInit {
       filter: this.selectedFilter(),
     });
 
-    const sorted = [...filtered].sort((left, right) =>
-      left.front.localeCompare(right.front, 'zh-Hant', { numeric: true, sensitivity: 'base' }),
-    );
-
-    if (this.sortDirection() === 'desc') {
-      sorted.reverse();
-    }
-
-    return sorted;
+    return sortDeckCards(filtered, this.sortDirection());
   });
 
   readonly isEmpty = computed(() => !this.cardsLoading() && this.cards().length === 0);

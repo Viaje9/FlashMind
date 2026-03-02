@@ -1,2 +1,2 @@
 node scripts/bump-version.mjs
-npx lint-staged
+corepack pnpm exec lint-staged

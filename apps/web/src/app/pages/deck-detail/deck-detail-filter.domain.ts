@@ -18,6 +18,8 @@ export interface FilterDeckCardsParams {
   now?: Date;
 }
 
+export type DeckDetailCardSortDirection = 'asc' | 'desc';
+
 export function filterDeckCards(
   cards: CardListItem[],
   params: FilterDeckCardsParams,
@@ -29,6 +31,19 @@ export function filterDeckCards(
     (card) =>
       matchesSearchTerm(card, normalizedSearchTerm) && matchesFilter(card, params.filter, now),
   );
+}
+
+export function sortDeckCards(
+  cards: CardListItem[],
+  direction: DeckDetailCardSortDirection,
+): CardListItem[] {
+  const sorted = [...cards].sort(compareByDueThenFront);
+
+  if (direction === 'desc') {
+    sorted.reverse();
+  }
+
+  return sorted;
 }
 
 function matchesSearchTerm(card: CardListItem, normalizedSearchTerm: string): boolean {
@@ -82,4 +97,18 @@ function parseDue(due: string | null | undefined): Date | null {
   }
 
   return date;
+}
+
+function compareByDueThenFront(left: CardListItem, right: CardListItem): number {
+  const leftDueTime = parseDue(left.due)?.getTime() ?? Number.POSITIVE_INFINITY;
+  const rightDueTime = parseDue(right.due)?.getTime() ?? Number.POSITIVE_INFINITY;
+
+  if (leftDueTime !== rightDueTime) {
+    return leftDueTime - rightDueTime;
+  }
+
+  return left.front.localeCompare(right.front, 'zh-Hant', {
+    numeric: true,
+    sensitivity: 'base',
+  });
 }
