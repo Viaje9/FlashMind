@@ -342,6 +342,203 @@ describe('StudyService', () => {
       expect(reverseCards.find((c) => c.isNew)).toBeDefined();
     });
 
+    it('enableReverse 為 true 時應在總量內盡量 1:1 混排複習卡', async () => {
+      const reverseDeck = {
+        ...mockDeck,
+        enableReverse: true,
+        dailyReviewCards: 4,
+        dailyNewCards: 0,
+      };
+      const forwardDueCards = [
+        { ...mockDueCard, id: 'f1' },
+        { ...mockDueCard, id: 'f2' },
+        { ...mockDueCard, id: 'f3' },
+      ];
+      const reverseDueCards = [
+        {
+          ...mockDueCard,
+          id: 'r1',
+          reverseState: CardState.REVIEW,
+          reverseDue: new Date('2026-01-18T09:00:00Z'),
+        },
+        {
+          ...mockDueCard,
+          id: 'r2',
+          reverseState: CardState.REVIEW,
+          reverseDue: new Date('2026-01-18T08:00:00Z'),
+        },
+        {
+          ...mockDueCard,
+          id: 'r3',
+          reverseState: CardState.REVIEW,
+          reverseDue: new Date('2026-01-18T07:00:00Z'),
+        },
+      ];
+
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce(forwardDueCards)
+        .mockResolvedValueOnce(reverseDueCards);
+
+      const result = await service.getStudyCards(
+        mockDeckId,
+        mockUserId,
+        mockTimezone,
+      );
+
+      expect(result).toHaveLength(4);
+      expect(
+        result.filter((card) => card.direction === 'FORWARD'),
+      ).toHaveLength(2);
+      expect(
+        result.filter((card) => card.direction === 'REVERSE'),
+      ).toHaveLength(2);
+    });
+
+    it('單側不足時應由另一側補滿剩餘名額', async () => {
+      const reverseDeck = {
+        ...mockDeck,
+        enableReverse: true,
+        dailyReviewCards: 5,
+        dailyNewCards: 0,
+      };
+      const forwardDueCards = [
+        { ...mockDueCard, id: 'f1' },
+        { ...mockDueCard, id: 'f2' },
+        { ...mockDueCard, id: 'f3' },
+        { ...mockDueCard, id: 'f4' },
+      ];
+      const reverseDueCards = [
+        {
+          ...mockDueCard,
+          id: 'r1',
+          reverseState: CardState.REVIEW,
+          reverseDue: new Date('2026-01-18T09:00:00Z'),
+        },
+      ];
+
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce(forwardDueCards)
+        .mockResolvedValueOnce(reverseDueCards);
+
+      const result = await service.getStudyCards(
+        mockDeckId,
+        mockUserId,
+        mockTimezone,
+      );
+
+      expect(result).toHaveLength(5);
+      expect(
+        result.filter((card) => card.direction === 'REVERSE'),
+      ).toHaveLength(1);
+      expect(
+        result.filter((card) => card.direction === 'FORWARD'),
+      ).toHaveLength(4);
+    });
+
+    it('只有反向候選時仍應回傳反向卡片', async () => {
+      const reverseDeck = {
+        ...mockDeck,
+        enableReverse: true,
+        dailyReviewCards: 2,
+        dailyNewCards: 0,
+      };
+      const reverseDueCards = [
+        {
+          ...mockDueCard,
+          id: 'r1',
+          reverseState: CardState.REVIEW,
+          reverseDue: new Date('2026-01-18T09:00:00Z'),
+        },
+        {
+          ...mockDueCard,
+          id: 'r2',
+          reverseState: CardState.REVIEW,
+          reverseDue: new Date('2026-01-18T08:00:00Z'),
+        },
+      ];
+
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(reverseDueCards);
+
+      const result = await service.getStudyCards(
+        mockDeckId,
+        mockUserId,
+        mockTimezone,
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result.every((card) => card.direction === 'REVERSE')).toBe(true);
+    });
+
+    it('enableReverse 為 true 時不應讓總量翻倍', async () => {
+      const reverseDeck = {
+        ...mockDeck,
+        enableReverse: true,
+        dailyReviewCards: 3,
+        dailyNewCards: 2,
+      };
+      const reverseDueCard = {
+        ...mockDueCard,
+        id: 'r1',
+        reverseState: CardState.REVIEW,
+        reverseDue: new Date('2026-01-18T09:00:00Z'),
+      };
+      const reverseNewCard = {
+        ...mockNewCard,
+        id: 'rn1',
+        reverseState: CardState.NEW,
+      };
+
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([
+          { ...mockDueCard, id: 'f1' },
+          { ...mockDueCard, id: 'f2' },
+          { ...mockDueCard, id: 'f3' },
+        ])
+        .mockResolvedValueOnce([
+          { ...mockNewCard, id: 'n1' },
+          { ...mockNewCard, id: 'n2' },
+        ])
+        .mockResolvedValueOnce([
+          reverseDueCard,
+          { ...reverseDueCard, id: 'r2' },
+          { ...reverseDueCard, id: 'r3' },
+        ])
+        .mockResolvedValueOnce([
+          reverseNewCard,
+          { ...reverseNewCard, id: 'rn2' },
+        ]);
+
+      const result = await service.getStudyCards(
+        mockDeckId,
+        mockUserId,
+        mockTimezone,
+      );
+
+      const reviewCards = result.filter((card) => !card.isNew);
+      const newCards = result.filter((card) => card.isNew);
+      expect(reviewCards).toHaveLength(3);
+      expect(newCards).toHaveLength(2);
+      expect(result).toHaveLength(5);
+    });
+
     it('enableReverse 為 false 時不查詢反向卡片', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck); // enableReverse: false
       mockPrismaService.reviewLog.count
@@ -393,6 +590,41 @@ describe('StudyService', () => {
       expect(newCardsCall[0].take).toBe(40);
 
       jest.useRealTimers();
+    });
+
+    it('enableReverse 為 true 時反向查詢 take 應維持總量上限而非剩餘名額', async () => {
+      const reverseDeck = {
+        ...mockDeck,
+        enableReverse: true,
+        dailyReviewCards: 6,
+        dailyNewCards: 4,
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([mockDueCard])
+        .mockResolvedValueOnce([mockNewCard])
+        .mockResolvedValueOnce([
+          {
+            ...mockDueCard,
+            id: 'reverse-due',
+            reverseState: CardState.REVIEW,
+            reverseDue: new Date('2026-01-18T09:00:00Z'),
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            ...mockNewCard,
+            id: 'reverse-new',
+          },
+        ]);
+
+      await service.getStudyCards(mockDeckId, mockUserId, mockTimezone);
+
+      expect(mockPrismaService.card.findMany.mock.calls[2][0].take).toBe(6);
+      expect(mockPrismaService.card.findMany.mock.calls[3][0].take).toBe(4);
     });
   });
 

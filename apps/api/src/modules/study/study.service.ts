@@ -179,6 +179,44 @@ export class StudyService {
   }
 
   /**
+   * 依 1:1 優先規則交錯兩個方向的卡面，若單側不足則由另一側補位。
+   */
+  private mixOneToOne(
+    primary: readonly StudyCard[],
+    secondary: readonly StudyCard[],
+    limit: number,
+  ): StudyCard[] {
+    if (limit <= 0) {
+      return [];
+    }
+
+    const mixed: StudyCard[] = [];
+    let primaryIndex = 0;
+    let secondaryIndex = 0;
+
+    while (
+      mixed.length < limit &&
+      primaryIndex < primary.length &&
+      secondaryIndex < secondary.length
+    ) {
+      mixed.push(primary[primaryIndex++]);
+      if (mixed.length < limit) {
+        mixed.push(secondary[secondaryIndex++]);
+      }
+    }
+
+    while (mixed.length < limit && primaryIndex < primary.length) {
+      mixed.push(primary[primaryIndex++]);
+    }
+
+    while (mixed.length < limit && secondaryIndex < secondary.length) {
+      mixed.push(secondary[secondaryIndex++]);
+    }
+
+    return mixed;
+  }
+
+  /**
    * 取得今日學習卡片
    * 排序：新卡與複習卡隨機混合，同一張卡的正反向至少間隔 5 張
    */
@@ -224,7 +262,7 @@ export class StudyService {
       effectiveNewCards - todayNewCardsStudied,
     );
 
-    // 1. 取得正向待複習卡片（due <= now，且不是 NEW 狀態）
+    // 1. 分別收集正向/反向候選，再在總量上限內組池
     const forwardDueCards =
       remainingReviewSlots > 0
         ? await this.prisma.card.findMany({
@@ -239,7 +277,6 @@ export class StudyService {
           })
         : [];
 
-    // 2. 取得正向新卡片
     const forwardNewCards =
       remainingNewSlots > 0
         ? await this.prisma.card.findMany({
@@ -253,7 +290,6 @@ export class StudyService {
           })
         : [];
 
-    // 正向結果
     const forwardDueStudyCards = forwardDueCards.map((card) =>
       this.mapToStudyCard(card, 'FORWARD'),
     );
@@ -261,22 +297,12 @@ export class StudyService {
       this.mapToStudyCard(card, 'FORWARD'),
     );
 
-    // 3. 若 enableReverse，取得反向卡片
     let reverseDueStudyCards: StudyCard[] = [];
     let reverseNewStudyCards: StudyCard[] = [];
 
     if (enableReverse) {
-      const reverseRemainingReviewSlots = Math.max(
-        0,
-        remainingReviewSlots - forwardDueCards.length,
-      );
-      const reverseRemainingNewSlots = Math.max(
-        0,
-        remainingNewSlots - forwardNewCards.length,
-      );
-
       const reverseDueCards =
-        reverseRemainingReviewSlots > 0
+        remainingReviewSlots > 0
           ? await this.prisma.card.findMany({
               where: {
                 deckId,
@@ -285,12 +311,12 @@ export class StudyService {
               },
               include: { meanings: { orderBy: { sortOrder: 'asc' } } },
               orderBy: { reverseDue: 'asc' },
-              take: reverseRemainingReviewSlots,
+              take: remainingReviewSlots,
             })
           : [];
 
       const reverseNewCards =
-        reverseRemainingNewSlots > 0
+        remainingNewSlots > 0
           ? await this.prisma.card.findMany({
               where: {
                 deckId,
@@ -298,7 +324,7 @@ export class StudyService {
               },
               include: { meanings: { orderBy: { sortOrder: 'asc' } } },
               orderBy: { createdAt: 'asc' },
-              take: reverseRemainingNewSlots,
+              take: remainingNewSlots,
             })
           : [];
 
@@ -310,13 +336,24 @@ export class StudyService {
       );
     }
 
+    const reviewCards = enableReverse
+      ? this.mixOneToOne(
+          forwardDueStudyCards,
+          reverseDueStudyCards,
+          remainingReviewSlots,
+        )
+      : forwardDueStudyCards.slice(0, remainingReviewSlots);
+
+    const newCards = enableReverse
+      ? this.mixOneToOne(
+          forwardNewStudyCards,
+          reverseNewStudyCards,
+          remainingNewSlots,
+        )
+      : forwardNewStudyCards.slice(0, remainingNewSlots);
+
     // 4. 合併並隨機混合排列，正反向至少間隔 MIN_FORWARD_REVERSE_SPACING 張
-    const allCards = [
-      ...forwardDueStudyCards,
-      ...reverseDueStudyCards,
-      ...forwardNewStudyCards,
-      ...reverseNewStudyCards,
-    ];
+    const allCards = [...reviewCards, ...newCards];
 
     return shuffleWithSpacing(allCards, MIN_FORWARD_REVERSE_SPACING);
   }
