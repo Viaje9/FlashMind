@@ -120,12 +120,23 @@ describe('DeckDetailComponent filters', () => {
     expect(getRenderedCardIds(fixture)).toEqual(['due-2']);
   });
 
+  it('搜尋後卡片總數應顯示過濾後結果', () => {
+    const count = fixture.nativeElement.querySelector(
+      '[data-testid="deck-detail-card-count"]',
+    ) as HTMLElement | null;
+
+    setSearch(fixture, 'target');
+
+    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'new-card']);
+    expect(count?.textContent?.trim()).toBe('2');
+  });
+
   it('搜尋框右側應顯示目前卡片總數', () => {
     const count = fixture.nativeElement.querySelector(
       '[data-testid="deck-detail-card-count"]',
     ) as HTMLElement | null;
 
-    expect(count?.textContent?.trim()).toBe('6');
+    expect(count?.textContent?.trim()).toBe('7');
   });
 
   it('點擊排序按鈕後應切換為降冪排序', () => {
