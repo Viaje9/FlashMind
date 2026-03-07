@@ -93,6 +93,7 @@ describe('DeckDetailComponent filters', () => {
       'due-2',
       'due-3',
       'new-card',
+      'new-card-reverse',
     ]);
   });
 
@@ -110,7 +111,7 @@ describe('DeckDetailComponent filters', () => {
     expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h', 'due-1d', 'due-2']);
 
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.NEW);
-    expect(getRenderedCardIds(fixture)).toEqual(['new-card']);
+    expect(getRenderedCardIds(fixture)).toEqual(['new-card', 'new-card-reverse']);
   });
 
   it('搜尋與篩選應同時生效（交集）', () => {
@@ -127,8 +128,8 @@ describe('DeckDetailComponent filters', () => {
 
     setSearch(fixture, 'target');
 
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'new-card']);
-    expect(count?.textContent?.trim()).toBe('2');
+    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'new-card', 'new-card-reverse']);
+    expect(count?.textContent?.trim()).toBe('3');
   });
 
   it('搜尋框右側應顯示目前卡片總數', () => {
@@ -136,7 +137,7 @@ describe('DeckDetailComponent filters', () => {
       '[data-testid="deck-detail-card-count"]',
     ) as HTMLElement | null;
 
-    expect(count?.textContent?.trim()).toBe('7');
+    expect(count?.textContent?.trim()).toBe('8');
   });
 
   it('點擊排序按鈕後應切換為降冪排序', () => {
@@ -144,6 +145,7 @@ describe('DeckDetailComponent filters', () => {
 
     expect(component.sortDirection()).toBe('desc');
     expect(getRenderedCardIds(fixture)).toEqual([
+      'new-card-reverse',
       'new-card',
       'due-3',
       'due-2',
@@ -153,6 +155,13 @@ describe('DeckDetailComponent filters', () => {
       'overdue',
     ]);
   });
+
+  it('列表項目應顯示方向標示', () => {
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.textContent).toContain('正面卡片');
+    expect(root.textContent).toContain('反面卡片');
+  });
 });
 
 function createCardStoreMock() {
@@ -160,13 +169,26 @@ function createCardStoreMock() {
     cards: signal<CardListItem[]>([
       {
         id: 'new-card',
+        cardId: 'card-new',
+        direction: 'FORWARD',
         front: 'Target New Card',
         summary: '尚未練習',
         state: 'NEW',
         due: null,
       },
       {
+        id: 'new-card-reverse',
+        cardId: 'card-new',
+        direction: 'REVERSE',
+        front: 'Target New Card',
+        summary: '尚未練習（反面）',
+        state: 'NEW',
+        due: null,
+      },
+      {
         id: 'due-6h',
+        cardId: 'card-due-6h',
+        direction: 'FORWARD',
         front: 'Review Soonest',
         summary: 'due in six hours',
         state: 'REVIEW',
@@ -174,6 +196,8 @@ function createCardStoreMock() {
       },
       {
         id: 'due-12h',
+        cardId: 'card-due-12h',
+        direction: 'FORWARD',
         front: 'Review Within 12h',
         summary: 'due in twelve hours',
         state: 'LEARNING',
@@ -181,6 +205,8 @@ function createCardStoreMock() {
       },
       {
         id: 'due-1d',
+        cardId: 'card-due-1d',
+        direction: 'FORWARD',
         front: 'Review One Day',
         summary: 'due in one day',
         state: 'REVIEW',
@@ -188,6 +214,8 @@ function createCardStoreMock() {
       },
       {
         id: 'due-2',
+        cardId: 'card-due-2',
+        direction: 'FORWARD',
         front: 'Review Two Days',
         summary: 'target due in two days',
         state: 'REVIEW',
@@ -195,6 +223,8 @@ function createCardStoreMock() {
       },
       {
         id: 'due-3',
+        cardId: 'card-due-3',
+        direction: 'FORWARD',
         front: 'Later Card',
         summary: 'outside two days',
         state: 'REVIEW',
@@ -202,6 +232,8 @@ function createCardStoreMock() {
       },
       {
         id: 'overdue',
+        cardId: 'card-overdue',
+        direction: 'FORWARD',
         front: 'Overdue Card',
         summary: 'already overdue',
         state: 'REVIEW',
@@ -221,11 +253,11 @@ function createDeckDetail(): DeckDetail {
     dailyNewCards: 20,
     dailyReviewCards: 100,
     dailyResetHour: 4,
-    enableReverse: false,
+    enableReverse: true,
     stats: {
-      newCount: 1,
+      newCount: 2,
       reviewCount: 5,
-      totalCount: 6,
+      totalCount: 7,
       createdAt: '2026-01-01T00:00:00.000Z',
       lastStudiedAt: null,
     },
@@ -234,8 +266,8 @@ function createDeckDetail(): DeckDetail {
 
 function createStudySummary(): StudySummary {
   return {
-    totalCards: 6,
-    newCount: 1,
+    totalCards: 7,
+    newCount: 2,
     reviewCount: 5,
     todayStudied: 0,
     dailyNewCards: 20,
@@ -296,7 +328,9 @@ function toggleSort(fixture: ComponentFixture<DeckDetailComponent>): void {
 
 function getRenderedCardIds(fixture: ComponentFixture<DeckDetailComponent>): string[] {
   const root = fixture.nativeElement as HTMLElement;
-  const cards = root.querySelectorAll('[data-testid^="deck-detail-card-"]');
+  const cards = root.querySelectorAll(
+    '[data-testid^="deck-detail-card-"]:not([data-testid="deck-detail-card-count"])',
+  );
   return Array.from(cards)
     .map((element) => (element as HTMLElement).getAttribute('data-testid') ?? '')
     .map((testId) => testId.replace('deck-detail-card-', ''))

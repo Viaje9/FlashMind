@@ -2021,14 +2021,25 @@ components:
       description: 卡片列表項目
       required:
         - id
+        - cardId
+        - direction
         - front
         - summary
         - state
       properties:
         id:
           type: string
-          description: 卡片 ID
+          description: 列表項目 ID
           example: clh1234567890card
+        cardId:
+          type: string
+          description: 底層卡片 ID
+          example: clh1234567890card
+        direction:
+          type: string
+          enum: [FORWARD, REVERSE]
+          description: 列表項目的學習方向
+          example: FORWARD
         front:
           type: string
           description: 正面內容
@@ -2040,13 +2051,13 @@ components:
         state:
           type: string
           enum: [NEW, LEARNING, REVIEW, RELEARNING]
-          description: 卡片學習狀態
+          description: 該方向的卡片學習狀態
           example: NEW
         due:
           type: string
           format: date-time
           nullable: true
-          description: 下次複習時間（ISO 8601 UTC），新卡片為 null
+          description: 該方向的下次複習時間（ISO 8601 UTC），新卡片為 null
           example: "2026-02-01T10:00:00Z"
 
     CreateCardMeaningRequest:

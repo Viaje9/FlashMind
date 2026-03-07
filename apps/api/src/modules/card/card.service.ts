@@ -14,6 +14,8 @@ import {
 
 export interface CardListItem {
   id: string;
+  cardId: string;
+  direction: 'FORWARD' | 'REVERSE';
   front: string;
   summary: string;
   state: string;
@@ -42,7 +44,7 @@ export class CardService {
   private async validateDeckAccess(
     deckId: string,
     userId: string,
-  ): Promise<void> {
+  ): Promise<{ enableReverse: boolean }> {
     const deck = await this.prisma.deck.findUnique({
       where: { id: deckId },
     });
@@ -64,13 +66,17 @@ export class CardService {
         },
       });
     }
+
+    return {
+      enableReverse: deck.enableReverse,
+    };
   }
 
   async findAllByDeckId(
     deckId: string,
     userId: string,
   ): Promise<CardListItem[]> {
-    await this.validateDeckAccess(deckId, userId);
+    const deck = await this.validateDeckAccess(deckId, userId);
 
     const cards = await this.prisma.card.findMany({
       where: { deckId },
@@ -78,13 +84,35 @@ export class CardService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return cards.map((card) => ({
-      id: card.id,
-      front: card.front,
-      summary: card.meanings[0]?.zhMeaning ?? '',
-      state: card.state,
-      due: card.due?.toISOString() ?? null,
-    }));
+    return cards.flatMap((card) => {
+      const summary = card.meanings[0]?.zhMeaning ?? '';
+      const forwardItem: CardListItem = {
+        id: card.id,
+        cardId: card.id,
+        direction: 'FORWARD',
+        front: card.front,
+        summary,
+        state: card.state,
+        due: card.due?.toISOString() ?? null,
+      };
+
+      if (!deck.enableReverse) {
+        return [forwardItem];
+      }
+
+      return [
+        forwardItem,
+        {
+          id: `${card.id}:REVERSE`,
+          cardId: card.id,
+          direction: 'REVERSE',
+          front: card.front,
+          summary,
+          state: card.reverseState,
+          due: card.reverseDue?.toISOString() ?? null,
+        },
+      ];
+    });
   }
 
   async findById(

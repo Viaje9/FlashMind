@@ -34,6 +34,7 @@ describe('CardService', () => {
     id: mockDeckId,
     name: '英文單字',
     userId: mockUserId,
+    enableReverse: false,
     dailyNewCards: 20,
     dailyReviewCards: 100,
     createdAt: new Date('2026-01-17T10:00:00Z'),
@@ -57,6 +58,8 @@ describe('CardService', () => {
     deckId: mockDeckId,
     state: 'NEW',
     due: null,
+    reverseState: 'REVIEW',
+    reverseDue: new Date('2026-01-18T10:00:00Z'),
     stability: null,
     difficulty: null,
     elapsedDays: 0,
@@ -93,6 +96,8 @@ describe('CardService', () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         id: mockCardId,
+        cardId: mockCardId,
+        direction: 'FORWARD',
         front: 'Hello',
         summary: '你好',
         state: 'NEW',
@@ -123,6 +128,37 @@ describe('CardService', () => {
       await expect(
         service.findAllByDeckId(mockDeckId, 'other-user'),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('啟用反向學習時應展開正向與反向列表項目', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue({
+        ...mockDeck,
+        enableReverse: true,
+      });
+      mockPrismaService.card.findMany.mockResolvedValue([mockCard]);
+
+      const result = await service.findAllByDeckId(mockDeckId, mockUserId);
+
+      expect(result).toEqual([
+        {
+          id: mockCardId,
+          cardId: mockCardId,
+          direction: 'FORWARD',
+          front: 'Hello',
+          summary: '你好',
+          state: 'NEW',
+          due: null,
+        },
+        {
+          id: `${mockCardId}:REVERSE`,
+          cardId: mockCardId,
+          direction: 'REVERSE',
+          front: 'Hello',
+          summary: '你好',
+          state: 'REVIEW',
+          due: '2026-01-18T10:00:00.000Z',
+        },
+      ]);
     });
   });
 

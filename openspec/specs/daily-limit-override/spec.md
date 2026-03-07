@@ -1,4 +1,10 @@
-## ADDED Requirements
+# daily-limit-override Specification
+
+## Purpose
+
+允許使用者在不改動牌組預設值的前提下，針對當前學習日暫時提高新卡與複習卡上限，並讓所有依賴每日上限的統計、出題與畫面顯示使用相同的有效上限計算規則。
+
+## Requirements
 
 ### Requirement: 設定今日學習上限覆寫
 

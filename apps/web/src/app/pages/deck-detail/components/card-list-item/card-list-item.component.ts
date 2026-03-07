@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 
 type CardState = 'NEW' | 'LEARNING' | 'REVIEW' | 'RELEARNING';
+type CardDirection = 'FORWARD' | 'REVERSE';
 
 @Component({
   selector: 'fm-card-list-item',
   templateUrl: './card-list-item.component.html',
   styleUrl: './card-list-item.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FmCardListItemComponent {
   readonly title = input('');
@@ -16,9 +17,18 @@ export class FmCardListItemComponent {
   readonly testId = input<string>();
   readonly state = input<CardState>('NEW');
   readonly due = input<string | null>(null);
+  readonly direction = input<CardDirection>('FORWARD');
 
   readonly editClick = output<void>();
   readonly deleteClick = output<void>();
+  readonly directionLabel = computed(() =>
+    this.direction() === 'REVERSE' ? '反面卡片' : '正面卡片',
+  );
+  readonly directionBadgeClass = computed(() =>
+    this.direction() === 'REVERSE'
+      ? 'bg-cyan-50/60 text-cyan-700 ring-cyan-100 dark:bg-cyan-500/8 dark:text-cyan-200 dark:ring-cyan-400/15'
+      : 'bg-amber-50/60 text-amber-700 ring-amber-100 dark:bg-amber-500/8 dark:text-amber-200 dark:ring-amber-400/15',
+  );
 
   readonly reviewInfo = computed(() => {
     const state = this.state();
@@ -48,10 +58,16 @@ export class FmCardListItemComponent {
     }
 
     if (diffMinutes < 60) {
-      return { text: `${diffMinutes} 分鐘後到期`, colorClass: 'text-emerald-500 dark:text-emerald-400' };
+      return {
+        text: `${diffMinutes} 分鐘後到期`,
+        colorClass: 'text-emerald-500 dark:text-emerald-400',
+      };
     }
     if (diffHours < 24) {
-      return { text: `${diffHours} 小時後到期`, colorClass: 'text-emerald-500 dark:text-emerald-400' };
+      return {
+        text: `${diffHours} 小時後到期`,
+        colorClass: 'text-emerald-500 dark:text-emerald-400',
+      };
     }
     return { text: `${diffDays} 天後`, colorClass: 'text-slate-400 dark:text-slate-500' };
   });

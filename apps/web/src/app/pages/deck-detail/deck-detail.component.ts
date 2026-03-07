@@ -193,7 +193,7 @@ export class DeckDetailComponent implements OnInit {
     const dialogRef = this.dialogService.open(FmConfirmDialogComponent, {
       data: {
         title: '刪除卡片',
-        message: `確定要刪除「${card.front}」嗎？此操作無法復原。`,
+        message: `確定要刪除「${card.front}」嗎？此操作會刪除整張卡片（含正反向學習資料），且無法復原。`,
         confirmText: '刪除',
         cancelText: '取消',
       },
@@ -201,7 +201,7 @@ export class DeckDetailComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(async (confirmed) => {
       if (confirmed) {
-        const success = await this.cardStore.deleteCard(this.deckId(), card.id);
+        const success = await this.cardStore.deleteCard(this.deckId(), card.cardId);
         if (success) {
           // 重新載入牌組資訊以更新統計
           this.loadDeck(this.deckId());

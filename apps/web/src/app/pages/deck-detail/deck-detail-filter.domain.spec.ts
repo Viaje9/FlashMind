@@ -12,12 +12,16 @@ function createCard(
   options: {
     front?: string;
     summary?: string;
+    cardId?: string;
+    direction?: CardListItem.DirectionEnum;
     state?: CardListItem.StateEnum;
     due?: string | null;
   } = {},
 ): CardListItem {
   return {
     id,
+    cardId: options.cardId ?? id,
+    direction: options.direction ?? 'FORWARD',
     front: options.front ?? `front-${id}`,
     summary: options.summary ?? `summary-${id}`,
     state: options.state ?? 'REVIEW',
@@ -103,6 +107,33 @@ describe('deck-detail-filter.domain', () => {
     const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.NEW);
 
     expect(result.map((card) => card.id)).toEqual(['new-1', 'new-2']);
+  });
+
+  it('新卡片篩選應包含反面列表項目', () => {
+    const cards = [
+      createCard('forward-new', {
+        cardId: 'base-1',
+        direction: 'FORWARD',
+        state: 'NEW',
+        due: null,
+      }),
+      createCard('reverse-new', {
+        cardId: 'base-1',
+        direction: 'REVERSE',
+        state: 'NEW',
+        due: null,
+      }),
+      createCard('reverse-review', {
+        cardId: 'base-2',
+        direction: 'REVERSE',
+        state: 'REVIEW',
+        due: '2026-03-02T00:00:00.000Z',
+      }),
+    ];
+
+    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.NEW);
+
+    expect(result.map((card) => card.id)).toEqual(['forward-new', 'reverse-new']);
   });
 
   it('搜尋條件應與篩選條件取交集（同時生效）', () => {
