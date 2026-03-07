@@ -87,33 +87,45 @@ describe('DeckDetailComponent filters', () => {
     expect(component.sortDirection()).toBe('asc');
     expect(getRenderedCardIds(fixture)).toEqual([
       'overdue',
+      'due-6h',
+      'due-12h',
+      'due-1d',
       'due-2',
       'due-3',
-      'due-7',
-      'due-8',
       'new-card',
     ]);
   });
 
-  it('選擇七天內到期應僅顯示 7 天內非 NEW 卡片', () => {
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS);
+  it('選擇 12 小時內到期應僅顯示 12 小時內非 NEW 卡片', () => {
+    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_12_HOURS);
 
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'due-3', 'due-7']);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h']);
   });
 
-  it('選擇三天內到期與新卡片應套用對應篩選', () => {
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS);
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'due-3']);
+  it('選擇一天內、兩天內到期與新卡片應套用對應篩選', () => {
+    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h', 'due-1d']);
+
+    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS);
+    expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h', 'due-1d', 'due-2']);
 
     setFilter(fixture, DECK_DETAIL_CARD_FILTER.NEW);
     expect(getRenderedCardIds(fixture)).toEqual(['new-card']);
   });
 
   it('搜尋與篩選應同時生效（交集）', () => {
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS);
+    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS);
     setSearch(fixture, 'target');
 
     expect(getRenderedCardIds(fixture)).toEqual(['due-2']);
+  });
+
+  it('搜尋框右側應顯示目前卡片總數', () => {
+    const count = fixture.nativeElement.querySelector(
+      '[data-testid="deck-detail-card-count"]',
+    ) as HTMLElement | null;
+
+    expect(count?.textContent?.trim()).toBe('6');
   });
 
   it('點擊排序按鈕後應切換為降冪排序', () => {
@@ -122,10 +134,11 @@ describe('DeckDetailComponent filters', () => {
     expect(component.sortDirection()).toBe('desc');
     expect(getRenderedCardIds(fixture)).toEqual([
       'new-card',
-      'due-8',
-      'due-7',
       'due-3',
       'due-2',
+      'due-1d',
+      'due-12h',
+      'due-6h',
       'overdue',
     ]);
   });
@@ -142,32 +155,39 @@ function createCardStoreMock() {
         due: null,
       },
       {
+        id: 'due-6h',
+        front: 'Review Soonest',
+        summary: 'due in six hours',
+        state: 'REVIEW',
+        due: '2026-03-01T06:00:00.000Z',
+      },
+      {
+        id: 'due-12h',
+        front: 'Review Within 12h',
+        summary: 'due in twelve hours',
+        state: 'LEARNING',
+        due: '2026-03-01T12:00:00.000Z',
+      },
+      {
+        id: 'due-1d',
+        front: 'Review One Day',
+        summary: 'due in one day',
+        state: 'REVIEW',
+        due: '2026-03-02T00:00:00.000Z',
+      },
+      {
         id: 'due-2',
-        front: 'Review Soon',
+        front: 'Review Two Days',
         summary: 'target due in two days',
         state: 'REVIEW',
         due: '2026-03-03T00:00:00.000Z',
       },
       {
         id: 'due-3',
-        front: 'Learning Card',
-        summary: 'due in three days',
-        state: 'LEARNING',
-        due: '2026-03-04T00:00:00.000Z',
-      },
-      {
-        id: 'due-7',
-        front: 'Seven Day Card',
-        summary: 'review card',
-        state: 'REVIEW',
-        due: '2026-03-08T00:00:00.000Z',
-      },
-      {
-        id: 'due-8',
         front: 'Later Card',
-        summary: 'outside seven days',
+        summary: 'outside two days',
         state: 'REVIEW',
-        due: '2026-03-09T00:00:00.000Z',
+        due: '2026-03-04T00:00:00.000Z',
       },
       {
         id: 'overdue',

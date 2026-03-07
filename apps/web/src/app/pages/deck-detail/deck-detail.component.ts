@@ -84,10 +84,11 @@ export class DeckDetailComponent implements OnInit {
   readonly studySummary = signal<StudySummary | null>(null);
   readonly overrideActive = signal(false);
   readonly filterOptions: ReadonlyArray<{ label: string; value: DeckDetailCardFilter }> = [
-    { label: '全部卡片', value: DECK_DETAIL_CARD_FILTER.ALL },
-    { label: '七天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS },
+    { label: '全部', value: DECK_DETAIL_CARD_FILTER.ALL },
+    { label: '12小時內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_12_HOURS },
+    { label: '一天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY },
+    { label: '兩天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS },
     { label: '尚未練習的新卡片', value: DECK_DETAIL_CARD_FILTER.NEW },
-    { label: '三天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS },
   ];
   readonly filterOverlayPositions: ConnectedPosition[] = [
     {
@@ -110,8 +111,7 @@ export class DeckDetailComponent implements OnInit {
   readonly cardsLoading = this.cardStore.loading;
   readonly selectedFilterLabel = computed(() => {
     return (
-      this.filterOptions.find((option) => option.value === this.selectedFilter())?.label ??
-      '全部卡片'
+      this.filterOptions.find((option) => option.value === this.selectedFilter())?.label ?? '全部'
     );
   });
 

@@ -51,33 +51,46 @@ describe('deck-detail-filter.domain', () => {
     expect(result.map((card) => card.id)).toEqual(['c1', 'c2']);
   });
 
-  it('七天內到期篩選應包含邊界並排除逾期與 null due', () => {
+  it('12 小時內到期篩選應包含邊界並排除逾期與 null due', () => {
     const cards = [
-      createCard('in-2', { due: '2026-03-03T00:00:00.000Z' }),
-      createCard('in-7', { due: '2026-03-08T00:00:00.000Z' }),
-      createCard('in-8', { due: '2026-03-09T00:00:00.000Z' }),
+      createCard('in-6h', { due: '2026-03-01T06:00:00.000Z' }),
+      createCard('in-12h', { due: '2026-03-01T12:00:00.000Z' }),
+      createCard('in-13h', { due: '2026-03-01T13:00:00.000Z' }),
       createCard('overdue', { due: '2026-02-28T23:59:59.000Z' }),
       createCard('due-null', { due: null }),
       createCard('new-card', { state: 'NEW', due: null }),
     ];
 
-    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS);
+    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_12_HOURS);
 
-    expect(result.map((card) => card.id)).toEqual(['in-2', 'in-7']);
+    expect(result.map((card) => card.id)).toEqual(['in-6h', 'in-12h']);
   });
 
-  it('三天內到期篩選應包含邊界並排除非 NEW 但超過 3 天', () => {
+  it('一天內到期篩選應包含邊界並排除超過一天的卡片', () => {
     const cards = [
-      createCard('in-1', { due: '2026-03-02T00:00:00.000Z' }),
-      createCard('in-3', { due: '2026-03-04T00:00:00.000Z' }),
-      createCard('in-4', { due: '2026-03-05T00:00:00.000Z' }),
+      createCard('in-12h', { due: '2026-03-01T12:00:00.000Z' }),
+      createCard('in-1d', { due: '2026-03-02T00:00:00.000Z' }),
+      createCard('in-2d', { due: '2026-03-03T00:00:00.000Z' }),
       createCard('new-card', { state: 'NEW', due: null }),
       createCard('due-null', { due: null }),
     ];
 
-    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_3_DAYS);
+    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY);
 
-    expect(result.map((card) => card.id)).toEqual(['in-1', 'in-3']);
+    expect(result.map((card) => card.id)).toEqual(['in-12h', 'in-1d']);
+  });
+
+  it('兩天內到期篩選應只回傳兩天內且非 NEW 卡片', () => {
+    const cards = [
+      createCard('in-1d', { due: '2026-03-02T00:00:00.000Z' }),
+      createCard('in-2d', { due: '2026-03-03T00:00:00.000Z' }),
+      createCard('in-3d', { due: '2026-03-04T00:00:00.000Z' }),
+      createCard('new-card', { state: 'NEW', due: null }),
+    ];
+
+    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS);
+
+    expect(result.map((card) => card.id)).toEqual(['in-1d', 'in-2d']);
   });
 
   it('新卡片篩選應只回傳 state=NEW', () => {
@@ -96,13 +109,13 @@ describe('deck-detail-filter.domain', () => {
     const cards = [
       createCard('due-match', {
         front: 'Target Card',
-        summary: '會在七天內到期',
-        due: '2026-03-04T00:00:00.000Z',
+        summary: '會在兩天內到期',
+        due: '2026-03-02T00:00:00.000Z',
       }),
       createCard('due-no-keyword', {
         front: 'Another',
-        summary: '也在七天內',
-        due: '2026-03-05T00:00:00.000Z',
+        summary: '也在兩天內',
+        due: '2026-03-03T00:00:00.000Z',
       }),
       createCard('keyword-no-due', {
         front: 'Target New Card',
@@ -112,7 +125,7 @@ describe('deck-detail-filter.domain', () => {
       }),
     ];
 
-    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_7_DAYS, 'target');
+    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS, 'target');
 
     expect(result.map((card) => card.id)).toEqual(['due-match']);
   });
