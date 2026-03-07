@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { CardListItem } from '@flashmind/api-client';
 import {
+  DECK_DETAIL_CARD_DIRECTION_FILTER,
   filterDeckCards,
+  hasReverseCards,
   type DeckDetailCardFilter,
+  type DeckDetailCardDirectionFilter,
   DECK_DETAIL_CARD_FILTER,
   sortDeckCards,
 } from './deck-detail-filter.domain';
@@ -35,9 +38,11 @@ function filterBy(
   cards: CardListItem[],
   filter: DeckDetailCardFilter,
   searchTerm = '',
+  directionFilter: DeckDetailCardDirectionFilter = DECK_DETAIL_CARD_DIRECTION_FILTER.ALL,
 ): CardListItem[] {
   return filterDeckCards(cards, {
     filter,
+    directionFilter,
     searchTerm,
     now: FIXED_NOW,
   });
@@ -161,6 +166,90 @@ describe('deck-detail-filter.domain', () => {
     expect(result.map((card) => card.id)).toEqual(['due-match']);
   });
 
+  it('方向篩選為全部卡面時應保留正反向列表項目', () => {
+    const cards = [
+      createCard('forward-1', { direction: 'FORWARD' }),
+      createCard('reverse-1', { direction: 'REVERSE' }),
+    ];
+
+    const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.ALL);
+
+    expect(result.map((card) => card.id)).toEqual(['forward-1', 'reverse-1']);
+  });
+
+  it('方向篩選為正面卡片時應只回傳 FORWARD 項目', () => {
+    const cards = [
+      createCard('forward-1', { direction: 'FORWARD' }),
+      createCard('reverse-1', { direction: 'REVERSE' }),
+      createCard('forward-2', { direction: 'FORWARD' }),
+    ];
+
+    const result = filterBy(
+      cards,
+      DECK_DETAIL_CARD_FILTER.ALL,
+      '',
+      DECK_DETAIL_CARD_DIRECTION_FILTER.FORWARD,
+    );
+
+    expect(result.map((card) => card.id)).toEqual(['forward-1', 'forward-2']);
+  });
+
+  it('方向篩選為反面卡片時應只回傳 REVERSE 項目', () => {
+    const cards = [
+      createCard('forward-1', { direction: 'FORWARD' }),
+      createCard('reverse-1', { direction: 'REVERSE' }),
+      createCard('reverse-2', { direction: 'REVERSE' }),
+    ];
+
+    const result = filterBy(
+      cards,
+      DECK_DETAIL_CARD_FILTER.ALL,
+      '',
+      DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE,
+    );
+
+    expect(result.map((card) => card.id)).toEqual(['reverse-1', 'reverse-2']);
+  });
+
+  it('方向篩選應與搜尋及既有篩選一起取交集', () => {
+    const cards = [
+      createCard('forward-match', {
+        direction: 'FORWARD',
+        front: 'Target',
+        due: '2026-03-01T06:00:00.000Z',
+      }),
+      createCard('reverse-match', {
+        direction: 'REVERSE',
+        front: 'Target',
+        due: '2026-03-01T06:00:00.000Z',
+      }),
+      createCard('reverse-outside', {
+        direction: 'REVERSE',
+        front: 'Other',
+        due: '2026-03-01T06:00:00.000Z',
+      }),
+    ];
+
+    const result = filterBy(
+      cards,
+      DECK_DETAIL_CARD_FILTER.DUE_IN_12_HOURS,
+      'target',
+      DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE,
+    );
+
+    expect(result.map((card) => card.id)).toEqual(['reverse-match']);
+  });
+
+  it('可判斷是否存在反面卡片以決定是否顯示方向選單', () => {
+    expect(hasReverseCards([createCard('forward-only', { direction: 'FORWARD' })])).toBe(false);
+    expect(
+      hasReverseCards([
+        createCard('forward-only', { direction: 'FORWARD' }),
+        createCard('reverse', { direction: 'REVERSE' }),
+      ]),
+    ).toBe(true);
+  });
+
   it('排序應以到期時間升冪，並將沒有 due 的卡片放在最後', () => {
     const cards = [
       createCard('no-due', { front: 'No Due', due: null }),
@@ -183,5 +272,28 @@ describe('deck-detail-filter.domain', () => {
     const result = sortDeckCards(cards, 'desc');
 
     expect(result.map((card) => card.id)).toEqual(['no-due', 'due-late', 'due-early']);
+  });
+
+  it('方向篩選後排序仍應依到期時間升冪', () => {
+    const cards = [
+      createCard('reverse-no-due', { direction: 'REVERSE', due: null }),
+      createCard('forward-early', { direction: 'FORWARD', due: '2026-03-01T03:00:00.000Z' }),
+      createCard('reverse-late', { direction: 'REVERSE', due: '2026-03-01T10:00:00.000Z' }),
+      createCard('reverse-early', { direction: 'REVERSE', due: '2026-03-01T02:00:00.000Z' }),
+    ];
+
+    const filtered = filterBy(
+      cards,
+      DECK_DETAIL_CARD_FILTER.ALL,
+      '',
+      DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE,
+    );
+    const result = sortDeckCards(filtered, 'asc');
+
+    expect(result.map((card) => card.id)).toEqual([
+      'reverse-early',
+      'reverse-late',
+      'reverse-no-due',
+    ]);
   });
 });

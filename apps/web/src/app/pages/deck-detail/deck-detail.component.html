@@ -53,13 +53,13 @@
 
     @if (!isEmpty()) {
       <div class="flex items-center gap-2" data-testid="deck-detail-filter-sort-row">
-        <div class="min-w-0 flex-1">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
           <button
             id="deck-detail-filter"
             type="button"
             cdkOverlayOrigin
             #filterTrigger="cdkOverlayOrigin"
-            class="group flex w-full items-center gap-2 rounded-xl bg-surface-light px-3 py-3 text-left ring-1 ring-slate-200 transition-all hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary dark:bg-surface-dark dark:ring-gray-800"
+            class="group flex min-w-0 flex-[1.15] items-center gap-2 rounded-xl bg-surface-light px-2.5 py-3 text-left ring-1 ring-slate-200 transition-all hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary sm:flex-1 sm:px-3 dark:bg-surface-dark dark:ring-gray-800"
             data-testid="deck-detail-filter-trigger"
             aria-haspopup="listbox"
             [attr.aria-expanded]="filterOverlayOpen()"
@@ -71,11 +71,12 @@
             >
               <span class="material-symbols-outlined text-[16px]">filter_alt</span>
             </span>
-            <span class="min-w-0 flex-1 truncate text-sm text-slate-800 dark:text-slate-100">{{
-              selectedFilterLabel()
-            }}</span>
             <span
-              class="material-symbols-outlined text-[18px] text-slate-500 transition-transform dark:text-slate-300"
+              class="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800 sm:text-sm dark:text-slate-100"
+              >{{ selectedFilterLabel() }}</span
+            >
+            <span
+              class="material-symbols-outlined shrink-0 text-[18px] text-slate-500 transition-transform dark:text-slate-300"
               [class.rotate-180]="filterOverlayOpen()"
               >arrow_drop_down</span
             >
@@ -113,6 +114,71 @@
               }
             </div>
           </ng-template>
+          @if (showDirectionFilter()) {
+            <div class="min-w-0 flex-[0.95] sm:flex-1">
+              <button
+                id="deck-detail-direction-filter"
+                type="button"
+                cdkOverlayOrigin
+                #directionTrigger="cdkOverlayOrigin"
+                class="group flex min-w-0 w-full items-center gap-2 rounded-xl bg-surface-light px-2.5 py-3 text-left ring-1 ring-slate-200 transition-all hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary sm:px-3 dark:bg-surface-dark dark:ring-gray-800"
+                data-testid="deck-detail-direction-filter-trigger"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="directionOverlayOpen()"
+                aria-label="卡面方向"
+                (click)="toggleDirectionOverlay()"
+              >
+                <span
+                  class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  <span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+                </span>
+                <span
+                  class="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800 sm:text-sm dark:text-slate-100"
+                >
+                  {{ selectedDirectionFilterLabel() }}
+                </span>
+                <span
+                  class="material-symbols-outlined shrink-0 text-[18px] text-slate-500 transition-transform dark:text-slate-300"
+                  [class.rotate-180]="directionOverlayOpen()"
+                  >arrow_drop_down</span
+                >
+              </button>
+
+              <ng-template
+                cdkConnectedOverlay
+                [cdkConnectedOverlayOpen]="directionOverlayOpen()"
+                [cdkConnectedOverlayOrigin]="directionTrigger"
+                [cdkConnectedOverlayHasBackdrop]="true"
+                cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                [cdkConnectedOverlayPositions]="filterOverlayPositions"
+                (backdropClick)="closeDirectionOverlay()"
+                (detach)="closeDirectionOverlay()"
+              >
+                <div
+                  class="w-56 rounded-xl bg-surface-light p-1.5 shadow-lg ring-1 ring-slate-200 dark:bg-surface-dark dark:ring-gray-800"
+                  role="listbox"
+                  data-testid="deck-detail-direction-filter-overlay"
+                >
+                  @for (option of directionFilterOptions; track option.value) {
+                    <button
+                      type="button"
+                      class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
+                      [class.text-primary]="isSelectedDirectionFilterOption(option.value)"
+                      [class.font-medium]="isSelectedDirectionFilterOption(option.value)"
+                      [attr.data-testid]="'deck-detail-direction-filter-option-' + option.value"
+                      (click)="selectDirectionFilterOption(option.value)"
+                    >
+                      <span>{{ option.label }}</span>
+                      @if (isSelectedDirectionFilterOption(option.value)) {
+                        <span class="material-symbols-outlined text-[16px]">check</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </ng-template>
+            </div>
+          }
         </div>
         <button
           type="button"

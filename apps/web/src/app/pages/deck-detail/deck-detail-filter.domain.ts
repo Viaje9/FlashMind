@@ -14,9 +14,19 @@ export const DECK_DETAIL_CARD_FILTER = {
 export type DeckDetailCardFilter =
   (typeof DECK_DETAIL_CARD_FILTER)[keyof typeof DECK_DETAIL_CARD_FILTER];
 
+export const DECK_DETAIL_CARD_DIRECTION_FILTER = {
+  ALL: 'all',
+  FORWARD: 'forward',
+  REVERSE: 'reverse',
+} as const;
+
+export type DeckDetailCardDirectionFilter =
+  (typeof DECK_DETAIL_CARD_DIRECTION_FILTER)[keyof typeof DECK_DETAIL_CARD_DIRECTION_FILTER];
+
 export interface FilterDeckCardsParams {
   searchTerm: string;
   filter: DeckDetailCardFilter;
+  directionFilter: DeckDetailCardDirectionFilter;
   now?: Date;
 }
 
@@ -31,8 +41,14 @@ export function filterDeckCards(
 
   return cards.filter(
     (card) =>
-      matchesSearchTerm(card, normalizedSearchTerm) && matchesFilter(card, params.filter, now),
+      matchesSearchTerm(card, normalizedSearchTerm) &&
+      matchesFilter(card, params.filter, now) &&
+      matchesDirectionFilter(card, params.directionFilter),
   );
+}
+
+export function hasReverseCards(cards: CardListItem[]): boolean {
+  return cards.some((card) => card.direction === 'REVERSE');
 }
 
 export function sortDeckCards(
@@ -69,6 +85,21 @@ function matchesFilter(card: CardListItem, filter: DeckDetailCardFilter, now: Da
     case DECK_DETAIL_CARD_FILTER.NEW:
       return card.state === 'NEW';
     case DECK_DETAIL_CARD_FILTER.ALL:
+    default:
+      return true;
+  }
+}
+
+function matchesDirectionFilter(
+  card: CardListItem,
+  directionFilter: DeckDetailCardDirectionFilter,
+): boolean {
+  switch (directionFilter) {
+    case DECK_DETAIL_CARD_DIRECTION_FILTER.FORWARD:
+      return card.direction === 'FORWARD';
+    case DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE:
+      return card.direction === 'REVERSE';
+    case DECK_DETAIL_CARD_DIRECTION_FILTER.ALL:
     default:
       return true;
   }

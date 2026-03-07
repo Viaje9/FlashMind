@@ -8,7 +8,7 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 
 ### Requirement: 檢視牌組內卡片
 
-使用者 SHALL 能夠檢視牌組內的所有可學習卡片，並透過搜尋與篩選縮小結果。
+使用者 SHALL 能夠檢視牌組內的所有可學習卡片，並透過搜尋、篩選與卡面方向條件縮小結果。
 
 #### Scenario: 顯示牌組摘要
 
@@ -21,6 +21,20 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **WHEN** 使用者進入牌組詳情頁
 - **THEN** 顯示卡片搜尋輸入框
 - **AND** 在搜尋輸入框右側顯示 `Filter` 控制項
+
+#### Scenario: 顯示方向下拉選單
+
+- **WHEN** 使用者進入牌組詳情頁
+- **AND** 目前卡片列表存在至少一筆 `direction = REVERSE` 的列表項目
+- **THEN** 顯示卡面方向下拉選單
+- **AND** 選單提供 `全部卡面`、`正面卡片`、`反面卡片` 三個選項
+- **AND** 預設選項 SHALL 為 `全部卡面`
+
+#### Scenario: 只有正面卡片時隱藏方向下拉選單
+
+- **WHEN** 使用者進入牌組詳情頁
+- **AND** 目前卡片列表不存在任何 `direction = REVERSE` 的列表項目
+- **THEN** 頁面 SHALL NOT 顯示卡面方向下拉選單
 
 #### Scenario: 顯示卡片列表
 
@@ -49,18 +63,34 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 #### Scenario: 未選擇篩選時顯示全部可見學習項目
 
 - **WHEN** 使用者尚未選擇任何篩選條件
+- **AND** 卡面方向為 `全部卡面`
 - **THEN** 卡片列表顯示所有可見列表項目
 - **AND** 列表數量顯示符合目前搜尋條件與方向展開後的項目總數
 
-#### Scenario: 過濾七天內到期的卡片
+#### Scenario: 只顯示正面卡片
 
-- **WHEN** 使用者選擇「七天內到期」篩選
-- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 7 天（含邊界）的卡片
+- **WHEN** 使用者選擇卡面方向 `正面卡片`
+- **THEN** 卡片列表僅顯示 `direction = FORWARD` 的列表項目
 
-#### Scenario: 過濾三天內到期的卡片
+#### Scenario: 只顯示反面卡片
 
-- **WHEN** 使用者選擇「三天內到期」篩選
-- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 3 天（含邊界）的卡片
+- **WHEN** 使用者選擇卡面方向 `反面卡片`
+- **THEN** 卡片列表僅顯示 `direction = REVERSE` 的列表項目
+
+#### Scenario: 過濾十二小時內到期的卡片
+
+- **WHEN** 使用者選擇「12小時內到期」篩選
+- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 12 小時（含邊界）的列表項目
+
+#### Scenario: 過濾一天內到期的卡片
+
+- **WHEN** 使用者選擇「一天內到期」篩選
+- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 1 天（含邊界）的列表項目
+
+#### Scenario: 過濾兩天內到期的卡片
+
+- **WHEN** 使用者選擇「兩天內到期」篩選
+- **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 介於現在到未來 2 天（含邊界）的列表項目
 
 #### Scenario: 過濾尚未練習的新卡片
 
@@ -75,11 +105,12 @@ TBD - created by archiving change add-card-management. Update Purpose after arch
 - **THEN** 卡片列表僅顯示學習狀態非 NEW 且 `due` 落在指定時間範圍內的列表項目
 - **AND** 正向與反向列表項目皆以各自方向對應的 `due` 值判斷
 
-#### Scenario: 搜尋與篩選同時生效
+#### Scenario: 搜尋、篩選與方向條件同時生效
 
 - **WHEN** 使用者輸入搜尋關鍵字
 - **AND** 使用者選擇任一篩選條件
-- **THEN** 卡片列表僅顯示同時符合搜尋條件與篩選條件的列表項目
+- **AND** 使用者選擇任一卡面方向
+- **THEN** 卡片列表僅顯示同時符合搜尋條件、篩選條件與卡面方向的列表項目
 
 #### Scenario: 卡片複習時間顯示 — 新卡片
 

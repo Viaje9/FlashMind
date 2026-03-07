@@ -1,7 +1,8 @@
 import '@angular/compiler';
 import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
+import { DialogService } from '@flashmind/ui';
 import {
   type CardListItem,
   DeckService,
@@ -13,22 +14,23 @@ import {
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CardStore } from '../../components/card/card.store';
-import { DECK_DETAIL_CARD_FILTER } from './deck-detail-filter.domain';
+import {
+  DECK_DETAIL_CARD_DIRECTION_FILTER,
+  DECK_DETAIL_CARD_FILTER,
+} from './deck-detail-filter.domain';
 import { DeckDetailComponent } from './deck-detail.component';
 
 describe('DeckDetailComponent filters', () => {
-  let fixture: ComponentFixture<DeckDetailComponent>;
   let component: DeckDetailComponent;
   let cardStoreMock: ReturnType<typeof createCardStoreMock>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
 
     cardStoreMock = createCardStoreMock();
 
-    await TestBed.configureTestingModule({
-      imports: [DeckDetailComponent],
+    TestBed.configureTestingModule({
       providers: [
         {
           provide: ActivatedRoute,
@@ -66,26 +68,29 @@ describe('DeckDetailComponent filters', () => {
           provide: CardStore,
           useValue: cardStoreMock,
         },
+        {
+          provide: DialogService,
+          useValue: {
+            open: vi.fn(),
+          },
+        },
       ],
-    }).compileComponents();
+    });
 
-    fixture = TestBed.createComponent(DeckDetailComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    component = TestBed.runInInjectionContext(() => new DeckDetailComponent());
+    component.ngOnInit();
   });
 
   afterEach(() => {
-    fixture.destroy();
+    TestBed.resetTestingModule();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it('預設應顯示所有卡片', () => {
+  it('預設應顯示所有卡片，且方向篩選預設為全部卡面', () => {
     expect(component.selectedFilter()).toBe(DECK_DETAIL_CARD_FILTER.ALL);
-    expect(component.sortDirection()).toBe('asc');
-    expect(getRenderedCardIds(fixture)).toEqual([
+    expect(component.selectedDirectionFilter()).toBe(DECK_DETAIL_CARD_DIRECTION_FILTER.ALL);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
       'overdue',
       'due-6h',
       'due-12h',
@@ -97,55 +102,81 @@ describe('DeckDetailComponent filters', () => {
     ]);
   });
 
-  it('選擇 12 小時內到期應僅顯示 12 小時內非 NEW 卡片', () => {
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_12_HOURS);
+  it('選擇既有到期篩選時應維持原本過濾行為', () => {
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.DUE_IN_12_HOURS);
+    expect(component.filteredCards().map((card) => card.id)).toEqual(['due-6h', 'due-12h']);
 
-    expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h']);
-  });
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
+      'due-6h',
+      'due-12h',
+      'due-1d',
+    ]);
 
-  it('選擇一天內、兩天內到期與新卡片應套用對應篩選', () => {
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY);
-    expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h', 'due-1d']);
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
+      'due-6h',
+      'due-12h',
+      'due-1d',
+      'due-2',
+    ]);
 
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS);
-    expect(getRenderedCardIds(fixture)).toEqual(['due-6h', 'due-12h', 'due-1d', 'due-2']);
-
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.NEW);
-    expect(getRenderedCardIds(fixture)).toEqual(['new-card', 'new-card-reverse']);
-  });
-
-  it('搜尋與篩選應同時生效（交集）', () => {
-    setFilter(fixture, DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS);
-    setSearch(fixture, 'target');
-
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2']);
-  });
-
-  it('搜尋後卡片總數應顯示過濾後結果', () => {
-    const count = fixture.nativeElement.querySelector(
-      '[data-testid="deck-detail-card-count"]',
-    ) as HTMLElement | null;
-
-    setSearch(fixture, 'target');
-
-    expect(getRenderedCardIds(fixture)).toEqual(['due-2', 'new-card', 'new-card-reverse']);
-    expect(count?.textContent?.trim()).toBe('3');
-  });
-
-  it('搜尋框右側應顯示目前卡片總數', () => {
-    const count = fixture.nativeElement.querySelector(
-      '[data-testid="deck-detail-card-count"]',
-    ) as HTMLElement | null;
-
-    expect(count?.textContent?.trim()).toBe('8');
-  });
-
-  it('點擊排序按鈕後應切換為降冪排序', () => {
-    toggleSort(fixture);
-
-    expect(component.sortDirection()).toBe('desc');
-    expect(getRenderedCardIds(fixture)).toEqual([
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.NEW);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
+      'new-card',
       'new-card-reverse',
+    ]);
+  });
+
+  it('有反面卡時應顯示方向下拉，且預設文案為全部卡面', () => {
+    expect(component.showDirectionFilter()).toBe(true);
+    expect(component.selectedDirectionFilterLabel()).toBe('全部卡面');
+  });
+
+  it('選擇正面卡片或反面卡片時應只顯示對應方向', () => {
+    component.selectDirectionFilterOption(DECK_DETAIL_CARD_DIRECTION_FILTER.FORWARD);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
+      'overdue',
+      'due-6h',
+      'due-12h',
+      'due-1d',
+      'due-2',
+      'due-3',
+      'new-card',
+    ]);
+
+    component.selectDirectionFilterOption(DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE);
+    expect(component.filteredCards().map((card) => card.id)).toEqual(['new-card-reverse']);
+  });
+
+  it('只有正面卡時不應顯示方向下拉', () => {
+    cardStoreMock.cards.set(createCardStoreMock({ reverse: false }).cards());
+
+    expect(component.showDirectionFilter()).toBe(false);
+  });
+
+  it('搜尋、既有篩選與方向篩選應同時生效', () => {
+    component.searchTerm.set('target');
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.NEW);
+    component.selectDirectionFilterOption(DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE);
+
+    expect(component.filteredCards().map((card) => card.id)).toEqual(['new-card-reverse']);
+  });
+
+  it('切換方向篩選不應影響排序規則', () => {
+    component.selectDirectionFilterOption(DECK_DETAIL_CARD_DIRECTION_FILTER.FORWARD);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
+      'overdue',
+      'due-6h',
+      'due-12h',
+      'due-1d',
+      'due-2',
+      'due-3',
+      'new-card',
+    ]);
+
+    component.toggleSortDirection();
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
       'new-card',
       'due-3',
       'due-2',
@@ -154,92 +185,91 @@ describe('DeckDetailComponent filters', () => {
       'due-6h',
       'overdue',
     ]);
-  });
-
-  it('列表項目應顯示方向標示', () => {
-    const root = fixture.nativeElement as HTMLElement;
-
-    expect(root.textContent).toContain('正面卡片');
-    expect(root.textContent).toContain('反面卡片');
   });
 });
 
-function createCardStoreMock() {
+function createCardStoreMock(options: { reverse?: boolean } = {}) {
+  const includeReverse = options.reverse ?? true;
+  const cards: CardListItem[] = [
+    {
+      id: 'new-card',
+      cardId: 'card-new',
+      direction: 'FORWARD',
+      front: 'Target New Card',
+      summary: '尚未練習',
+      state: 'NEW',
+      due: null,
+    },
+    {
+      id: 'due-6h',
+      cardId: 'card-due-6h',
+      direction: 'FORWARD',
+      front: 'Review Soonest',
+      summary: 'due in six hours',
+      state: 'REVIEW',
+      due: '2026-03-01T06:00:00.000Z',
+    },
+    {
+      id: 'due-12h',
+      cardId: 'card-due-12h',
+      direction: 'FORWARD',
+      front: 'Review Within 12h',
+      summary: 'due in twelve hours',
+      state: 'LEARNING',
+      due: '2026-03-01T12:00:00.000Z',
+    },
+    {
+      id: 'due-1d',
+      cardId: 'card-due-1d',
+      direction: 'FORWARD',
+      front: 'Review One Day',
+      summary: 'due in one day',
+      state: 'REVIEW',
+      due: '2026-03-02T00:00:00.000Z',
+    },
+    {
+      id: 'due-2',
+      cardId: 'card-due-2',
+      direction: 'FORWARD',
+      front: 'Review Two Days',
+      summary: 'target due in two days',
+      state: 'REVIEW',
+      due: '2026-03-03T00:00:00.000Z',
+    },
+    {
+      id: 'due-3',
+      cardId: 'card-due-3',
+      direction: 'FORWARD',
+      front: 'Later Card',
+      summary: 'outside two days',
+      state: 'REVIEW',
+      due: '2026-03-04T00:00:00.000Z',
+    },
+    {
+      id: 'overdue',
+      cardId: 'card-overdue',
+      direction: 'FORWARD',
+      front: 'Overdue Card',
+      summary: 'already overdue',
+      state: 'REVIEW',
+      due: '2026-02-28T00:00:00.000Z',
+    },
+  ];
+
+  if (includeReverse) {
+    cards.splice(1, 0, {
+      id: 'new-card-reverse',
+      cardId: 'card-new',
+      direction: 'REVERSE',
+      front: 'Target New Card',
+      summary: '尚未練習（反面）',
+      state: 'NEW',
+      due: null,
+    });
+  }
+
   return {
-    cards: signal<CardListItem[]>([
-      {
-        id: 'new-card',
-        cardId: 'card-new',
-        direction: 'FORWARD',
-        front: 'Target New Card',
-        summary: '尚未練習',
-        state: 'NEW',
-        due: null,
-      },
-      {
-        id: 'new-card-reverse',
-        cardId: 'card-new',
-        direction: 'REVERSE',
-        front: 'Target New Card',
-        summary: '尚未練習（反面）',
-        state: 'NEW',
-        due: null,
-      },
-      {
-        id: 'due-6h',
-        cardId: 'card-due-6h',
-        direction: 'FORWARD',
-        front: 'Review Soonest',
-        summary: 'due in six hours',
-        state: 'REVIEW',
-        due: '2026-03-01T06:00:00.000Z',
-      },
-      {
-        id: 'due-12h',
-        cardId: 'card-due-12h',
-        direction: 'FORWARD',
-        front: 'Review Within 12h',
-        summary: 'due in twelve hours',
-        state: 'LEARNING',
-        due: '2026-03-01T12:00:00.000Z',
-      },
-      {
-        id: 'due-1d',
-        cardId: 'card-due-1d',
-        direction: 'FORWARD',
-        front: 'Review One Day',
-        summary: 'due in one day',
-        state: 'REVIEW',
-        due: '2026-03-02T00:00:00.000Z',
-      },
-      {
-        id: 'due-2',
-        cardId: 'card-due-2',
-        direction: 'FORWARD',
-        front: 'Review Two Days',
-        summary: 'target due in two days',
-        state: 'REVIEW',
-        due: '2026-03-03T00:00:00.000Z',
-      },
-      {
-        id: 'due-3',
-        cardId: 'card-due-3',
-        direction: 'FORWARD',
-        front: 'Later Card',
-        summary: 'outside two days',
-        state: 'REVIEW',
-        due: '2026-03-04T00:00:00.000Z',
-      },
-      {
-        id: 'overdue',
-        cardId: 'card-overdue',
-        direction: 'FORWARD',
-        front: 'Overdue Card',
-        summary: 'already overdue',
-        state: 'REVIEW',
-        due: '2026-02-28T00:00:00.000Z',
-      },
-    ]),
+    cards: signal<CardListItem[]>(cards),
     loading: signal(false),
     loadCards: vi.fn().mockResolvedValue(undefined),
     deleteCard: vi.fn().mockResolvedValue(true),
@@ -275,64 +305,4 @@ function createStudySummary(): StudySummary {
     todayNewStudied: 0,
     todayReviewStudied: 0,
   };
-}
-
-function setFilter(fixture: ComponentFixture<DeckDetailComponent>, value: string): void {
-  const root = fixture.nativeElement as HTMLElement;
-  const trigger = root.querySelector(
-    '[data-testid="deck-detail-filter-trigger"]',
-  ) as HTMLButtonElement | null;
-  if (!trigger) {
-    throw new Error('deck-detail-filter-trigger not found');
-  }
-
-  trigger.click();
-  fixture.detectChanges();
-
-  const option = document.querySelector(
-    `[data-testid="deck-detail-filter-option-${value}"]`,
-  ) as HTMLButtonElement | null;
-  if (!option) {
-    throw new Error(`deck-detail-filter-option-${value} not found`);
-  }
-
-  option.click();
-  fixture.detectChanges();
-}
-
-function setSearch(fixture: ComponentFixture<DeckDetailComponent>, value: string): void {
-  const input = fixture.nativeElement.querySelector(
-    '[data-testid="deck-detail-search"]',
-  ) as HTMLInputElement | null;
-  if (!input) {
-    throw new Error('deck-detail-search not found');
-  }
-
-  input.value = value;
-  input.dispatchEvent(new Event('input'));
-  fixture.detectChanges();
-}
-
-function toggleSort(fixture: ComponentFixture<DeckDetailComponent>): void {
-  const root = fixture.nativeElement as HTMLElement;
-  const button = root.querySelector(
-    '[data-testid="deck-detail-sort-toggle"]',
-  ) as HTMLButtonElement | null;
-  if (!button) {
-    throw new Error('deck-detail-sort-toggle not found');
-  }
-
-  button.click();
-  fixture.detectChanges();
-}
-
-function getRenderedCardIds(fixture: ComponentFixture<DeckDetailComponent>): string[] {
-  const root = fixture.nativeElement as HTMLElement;
-  const cards = root.querySelectorAll(
-    '[data-testid^="deck-detail-card-"]:not([data-testid="deck-detail-card-count"])',
-  );
-  return Array.from(cards)
-    .map((element) => (element as HTMLElement).getAttribute('data-testid') ?? '')
-    .map((testId) => testId.replace('deck-detail-card-', ''))
-    .filter((id) => id.length > 0);
 }

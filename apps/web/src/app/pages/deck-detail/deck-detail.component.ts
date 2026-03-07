@@ -34,9 +34,12 @@ import {
 } from '@flashmind/api-client';
 import { CardStore } from '../../components/card/card.store';
 import {
+  DECK_DETAIL_CARD_DIRECTION_FILTER,
   DECK_DETAIL_CARD_FILTER,
+  type DeckDetailCardDirectionFilter,
   type DeckDetailCardFilter,
   filterDeckCards,
+  hasReverseCards,
   sortDeckCards,
 } from './deck-detail-filter.domain';
 import {
@@ -77,8 +80,12 @@ export class DeckDetailComponent implements OnInit {
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly searchTerm = signal('');
   readonly selectedFilter = signal<DeckDetailCardFilter>(DECK_DETAIL_CARD_FILTER.ALL);
+  readonly selectedDirectionFilter = signal<DeckDetailCardDirectionFilter>(
+    DECK_DETAIL_CARD_DIRECTION_FILTER.ALL,
+  );
   readonly sortDirection = signal<'asc' | 'desc'>('asc');
   readonly filterOverlayOpen = signal(false);
+  readonly directionOverlayOpen = signal(false);
   readonly deck = signal<DeckDetail | null>(null);
   readonly isLoading = signal(true);
   readonly studySummary = signal<StudySummary | null>(null);
@@ -89,6 +96,14 @@ export class DeckDetailComponent implements OnInit {
     { label: '一天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY },
     { label: '兩天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS },
     { label: '尚未練習的新卡片', value: DECK_DETAIL_CARD_FILTER.NEW },
+  ];
+  readonly directionFilterOptions: ReadonlyArray<{
+    label: string;
+    value: DeckDetailCardDirectionFilter;
+  }> = [
+    { label: '全部卡面', value: DECK_DETAIL_CARD_DIRECTION_FILTER.ALL },
+    { label: '正面卡片', value: DECK_DETAIL_CARD_DIRECTION_FILTER.FORWARD },
+    { label: '反面卡片', value: DECK_DETAIL_CARD_DIRECTION_FILTER.REVERSE },
   ];
   readonly filterOverlayPositions: ConnectedPosition[] = [
     {
@@ -109,9 +124,16 @@ export class DeckDetailComponent implements OnInit {
 
   readonly cards = this.cardStore.cards;
   readonly cardsLoading = this.cardStore.loading;
+  readonly showDirectionFilter = computed(() => hasReverseCards(this.cards()));
   readonly selectedFilterLabel = computed(() => {
     return (
       this.filterOptions.find((option) => option.value === this.selectedFilter())?.label ?? '全部'
+    );
+  });
+  readonly selectedDirectionFilterLabel = computed(() => {
+    return (
+      this.directionFilterOptions.find((option) => option.value === this.selectedDirectionFilter())
+        ?.label ?? '全部卡面'
     );
   });
 
@@ -119,6 +141,7 @@ export class DeckDetailComponent implements OnInit {
     const filtered = filterDeckCards(this.cards(), {
       searchTerm: this.searchTerm(),
       filter: this.selectedFilter(),
+      directionFilter: this.selectedDirectionFilter(),
     });
 
     return sortDeckCards(filtered, this.sortDirection());
@@ -250,8 +273,20 @@ export class DeckDetailComponent implements OnInit {
     this.sortDirection.update((direction) => (direction === 'asc' ? 'desc' : 'asc'));
   }
 
+  toggleDirectionOverlay(): void {
+    if (!this.showDirectionFilter()) {
+      return;
+    }
+
+    this.directionOverlayOpen.update((open) => !open);
+  }
+
   closeFilterOverlay(): void {
     this.filterOverlayOpen.set(false);
+  }
+
+  closeDirectionOverlay(): void {
+    this.directionOverlayOpen.set(false);
   }
 
   selectFilterOption(filter: DeckDetailCardFilter): void {
@@ -259,8 +294,17 @@ export class DeckDetailComponent implements OnInit {
     this.closeFilterOverlay();
   }
 
+  selectDirectionFilterOption(filter: DeckDetailCardDirectionFilter): void {
+    this.selectedDirectionFilter.set(filter);
+    this.closeDirectionOverlay();
+  }
+
   isSelectedFilterOption(filter: DeckDetailCardFilter): boolean {
     return this.selectedFilter() === filter;
+  }
+
+  isSelectedDirectionFilterOption(filter: DeckDetailCardDirectionFilter): boolean {
+    return this.selectedDirectionFilter() === filter;
   }
 
   formatDate(dateStr: string | null | undefined): string {
