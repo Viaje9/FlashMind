@@ -133,6 +133,22 @@ describe('DeckDetailComponent filters', () => {
     expect(component.selectedDirectionFilterLabel()).toBe('全部卡面');
   });
 
+  it('篩選下拉應提供手機版可視範圍保護設定', () => {
+    expect(component.filterOverlayViewportMargin).toBe(16);
+    expect(component.filterOverlayPositions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          originX: 'end',
+          overlayX: 'end',
+        }),
+        expect.objectContaining({
+          originX: 'start',
+          overlayX: 'start',
+        }),
+      ]),
+    );
+  });
+
   it('選擇正面卡片或反面卡片時應只顯示對應方向', () => {
     component.selectDirectionFilterOption(DECK_DETAIL_CARD_DIRECTION_FILTER.FORWARD);
     expect(component.filteredCards().map((card) => card.id)).toEqual([

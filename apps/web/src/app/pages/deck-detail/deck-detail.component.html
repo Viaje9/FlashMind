@@ -87,13 +87,15 @@
             [cdkConnectedOverlayOpen]="filterOverlayOpen()"
             [cdkConnectedOverlayOrigin]="filterTrigger"
             [cdkConnectedOverlayHasBackdrop]="true"
+            [cdkConnectedOverlayPush]="true"
+            [cdkConnectedOverlayViewportMargin]="filterOverlayViewportMargin"
             cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
             [cdkConnectedOverlayPositions]="filterOverlayPositions"
             (backdropClick)="closeFilterOverlay()"
             (detach)="closeFilterOverlay()"
           >
             <div
-              class="w-56 rounded-xl bg-surface-light p-1.5 shadow-lg ring-1 ring-slate-200 dark:bg-surface-dark dark:ring-gray-800"
+              class="w-56 max-w-[calc(100vw-2rem)] rounded-xl bg-surface-light p-1.5 shadow-lg ring-1 ring-slate-200 dark:bg-surface-dark dark:ring-gray-800"
               role="listbox"
               data-testid="deck-detail-filter-overlay"
             >
@@ -150,13 +152,15 @@
                 [cdkConnectedOverlayOpen]="directionOverlayOpen()"
                 [cdkConnectedOverlayOrigin]="directionTrigger"
                 [cdkConnectedOverlayHasBackdrop]="true"
+                [cdkConnectedOverlayPush]="true"
+                [cdkConnectedOverlayViewportMargin]="filterOverlayViewportMargin"
                 cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
                 [cdkConnectedOverlayPositions]="filterOverlayPositions"
                 (backdropClick)="closeDirectionOverlay()"
                 (detach)="closeDirectionOverlay()"
               >
                 <div
-                  class="w-56 rounded-xl bg-surface-light p-1.5 shadow-lg ring-1 ring-slate-200 dark:bg-surface-dark dark:ring-gray-800"
+                  class="w-56 max-w-[calc(100vw-2rem)] rounded-xl bg-surface-light p-1.5 shadow-lg ring-1 ring-slate-200 dark:bg-surface-dark dark:ring-gray-800"
                   role="listbox"
                   data-testid="deck-detail-direction-filter-overlay"
                 >

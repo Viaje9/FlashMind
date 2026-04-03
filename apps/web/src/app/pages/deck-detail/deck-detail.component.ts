@@ -120,7 +120,22 @@ export class DeckDetailComponent implements OnInit {
       overlayY: 'bottom',
       offsetY: -6,
     },
+    {
+      originX: 'start',
+      originY: 'bottom',
+      overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+    {
+      originX: 'start',
+      originY: 'top',
+      overlayX: 'start',
+      overlayY: 'bottom',
+      offsetY: -6,
+    },
   ];
+  readonly filterOverlayViewportMargin = 16;
 
   readonly cards = this.cardStore.cards;
   readonly cardsLoading = this.cardStore.loading;
