@@ -73,8 +73,7 @@ export class LoginComponent {
       return new Promise<void>((resolve, reject) => {
         this.authService.login(email, password, rememberMe).subscribe({
           next: () => {
-            const preferredPath =
-              this.homeEntryPreferenceService.getTodayPreferredPath() ?? '/home';
+            const preferredPath = this.homeEntryPreferenceService.getPreferredPath() ?? '/home';
             this.router.navigate([preferredPath]);
             resolve();
           },

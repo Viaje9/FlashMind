@@ -88,8 +88,7 @@ export class RegisterComponent {
       return new Promise<void>((resolve, reject) => {
         this.authService.register(email, password).subscribe({
           next: () => {
-            const preferredPath =
-              this.homeEntryPreferenceService.getTodayPreferredPath() ?? '/home';
+            const preferredPath = this.homeEntryPreferenceService.getPreferredPath() ?? '/home';
             this.router.navigate([preferredPath]);
             resolve();
           },

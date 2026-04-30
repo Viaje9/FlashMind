@@ -22,7 +22,7 @@ export class HomeEntryPreferenceService {
     localStorage.setItem(HOME_ENTRY_STORAGE_KEY, JSON.stringify(payload));
   }
 
-  getTodayPreferredPath(): HomeEntryPath | null {
+  getPreferredPath(): HomeEntryPath | null {
     const raw = localStorage.getItem(HOME_ENTRY_STORAGE_KEY);
     if (!raw) {
       return null;
@@ -30,9 +30,6 @@ export class HomeEntryPreferenceService {
 
     try {
       const parsed = JSON.parse(raw) as Partial<HomeEntryPreference>;
-      if (parsed.date !== this.getTodayKey()) {
-        return null;
-      }
       if (parsed.path === '/decks' || parsed.path === '/speaking') {
         return parsed.path;
       }

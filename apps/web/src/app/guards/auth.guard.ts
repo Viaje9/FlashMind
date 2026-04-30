@@ -25,7 +25,7 @@ export const guestGuard: CanActivateFn = () => {
   return authService.checkAuth().pipe(
     map((isAuthenticated) => {
       if (isAuthenticated) {
-        const preferredPath = homeEntryPreferenceService.getTodayPreferredPath() ?? '/home';
+        const preferredPath = homeEntryPreferenceService.getPreferredPath() ?? '/home';
         router.navigate([preferredPath]);
         return false;
       }
