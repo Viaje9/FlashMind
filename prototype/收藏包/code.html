@@ -1,0 +1,1526 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlashMind - 收藏包 Prototype</title>
+    <style>
+      :root {
+        --ink: #101828;
+        --muted: #64748b;
+        --soft: #f4f7fb;
+        --surface: #ffffff;
+        --line: #dce6f2;
+        --blue: #1698c7;
+        --blue-soft: #dff6fd;
+        --green: #238568;
+        --green-soft: #def6ed;
+        --amber: #aa6a14;
+        --amber-soft: #fff0d5;
+        --violet: #6f5eb7;
+        --violet-soft: #ece8ff;
+        --shadow: 0 18px 42px rgb(15 23 42 / 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, #f7fafc 0%, #eef5f8 44%, #f8fafc 100%),
+          var(--soft);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Noto Sans TC",
+          "Segoe UI",
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        cursor: pointer;
+      }
+
+      .app {
+        width: min(430px, 100vw);
+        min-height: 100vh;
+        margin: 0 auto;
+        background: #f8fbfd;
+        box-shadow: 0 0 0 1px rgb(15 23 42 / 0.05);
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 1rem 1.15rem 0.65rem;
+        background: rgb(248 251 253 / 0.92);
+        backdrop-filter: blur(18px);
+      }
+
+      .icon-btn {
+        display: inline-grid;
+        width: 2.55rem;
+        height: 2.55rem;
+        place-items: center;
+        border-radius: 0.78rem;
+        background: #edf4f8;
+        color: #334155;
+        font-size: 1.18rem;
+        font-weight: 900;
+      }
+
+      .title-wrap {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .eyebrow {
+        margin: 0 0 0.1rem;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 0;
+        color: #243349;
+        font-size: 1.48rem;
+        font-weight: 900;
+        line-height: 1.15;
+      }
+
+      .content {
+        padding: 0.65rem 1rem 5.2rem;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 1.25rem;
+        background: linear-gradient(135deg, #ffffff 0%, #eefbff 100%);
+        padding: 1rem;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.8rem;
+      }
+
+      .hero h2 {
+        margin: 0;
+        font-size: 1.08rem;
+        font-weight: 900;
+        line-height: 1.35;
+      }
+
+      .hero p {
+        margin: 0.38rem 0 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.55;
+      }
+
+      .primary-btn {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        min-height: 2.35rem;
+        border-radius: 0.8rem;
+        background: var(--blue);
+        padding: 0 0.85rem;
+        color: white;
+        font-size: 0.84rem;
+        font-weight: 900;
+        box-shadow: 0 12px 22px rgb(22 152 199 / 0.25);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.55rem;
+        margin-top: 0.9rem;
+      }
+
+      .metric {
+        border-radius: 0.9rem;
+        background: rgb(255 255 255 / 0.82);
+        padding: 0.7rem;
+        box-shadow: inset 0 0 0 1px rgb(220 230 242 / 0.8);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 1.12rem;
+        font-weight: 950;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 0.12rem;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+      }
+
+      .toolbar {
+        margin-top: 1rem;
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        border: 1px solid var(--line);
+        border-radius: 0.95rem;
+        background: white;
+        padding: 0.72rem 0.85rem;
+      }
+
+      .search-symbol {
+        color: #94a3b8;
+        font-size: 1.05rem;
+        font-weight: 900;
+      }
+
+      .search input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
+        color: var(--ink);
+        background: transparent;
+        font-size: 0.92rem;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.35rem;
+        margin-top: 0.75rem;
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: #edf3f7;
+        padding: 0.32rem;
+      }
+
+      .tab {
+        min-height: 2.45rem;
+        border-radius: 0.75rem;
+        background: transparent;
+        color: #475569;
+        font-size: 0.72rem;
+        font-weight: 900;
+      }
+
+      .tab.active {
+        background: white;
+        color: var(--ink);
+        box-shadow: 0 2px 8px rgb(15 23 42 / 0.08);
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 1.05rem 0 0.55rem;
+      }
+
+      .section-title h3 {
+        margin: 0;
+        font-size: 0.92rem;
+        font-weight: 950;
+      }
+
+      .section-title span {
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+
+      .chunk-list {
+        display: grid;
+        gap: 0.72rem;
+      }
+
+      .chunk-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.72rem;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 1.05rem;
+        background: white;
+        padding: 0.82rem;
+        box-shadow: 0 8px 20px rgb(15 23 42 / 0.045);
+      }
+
+      .chunk-main {
+        min-width: 0;
+      }
+
+      .chunk-text {
+        margin: 0;
+        color: #121a2f;
+        font-size: 1rem;
+        font-weight: 950;
+        line-height: 1.35;
+      }
+
+      .sentence-highlight {
+        border-radius: 0.35rem;
+        padding: 0.03rem 0.18rem 0.08rem;
+        color: inherit;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+      }
+
+      .sentence-highlight.kind-collocation {
+        background: var(--blue-soft);
+        box-shadow: inset 0 -0.18rem 0 rgb(22 152 199 / 0.28);
+      }
+
+      .sentence-highlight.kind-phrase {
+        background: var(--green-soft);
+        box-shadow: inset 0 -0.18rem 0 rgb(35 133 104 / 0.24);
+      }
+
+      .sentence-highlight.kind-clause {
+        background: var(--violet-soft);
+        box-shadow: inset 0 -0.18rem 0 rgb(111 94 183 / 0.22);
+      }
+
+      .chunk-meaning {
+        margin: 0.2rem 0 0;
+        color: #61718a;
+        font-size: 0.86rem;
+        line-height: 1.4;
+      }
+
+      .chunk-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.52rem;
+      }
+
+      .word-source {
+        display: flex;
+        align-items: center;
+        gap: 0.42rem;
+        margin-top: 0.62rem;
+        color: #64748b;
+        font-size: 0.72rem;
+        font-weight: 850;
+      }
+
+      .word-source span {
+        color: #8a98aa;
+        font-size: 0.68rem;
+        font-weight: 900;
+      }
+
+      .word-source strong {
+        border-radius: 999px;
+        background: #eef2f7;
+        padding: 0.26rem 0.58rem;
+        color: #334155;
+        font-size: 0.76rem;
+        font-weight: 950;
+      }
+
+      .analysis-label {
+        margin: 0.72rem 0 0;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 950;
+      }
+
+      .chunk-breakdown {
+        display: grid;
+        gap: 0.45rem;
+        margin-top: 0.45rem;
+      }
+
+      .breakdown-item {
+        display: grid;
+        gap: 0.24rem;
+        border-radius: 0.82rem;
+        background: #f8fbfd;
+        padding: 0.58rem 0.62rem;
+        box-shadow: inset 0 0 0 1px rgb(220 230 242 / 0.76);
+      }
+
+      .breakdown-item strong {
+        color: #172033;
+        font-size: 0.82rem;
+        font-weight: 950;
+        line-height: 1.3;
+      }
+
+      .breakdown-meaning {
+        margin: 0;
+        color: #66758b;
+        font-size: 0.76rem;
+        font-weight: 750;
+        line-height: 1.35;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        border-radius: 999px;
+        padding: 0.22rem 0.5rem;
+        font-size: 0.68rem;
+        font-weight: 900;
+        line-height: 1.1;
+      }
+
+      .kind-collocation {
+        background: var(--blue-soft);
+        color: #127da4;
+      }
+
+      .kind-sentence {
+        background: #edf3f7;
+        color: #334155;
+      }
+
+      .kind-phrase {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .kind-clause {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+
+      .source {
+        background: #eef2f7;
+        color: #526174;
+      }
+
+      .relation {
+        background: #f1f5f9;
+        color: #475569;
+      }
+
+      .state-existing {
+        background: #e5f4ef;
+        color: #23745d;
+      }
+
+      .state-new {
+        background: #fff0d5;
+        color: #9a5c10;
+      }
+
+      .filter-collocation
+        .chunk-card[data-item-kind="collocation"]
+        > .chunk-main
+        > .chunk-meta,
+      .filter-phrase
+        .chunk-card[data-item-kind="phrase"]
+        > .chunk-main
+        > .chunk-meta,
+      .filter-clause
+        .chunk-card[data-item-kind="clause"]
+        > .chunk-main
+        > .chunk-meta {
+        display: none;
+      }
+
+      .insight-card {
+        margin-top: 0.9rem;
+        border: 1px solid #d7ebe3;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, #f2fbf7 0%, #ffffff 100%);
+        padding: 0.88rem;
+      }
+
+      .insight-card strong {
+        display: block;
+        font-size: 0.86rem;
+        font-weight: 950;
+      }
+
+      .insight-card p {
+        margin: 0.28rem 0 0;
+        color: #516277;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+
+      .empty-row {
+        display: none;
+        border: 1px dashed #cbd5e1;
+        border-radius: 1rem;
+        background: white;
+        padding: 1.2rem;
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-weight: 800;
+        line-height: 1.5;
+        text-align: center;
+      }
+
+      .list-page[hidden],
+      .add-page[hidden] {
+        display: none !important;
+      }
+
+      .add-page {
+        padding: 0.65rem 1rem 12rem;
+      }
+
+      .add-sheet {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .sheet-handle {
+        display: none;
+      }
+
+      .sheet-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        border: 1px solid var(--line);
+        border-radius: 1.2rem;
+        background: linear-gradient(135deg, #ffffff 0%, #eefbff 100%);
+        padding: 1rem;
+        box-shadow: var(--shadow);
+      }
+
+      .sheet-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 950;
+        line-height: 1.25;
+      }
+
+      .sheet-header p {
+        margin: 0.22rem 0 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 750;
+        line-height: 1.45;
+      }
+
+      .close-sheet {
+        display: grid;
+        width: 2.25rem;
+        height: 2.25rem;
+        flex: none;
+        place-items: center;
+        border-radius: 0.75rem;
+        background: #eef3f7;
+        color: #334155;
+        font-size: 1.2rem;
+        font-weight: 950;
+      }
+
+      .form-body {
+        display: grid;
+        gap: 0.78rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: white;
+        padding: 0.85rem;
+        box-shadow: 0 8px 20px rgb(15 23 42 / 0.035);
+      }
+
+      .field label,
+      .field-label {
+        margin: 0;
+        color: #334155;
+        font-size: 0.76rem;
+        font-weight: 950;
+      }
+
+      .field input,
+      .field textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 0.85rem;
+        background: #f8fbfd;
+        outline: none;
+        padding: 0.72rem 0.78rem;
+        color: var(--ink);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .field textarea {
+        min-height: 4.3rem;
+        resize: vertical;
+      }
+
+      .chat-panel {
+        display: grid;
+        gap: 0.78rem;
+      }
+
+      .chat-thread {
+        display: grid;
+        gap: 0.62rem;
+      }
+
+      .message {
+        max-width: 88%;
+        border-radius: 1rem;
+        padding: 0.72rem 0.82rem;
+        font-size: 0.86rem;
+        font-weight: 780;
+        line-height: 1.5;
+        scroll-margin-bottom: 11rem;
+      }
+
+      .message.user {
+        justify-self: end;
+        background: var(--blue);
+        color: white;
+      }
+
+      .message.ai {
+        justify-self: start;
+        border: 1px solid #d7ebe3;
+        background: #f2fbf7;
+        color: #334155;
+      }
+
+      .suggestion-list {
+        display: grid;
+        gap: 0.58rem;
+        margin: 0.1rem 0 0.35rem;
+        scroll-margin-bottom: 11rem;
+      }
+
+      .suggestion-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.7rem;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: white;
+        padding: 0.78rem;
+        box-shadow: 0 8px 20px rgb(15 23 42 / 0.035);
+      }
+
+      .suggestion-card.existing {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .suggestion-card strong {
+        display: block;
+        color: #172033;
+        font-size: 0.9rem;
+        font-weight: 950;
+        line-height: 1.35;
+      }
+
+      .suggestion-card p {
+        margin: 0.2rem 0 0;
+        color: #61718a;
+        font-size: 0.78rem;
+        font-weight: 750;
+        line-height: 1.4;
+      }
+
+      .add-suggestion {
+        display: grid;
+        width: 2.35rem;
+        height: 2.35rem;
+        place-items: center;
+        border-radius: 0.78rem;
+        background: var(--blue-soft);
+        color: #127da4;
+        font-size: 1.25rem;
+        font-weight: 950;
+      }
+
+      .suggestion-card.added .add-suggestion {
+        background: #fee2e2;
+        color: #b42318;
+      }
+
+      .suggestion-card.existing .add-suggestion {
+        display: none;
+      }
+
+      .chat-composer-wrap {
+        position: fixed;
+        right: calc((100vw - min(430px, 100vw)) / 2 + 1rem);
+        bottom: 1rem;
+        left: calc((100vw - min(430px, 100vw)) / 2 + 1rem);
+        z-index: 12;
+      }
+
+      .chat-composer-wrap .chat-composer {
+        box-shadow: 0 20px 44px rgb(15 23 42 / 0.16);
+        backdrop-filter: blur(16px);
+      }
+
+      .suggestion-card.added {
+        border-color: rgb(35 133 104 / 0.46);
+        background: #f2fbf7;
+      }
+
+      .suggestion-card.added .add-suggestion {
+        background: #fee2e2;
+        color: #b42318;
+      }
+
+      .suggestion-card.added .state-new {
+        background: #e5f4ef;
+        color: #23745d;
+      }
+
+      .suggestion-card.added .state-new {
+        font-size: 0;
+      }
+
+      .suggestion-card.added .state-new::after {
+        content: "已加入";
+        font-size: 0.68rem;
+      }
+
+      .chat-composer {
+        display: grid;
+        gap: 0.55rem;
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: white;
+        padding: 0.72rem;
+      }
+
+      .chat-composer textarea {
+        min-height: 4.4rem;
+        border: 0;
+        background: transparent;
+        outline: 0;
+        color: var(--ink);
+        font-size: 0.92rem;
+        font-weight: 780;
+        line-height: 1.45;
+        resize: vertical;
+      }
+
+      .send-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .send-row span {
+        color: #64748b;
+        font-size: 0.72rem;
+        font-weight: 850;
+      }
+
+      .send-btn {
+        min-height: 2.35rem;
+        border-radius: 0.78rem;
+        background: #111827;
+        padding: 0 0.88rem;
+        color: white;
+        font-size: 0.82rem;
+        font-weight: 950;
+      }
+
+      @media (min-width: 700px) {
+        .app {
+          margin-block: 1.25rem;
+          min-height: calc(100vh - 2.5rem);
+          border-radius: 1.4rem;
+          overflow: hidden;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <button class="icon-btn" id="backButton" aria-label="返回">‹</button>
+        <div class="title-wrap">
+          <p class="eyebrow">FlashMind</p>
+          <h1 id="pageTitle">收藏包</h1>
+        </div>
+        <button class="icon-btn" aria-label="更多">⋯</button>
+      </header>
+
+      <main class="content list-page" id="listPage">
+        <section class="hero" aria-label="收藏包摘要">
+          <div class="hero-row">
+            <div>
+              <h2>收藏你想再用的英文表達。</h2>
+              <p>
+                可以是一整句，也可以是搭配詞、片語或子句；句子底下會保留關聯語塊。
+              </p>
+            </div>
+            <button class="primary-btn open-add-sheet" type="button">
+              新增收藏
+            </button>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <strong>32</strong>
+              <span>收藏項目</span>
+            </div>
+            <div class="metric">
+              <strong>72%</strong>
+              <span>單字覆蓋率</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="toolbar" aria-label="搜尋與分類">
+          <label class="search">
+            <span class="search-symbol">⌕</span>
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="搜尋句子、語塊、中文或來源單字"
+            />
+          </label>
+
+          <div class="tabs" role="tablist" aria-label="收藏類型">
+            <button class="tab active" data-filter="all" type="button">
+              全部
+            </button>
+            <button class="tab" data-filter="sentence" type="button">
+              句子
+            </button>
+            <button class="tab" data-filter="collocation" type="button">
+              搭配詞
+            </button>
+            <button class="tab" data-filter="phrase" type="button">片語</button>
+            <button class="tab" data-filter="clause" type="button">子句</button>
+          </div>
+        </section>
+
+        <div class="section-title">
+          <h3>收藏列表</h3>
+          <span id="resultCount">7 個項目</span>
+        </div>
+
+        <section class="chunk-list" id="chunkList" aria-label="收藏列表">
+          <article
+            class="chunk-card"
+            data-item-kind="sentence"
+            data-kind="collocation clause"
+            data-keywords="fall behind schedule bring in extra resources project deadline 專案 進度落後 額外資源 schedule resource"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">
+                We started to fall behind schedule, so we decided to bring in
+                extra resources.
+              </p>
+              <p class="chunk-meaning">
+                我們開始進度落後，所以決定投入額外資源。
+              </p>
+              <div class="chunk-meta">
+                <span class="pill kind-sentence">句子</span>
+              </div>
+              <p class="analysis-label">AI 拆解</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>fall behind schedule</strong>
+                  <p class="breakdown-meaning">進度落後</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                    <span class="pill source">schedule</span>
+                  </div>
+                </div>
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>bring in extra resources</strong>
+                  <p class="breakdown-meaning">投入額外資源</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                    <span class="pill source">resource</span>
+                  </div>
+                </div>
+                <div class="breakdown-item" data-breakdown-kind="clause">
+                  <strong>so we decided to bring in extra resources</strong>
+                  <p class="breakdown-meaning">所以我們決定投入額外資源</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-clause">子句</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="chunk-card"
+            data-item-kind="sentence"
+            data-kind="collocation clause"
+            data-keywords="make reservation restaurant fully booked 預約 訂位 餐廳 restaurant reservation"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">
+                I need to make a reservation before the restaurant gets fully
+                booked.
+              </p>
+              <p class="chunk-meaning">我需要在餐廳訂滿之前先訂位。</p>
+              <div class="chunk-meta">
+                <span class="pill kind-sentence">句子</span>
+              </div>
+              <p class="analysis-label">AI 拆解</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>make a reservation</strong>
+                  <p class="breakdown-meaning">訂位、預約</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                    <span class="pill source">reservation</span>
+                  </div>
+                </div>
+                <div class="breakdown-item" data-breakdown-kind="clause">
+                  <strong>before the restaurant gets fully booked</strong>
+                  <p class="breakdown-meaning">在餐廳訂滿之前</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-clause">子句</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="chunk-card"
+            data-item-kind="sentence"
+            data-kind="phrase collocation"
+            data-keywords="during our trip stick to itinerary 旅途中 遵守行程 itinerary trip"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">
+                During our trip, we tried to stick to our itinerary.
+              </p>
+              <p class="chunk-meaning">在旅途中，我們試著照著行程走。</p>
+              <div class="chunk-meta">
+                <span class="pill kind-sentence">句子</span>
+              </div>
+              <p class="analysis-label">AI 拆解</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="phrase">
+                  <strong>during our trip</strong>
+                  <p class="breakdown-meaning">在我們旅途中</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-phrase">片語</span>
+                  </div>
+                </div>
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>stick to our itinerary</strong>
+                  <p class="breakdown-meaning">照著行程走、遵守行程</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                    <span class="pill source">itinerary</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="chunk-card"
+            data-item-kind="sentence"
+            data-kind="clause collocation"
+            data-keywords="although hotel expensive location made trip easier 飯店 貴 地點 hotel location trip"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">
+                Although the hotel was expensive, the location made our trip
+                easier.
+              </p>
+              <p class="chunk-meaning">
+                雖然飯店很貴，但地點讓我們的旅程輕鬆很多。
+              </p>
+              <div class="chunk-meta">
+                <span class="pill kind-sentence">句子</span>
+              </div>
+              <p class="analysis-label">AI 拆解</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="clause">
+                  <strong>although the hotel was expensive</strong>
+                  <p class="breakdown-meaning">雖然飯店很貴</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-clause">子句</span>
+                  </div>
+                </div>
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>made our trip easier</strong>
+                  <p class="breakdown-meaning">讓我們的旅程更輕鬆</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                    <span class="pill source">trip</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="chunk-card"
+            data-item-kind="collocation"
+            data-kind="collocation"
+            data-keywords="fall behind schedule 進度落後 schedule"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">fall behind schedule</p>
+              <p class="chunk-meaning">進度落後</p>
+              <div class="chunk-meta">
+                <span class="pill kind-collocation">搭配詞</span>
+              </div>
+              <div class="word-source">
+                <span>來源字</span>
+                <strong>schedule</strong>
+              </div>
+              <p class="analysis-label">關聯片語 / 子句</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="phrase">
+                  <strong>after falling behind schedule</strong>
+                  <p class="breakdown-meaning">在進度落後之後</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-phrase">片語</span>
+                  </div>
+                </div>
+                <div class="breakdown-item" data-breakdown-kind="clause">
+                  <strong>because we fell behind schedule</strong>
+                  <p class="breakdown-meaning">因為我們進度落後</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-clause">子句</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="chunk-card"
+            data-item-kind="phrase"
+            data-kind="phrase collocation"
+            data-keywords="after falling behind schedule 在進度落後之後 fall behind schedule"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">after falling behind schedule</p>
+              <p class="chunk-meaning">在進度落後之後</p>
+              <div class="chunk-meta">
+                <span class="pill kind-phrase">片語</span>
+              </div>
+              <p class="analysis-label">關聯搭配詞</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>fall behind schedule</strong>
+                  <p class="breakdown-meaning">進度落後</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                  </div>
+                </div>
+              </div>
+              <p class="analysis-label">關聯句子</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="sentence">
+                  <strong
+                    >After falling behind schedule, we asked the team for
+                    help.</strong
+                  >
+                  <p class="breakdown-meaning">
+                    在進度落後之後，我們向團隊請求協助。
+                  </p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-sentence">句子</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article
+            class="chunk-card"
+            data-item-kind="clause"
+            data-kind="clause collocation"
+            data-keywords="because we fell behind schedule 因為我們進度落後 fall behind schedule"
+          >
+            <div class="chunk-main">
+              <p class="chunk-text">because we fell behind schedule</p>
+              <p class="chunk-meaning">因為我們進度落後</p>
+              <div class="chunk-meta">
+                <span class="pill kind-clause">子句</span>
+              </div>
+              <p class="analysis-label">關聯搭配詞</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="collocation">
+                  <strong>fall behind schedule</strong>
+                  <p class="breakdown-meaning">進度落後</p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-collocation">搭配詞</span>
+                  </div>
+                </div>
+              </div>
+              <p class="analysis-label">關聯句子</p>
+              <div class="chunk-breakdown">
+                <div class="breakdown-item" data-breakdown-kind="sentence">
+                  <strong
+                    >We asked for help because we fell behind schedule.</strong
+                  >
+                  <p class="breakdown-meaning">
+                    我們因為進度落後，所以請求協助。
+                  </p>
+                  <div class="chunk-meta">
+                    <span class="pill kind-sentence">句子</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <div class="empty-row" id="emptyRow">
+            沒有符合條件的收藏項目。可以換個關鍵字，或新增一個收藏。
+          </div>
+        </section>
+
+        <section class="insight-card">
+          <strong>關聯提示</strong>
+          <p>
+            片語與子句常會包含搭配詞，例如 because we fell behind schedule
+            裡就包含 fall behind
+            schedule。收藏包會優先保留這種語塊關聯，來源單字只作為輔助標籤。
+          </p>
+        </section>
+      </main>
+
+      <main class="add-page" id="addPage" hidden>
+        <section class="add-sheet" aria-label="新增收藏">
+          <header class="sheet-header">
+            <div>
+              <h2>新增收藏</h2>
+              <p>直接跟 AI 說你想表達什麼，它會整理可收藏的句子與語塊。</p>
+            </div>
+          </header>
+
+          <div class="chat-panel">
+            <section class="chat-thread" aria-label="AI 對話">
+              <div class="message user">
+                我不知道「我需要在餐廳訂滿之前先訂位」怎麼自然地說。
+              </div>
+              <div class="message ai">
+                可以這樣說。我也幫你拆出幾個可以收藏的表達，點加號就能加入待收藏清單。
+              </div>
+
+              <section
+                class="suggestion-list"
+                id="suggestionList"
+                aria-label="可收藏建議"
+              >
+                <article
+                  class="suggestion-card"
+                  data-suggestion-kind="sentence"
+                  data-text="I need to make a reservation before the restaurant gets fully booked."
+                  data-meaning="我需要在餐廳訂滿之前先訂位。"
+                >
+                  <div>
+                    <strong
+                      >I need to make a reservation before the restaurant gets
+                      fully booked.</strong
+                    >
+                    <p>我需要在餐廳訂滿之前先訂位。</p>
+                    <div class="chunk-meta">
+                      <span class="pill kind-sentence">句子</span>
+                      <span class="pill state-new">將新增</span>
+                    </div>
+                  </div>
+                  <button
+                    class="add-suggestion"
+                    type="button"
+                    aria-label="加入句子"
+                  >
+                    ＋
+                  </button>
+                </article>
+
+                <article
+                  class="suggestion-card existing"
+                  data-suggestion-kind="collocation"
+                  data-text="make a reservation"
+                  data-meaning="訂位、預約"
+                >
+                  <div>
+                    <strong>make a reservation</strong>
+                    <p>訂位、預約</p>
+                    <div class="chunk-meta">
+                      <span class="pill kind-collocation">搭配詞</span>
+                      <span class="pill state-existing">已在收藏包</span>
+                      <span class="pill source">reservation</span>
+                    </div>
+                  </div>
+                </article>
+
+                <article
+                  class="suggestion-card"
+                  data-suggestion-kind="clause"
+                  data-text="before the restaurant gets fully booked"
+                  data-meaning="在餐廳訂滿之前"
+                >
+                  <div>
+                    <strong>before the restaurant gets fully booked</strong>
+                    <p>在餐廳訂滿之前</p>
+                    <div class="chunk-meta">
+                      <span class="pill kind-clause">子句</span>
+                      <span class="pill state-new">將新增</span>
+                    </div>
+                  </div>
+                  <button
+                    class="add-suggestion"
+                    type="button"
+                    aria-label="加入子句"
+                  >
+                    ＋
+                  </button>
+                </article>
+              </section>
+            </section>
+
+            <div class="chat-composer-wrap">
+              <section class="chat-composer" aria-label="輸入訊息">
+                <textarea id="chatInput">
+如果我要說「我想延期會議」呢？</textarea
+                >
+                <div class="send-row">
+                  <span>AI 會繼續列出可收藏的表達</span>
+                  <button class="send-btn" type="button" id="sendMessage">
+                    送出
+                  </button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+      let cards = Array.from(document.querySelectorAll(".chunk-card"));
+      const searchInput = document.querySelector("#searchInput");
+      const resultCount = document.querySelector("#resultCount");
+      const emptyRow = document.querySelector("#emptyRow");
+      const chunkList = document.querySelector("#chunkList");
+      const listPage = document.querySelector("#listPage");
+      const addPage = document.querySelector("#addPage");
+      const pageTitle = document.querySelector("#pageTitle");
+      const backButton = document.querySelector("#backButton");
+      const openAddButtons = Array.from(
+        document.querySelectorAll(".open-add-sheet"),
+      );
+      const sendMessage = document.querySelector("#sendMessage");
+      const chatInput = document.querySelector("#chatInput");
+      const chatThread = document.querySelector(".chat-thread");
+      const kindLabels = {
+        collocation: "搭配詞",
+        phrase: "片語",
+        clause: "子句",
+      };
+      let activeFilter = "all";
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderSentenceHighlight(card, breakdownItems) {
+        const sentenceEl = card.querySelector(".chunk-text");
+        if (card.dataset.itemKind !== "sentence") {
+          return;
+        }
+
+        const sentence = card.dataset.sentence || sentenceEl.textContent;
+        card.dataset.sentence = sentence;
+
+        if (activeFilter === "all" || activeFilter === "sentence") {
+          sentenceEl.textContent = sentence;
+          return;
+        }
+
+        const ranges = breakdownItems
+          .filter((item) => item.dataset.breakdownKind === activeFilter)
+          .map((item) => item.querySelector("strong")?.textContent.trim() ?? "")
+          .filter(Boolean)
+          .map((chunk) => {
+            const start = sentence.toLowerCase().indexOf(chunk.toLowerCase());
+            return start >= 0 ? { start, end: start + chunk.length } : null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.start - b.start);
+
+        if (ranges.length === 0) {
+          sentenceEl.textContent = sentence;
+          return;
+        }
+
+        let html = "";
+        let cursor = 0;
+
+        for (const range of ranges) {
+          if (range.start < cursor) continue;
+          html += escapeHtml(sentence.slice(cursor, range.start));
+          html += `<mark class="sentence-highlight kind-${activeFilter}">${escapeHtml(
+            sentence.slice(range.start, range.end),
+          )}</mark>`;
+          cursor = range.end;
+        }
+
+        html += escapeHtml(sentence.slice(cursor));
+        sentenceEl.innerHTML = html;
+      }
+
+      function updateCards() {
+        const query = searchInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+        document.body.classList.remove(
+          "filter-all",
+          "filter-sentence",
+          "filter-collocation",
+          "filter-phrase",
+          "filter-clause",
+        );
+        document.body.classList.add(`filter-${activeFilter}`);
+        const priorityByFilter = {
+          all: ["sentence", "collocation", "phrase", "clause"],
+          sentence: ["sentence"],
+          collocation: ["collocation"],
+          phrase: ["phrase"],
+          clause: ["clause"],
+        };
+
+        for (const [index, card] of cards.entries()) {
+          const breakdownItems = Array.from(
+            card.querySelectorAll(".breakdown-item"),
+          );
+          const itemKind = card.dataset.itemKind;
+          const matchesKind =
+            activeFilter === "all" || itemKind === activeFilter;
+          const keywords = card.dataset.keywords.toLowerCase();
+          const matchesQuery = !query || keywords.includes(query);
+          const visible = matchesKind && matchesQuery;
+          const priority =
+            priorityByFilter[activeFilter]?.indexOf(itemKind) ?? 99;
+
+          for (const item of breakdownItems) {
+            let matchesBreakdown =
+              activeFilter === "all" || activeFilter === "sentence";
+
+            if (activeFilter === "collocation" && itemKind === "collocation") {
+              matchesBreakdown = ["phrase", "clause"].includes(
+                item.dataset.breakdownKind,
+              );
+            } else if (
+              ["phrase", "clause"].includes(activeFilter) &&
+              itemKind === activeFilter
+            ) {
+              matchesBreakdown = ["collocation", "sentence"].includes(
+                item.dataset.breakdownKind,
+              );
+            } else if (!matchesBreakdown) {
+              matchesBreakdown = item.dataset.breakdownKind === activeFilter;
+            }
+
+            item.style.display = matchesBreakdown ? "grid" : "none";
+          }
+
+          for (const breakdown of card.querySelectorAll(".chunk-breakdown")) {
+            const visibleItems = Array.from(
+              breakdown.querySelectorAll(".breakdown-item"),
+            ).filter((item) => item.style.display !== "none");
+            const analysisLabel =
+              breakdown.previousElementSibling?.classList.contains(
+                "analysis-label",
+              )
+                ? breakdown.previousElementSibling
+                : null;
+            const showBreakdown = visibleItems.length > 0;
+            if (analysisLabel) {
+              analysisLabel.style.display = showBreakdown ? "block" : "none";
+            }
+            breakdown.style.display = showBreakdown ? "grid" : "none";
+          }
+
+          renderSentenceHighlight(card, breakdownItems);
+          card.style.order = String(
+            priority >= 0 ? priority * 100 + index : 900 + index,
+          );
+          card.style.display = visible ? "grid" : "none";
+          if (visible) visibleCount += 1;
+        }
+
+        resultCount.textContent = `${visibleCount} 個項目`;
+        emptyRow.style.display = visibleCount === 0 ? "block" : "none";
+      }
+
+      function showAddPage() {
+        listPage.hidden = true;
+        addPage.hidden = false;
+        pageTitle.textContent = "新增收藏";
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+
+      function showListPage() {
+        listPage.hidden = false;
+        addPage.hidden = true;
+        pageTitle.textContent = "收藏包";
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+
+      for (const tab of tabs) {
+        tab.addEventListener("click", () => {
+          activeFilter = tab.dataset.filter;
+          tabs.forEach((item) => item.classList.toggle("active", item === tab));
+          updateCards();
+        });
+      }
+
+      for (const button of openAddButtons) {
+        button.addEventListener("click", showAddPage);
+      }
+
+      backButton.addEventListener("click", () => {
+        if (!addPage.hidden) showListPage();
+      });
+
+      function createCollectionCardFromSuggestion(suggestion) {
+        const itemKind = suggestion.dataset.suggestionKind;
+        const text = suggestion.dataset.text;
+        const meaning = suggestion.dataset.meaning;
+        const card = document.createElement("article");
+
+        card.className = "chunk-card";
+        card.dataset.itemKind = itemKind;
+        card.dataset.kind =
+          itemKind === "sentence" ? "collocation clause" : itemKind;
+        card.dataset.keywords = `${text} ${meaning}`.toLowerCase();
+        card.innerHTML = `
+          <div class="chunk-main">
+            <p class="chunk-text"></p>
+            <p class="chunk-meaning"></p>
+            <div class="chunk-meta">
+              <span class="pill kind-${itemKind}">${itemKind === "sentence" ? "句子" : kindLabels[itemKind]}</span>
+            </div>
+          </div>
+        `;
+        card.querySelector(".chunk-text").textContent = text;
+        card.querySelector(".chunk-meaning").textContent = meaning;
+        return card;
+      }
+
+      function bindSuggestion(card) {
+        const button = card.querySelector(".add-suggestion");
+        if (!button) return;
+
+        button.addEventListener("click", () => {
+          if (card.classList.contains("added")) {
+            card.classList.remove("added");
+            button.textContent = "＋";
+            card._collectionCard?.remove();
+            card._collectionCard = null;
+            cards = Array.from(document.querySelectorAll(".chunk-card"));
+            updateCards();
+            return;
+          }
+
+          const collectionCard = createCollectionCardFromSuggestion(card);
+          chunkList.insertBefore(collectionCard, emptyRow);
+          card._collectionCard = collectionCard;
+          card.classList.add("added");
+          button.textContent = "−";
+          cards = Array.from(document.querySelectorAll(".chunk-card"));
+          updateCards();
+        });
+      }
+
+      for (const card of document.querySelectorAll(".suggestion-card")) {
+        bindSuggestion(card);
+      }
+
+      sendMessage.addEventListener("click", () => {
+        const text = chatInput.value.trim() || "我想延期會議";
+        const userMessage = document.createElement("div");
+        const aiMessage = document.createElement("div");
+
+        userMessage.className = "message user";
+        userMessage.textContent = text;
+        aiMessage.className = "message ai";
+        aiMessage.textContent =
+          "這句可以整理成 postpone the meeting，也可以收藏完整句子 I would like to postpone the meeting.";
+        chatThread.append(userMessage, aiMessage);
+
+        const suggestionGroup = document.createElement("section");
+        const card = document.createElement("article");
+        suggestionGroup.className = "suggestion-list";
+        suggestionGroup.setAttribute("aria-label", "可收藏建議");
+        card.className = "suggestion-card";
+        card.dataset.suggestionKind = "collocation";
+        card.dataset.text = "postpone the meeting";
+        card.dataset.meaning = "延期會議";
+        card.innerHTML = `
+          <div>
+            <strong>postpone the meeting</strong>
+            <p>延期會議</p>
+            <div class="chunk-meta">
+              <span class="pill kind-collocation">搭配詞</span>
+              <span class="pill state-new">將新增</span>
+              <span class="pill source">meeting</span>
+            </div>
+          </div>
+          <button class="add-suggestion" type="button" aria-label="加入搭配詞">＋</button>
+        `;
+        suggestionGroup.append(card);
+        chatThread.append(suggestionGroup);
+        bindSuggestion(card);
+        chatInput.value = "";
+        suggestionGroup.scrollIntoView({ block: "end", behavior: "smooth" });
+      });
+
+      searchInput.addEventListener("input", updateCards);
+      updateCards();
+      if (window.location.hash === "#add") showAddPage();
+    </script>
+  </body>
+</html>
