@@ -42,6 +42,19 @@ export class CollectionPackNewComponent {
     this.scrollToLastSuggestion();
   }
 
+  onInputKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || event.isComposing) {
+      return;
+    }
+
+    if (!event.metaKey && !event.ctrlKey) {
+      return;
+    }
+
+    event.preventDefault();
+    void this.onSubmit();
+  }
+
   private scrollChatBottom(): void {
     const bottom = document.querySelector('[data-collection-chat-bottom]');
     if (bottom instanceof HTMLElement && typeof bottom.scrollIntoView === 'function') {

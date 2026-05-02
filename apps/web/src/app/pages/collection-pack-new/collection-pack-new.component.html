@@ -1,4 +1,4 @@
-<div class="relative min-h-screen pb-40">
+<div class="relative min-h-screen pb-32">
   <fm-page-header
     title="新增收藏"
     subtitle="FlashMind"
@@ -14,25 +14,26 @@
     >
       <span class="material-symbols-outlined text-[22px]">arrow_back</span>
     </fm-icon-button>
+    <fm-icon-button
+      class="fm-header-right"
+      variant="primary"
+      ariaLabel="開始新對話"
+      testId="collection-new-chat"
+      (click)="onStartNewChat()"
+    >
+      <span class="material-symbols-outlined text-[22px]">add</span>
+    </fm-icon-button>
   </fm-page-header>
 
-  <main class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-64 pt-4">
-    <section class="rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm">
-      <div class="flex items-center justify-between gap-3">
+  <main class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-44 pt-4">
+    @if (store.chatGroups().length === 0) {
+      <section class="rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm">
         <h2 class="text-base font-bold text-white">新增收藏</h2>
-        <button
-          type="button"
-          class="rounded-full border border-slate-600 px-3 py-1 text-xs font-black text-slate-200 transition hover:border-primary hover:text-primary"
-          data-testid="collection-new-chat"
-          (click)="onStartNewChat()"
-        >
-          新對話
-        </button>
-      </div>
-      <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
-        直接跟 AI 說你想表達什麼，它會整理可收藏的句子與語塊。
-      </p>
-    </section>
+        <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+          直接跟 AI 說你想表達什麼，它會整理可收藏的句子與語塊。
+        </p>
+      </section>
+    }
 
     <section class="space-y-4" aria-label="新增收藏對話">
       @if (store.errorMessage()) {
@@ -111,28 +112,34 @@
   </main>
 
   <form
-    class="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-slate-700 bg-background-dark/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur"
+    class="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-slate-800 bg-background-dark/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-2 backdrop-blur-xl"
     (ngSubmit)="onSubmit()"
   >
-    <div class="rounded-2xl border border-slate-700 bg-surface-dark p-3 shadow-2xl shadow-black/30">
+    <div
+      class="flex items-end gap-2 rounded-2xl border border-slate-700 bg-card-dark/95 p-2 shadow-2xl shadow-black/30 transition focus-within:border-primary/80 focus-within:shadow-primary/10"
+    >
       <textarea
-        class="min-h-24 w-full resize-none rounded-xl border-none bg-transparent p-1 text-base font-bold leading-relaxed text-white placeholder:text-slate-500 focus:outline-none focus:ring-0"
+        class="max-h-28 min-h-10 flex-1 resize-none overflow-y-auto rounded-xl border-0 bg-transparent px-3 py-2 text-sm font-bold leading-relaxed text-white caret-primary outline-none [field-sizing:content] placeholder:text-slate-500 focus:ring-0"
         [formControl]="inputControl"
-        placeholder="輸入中文或英文，讓 AI 幫你拆成可收藏的表達"
+        rows="1"
+        placeholder="輸入中文或英文..."
         data-testid="collection-chat-input"
+        (keydown)="onInputKeydown($event)"
       ></textarea>
-      <div class="mt-2 flex items-center justify-between gap-3">
-        <span class="text-xs font-bold text-secondary-text">AI 會繼續列出可收藏的表達</span>
-        <fm-button
-          size="sm"
-          type="button"
-          [disabled]="!inputValue().trim() || store.chatLoading()"
-          testId="collection-chat-send"
-          (click)="onSubmit()"
-        >
+      <fm-button
+        class="shrink-0"
+        size="sm"
+        type="button"
+        [disabled]="!inputValue().trim() || store.chatLoading()"
+        testId="collection-chat-send"
+        (click)="onSubmit()"
+      >
+        @if (store.chatLoading()) {
+          送出中
+        } @else {
           送出
-        </fm-button>
-      </div>
+        }
+      </fm-button>
     </div>
   </form>
 </div>
