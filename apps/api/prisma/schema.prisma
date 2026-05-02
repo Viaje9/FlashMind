@@ -12,17 +12,19 @@ enum Provider {
 }
 
 model User {
-  id              String         @id @default(cuid())
-  email           String         @unique
-  passwordHash    String?
-  primaryProvider Provider       @default(EMAIL)
-  timezone        String         @default("Asia/Taipei")
-  lastLoginAt     DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  oauthAccounts   OAuthAccount[]
-  sessions        Session[]
-  decks           Deck[]
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  passwordHash           String?
+  primaryProvider        Provider                @default(EMAIL)
+  timezone               String                  @default("Asia/Taipei")
+  lastLoginAt            DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  oauthAccounts          OAuthAccount[]
+  sessions               Session[]
+  decks                  Deck[]
+  collectionItems        CollectionItem[]
+  collectionChatSessions CollectionChatSession[]
 }
 
 model OAuthAccount {
@@ -53,30 +55,30 @@ model Session {
 }
 
 model Deck {
-  id               String   @id @default(cuid())
+  id               String @id @default(cuid())
   name             String
-  dailyNewCards    Int      @default(20)
-  dailyReviewCards Int      @default(100)
-  dailyResetHour   Int      @default(4)
+  dailyNewCards    Int    @default(20)
+  dailyReviewCards Int    @default(100)
+  dailyResetHour   Int    @default(4)
 
   // FSRS 演算法參數（per-deck）
-  learningSteps    String   @default("1m,10m")
-  relearningSteps  String   @default("10m")
-  requestRetention Float    @default(0.9)
-  maximumInterval  Int      @default(36500)
+  learningSteps    String @default("1m,10m")
+  relearningSteps  String @default("10m")
+  requestRetention Float  @default(0.9)
+  maximumInterval  Int    @default(36500)
 
-  enableReverse    Boolean  @default(false)
+  enableReverse Boolean @default(false)
 
   // 今日上限覆寫（隔天自動失效）
-  overrideDate         DateTime?
-  overrideNewCards     Int?
-  overrideReviewCards  Int?
+  overrideDate        DateTime?
+  overrideNewCards    Int?
+  overrideReviewCards Int?
 
-  userId           String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cards            Card[]
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards     Card[]
 }
 
 enum CardState {
@@ -96,30 +98,31 @@ model Card {
   updatedAt DateTime      @updatedAt
 
   // FSRS 排程欄位（正向）
-  state         CardState   @default(NEW)
+  state         CardState @default(NEW)
   due           DateTime?
   stability     Float?
   difficulty    Float?
-  elapsedDays   Int         @default(0)
-  scheduledDays Int         @default(0)
-  reps          Int         @default(0)
-  lapses        Int         @default(0)
+  elapsedDays   Int       @default(0)
+  scheduledDays Int       @default(0)
+  reps          Int       @default(0)
+  lapses        Int       @default(0)
   lastReview    DateTime?
-  learningStep  Int         @default(0)
+  learningStep  Int       @default(0)
 
   // FSRS 排程欄位（反向）
-  reverseState         CardState   @default(NEW)
+  reverseState         CardState @default(NEW)
   reverseDue           DateTime?
   reverseStability     Float?
   reverseDifficulty    Float?
-  reverseElapsedDays   Int         @default(0)
-  reverseScheduledDays Int         @default(0)
-  reverseReps          Int         @default(0)
-  reverseLapses        Int         @default(0)
+  reverseElapsedDays   Int       @default(0)
+  reverseScheduledDays Int       @default(0)
+  reverseReps          Int       @default(0)
+  reverseLapses        Int       @default(0)
   reverseLastReview    DateTime?
-  reverseLearningStep  Int         @default(0)
+  reverseLearningStep  Int       @default(0)
 
-  reviewLogs    ReviewLog[]
+  reviewLogs      ReviewLog[]
+  collectionLinks CollectionItemCard[]
 }
 
 model CardMeaning {
@@ -159,5 +162,104 @@ model ReviewLog {
   scheduledDays Int
 
   // 學習方向
-  direction     String    @default("FORWARD")
+  direction String @default("FORWARD")
+}
+
+enum CollectionItemKind {
+  SENTENCE
+  COLLOCATION
+  PHRASE
+  CLAUSE
+}
+
+enum CollectionRelationType {
+  SENTENCE_HAS_COLLOCATION
+  SENTENCE_HAS_PHRASE
+  SENTENCE_HAS_CLAUSE
+  PHRASE_HAS_COLLOCATION
+  CLAUSE_HAS_COLLOCATION
+}
+
+enum CollectionChatRole {
+  USER
+  ASSISTANT
+}
+
+model CollectionItem {
+  id             String             @id @default(cuid())
+  userId         String
+  kind           CollectionItemKind
+  text           String
+  normalizedText String
+  zhMeaning      String?
+  note           String?
+  createdFrom    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentRelations CollectionItemRelation[] @relation("CollectionParent")
+  childRelations  CollectionItemRelation[] @relation("CollectionChild")
+  cardLinks       CollectionItemCard[]
+
+  @@unique([userId, kind, normalizedText])
+  @@index([userId, kind, createdAt])
+  @@index([userId, normalizedText])
+}
+
+model CollectionItemRelation {
+  id        String                 @id @default(cuid())
+  parentId  String
+  childId   String
+  type      CollectionRelationType
+  sortOrder Int                    @default(0)
+  createdAt DateTime               @default(now())
+
+  parent CollectionItem @relation("CollectionParent", fields: [parentId], references: [id], onDelete: Cascade)
+  child  CollectionItem @relation("CollectionChild", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId, type])
+  @@index([childId])
+}
+
+model CollectionItemCard {
+  id               String   @id @default(cuid())
+  collectionItemId String
+  cardId           String
+  role             String
+  createdAt        DateTime @default(now())
+
+  collectionItem CollectionItem @relation(fields: [collectionItemId], references: [id], onDelete: Cascade)
+  card           Card           @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionItemId, cardId, role])
+  @@index([cardId])
+}
+
+model CollectionChatSession {
+  id               String   @id @default(cuid())
+  userId           String
+  provider         String   @default("CODEX")
+  providerThreadId String?
+  title            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages CollectionChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model CollectionChatMessage {
+  id        String             @id @default(cuid())
+  sessionId String
+  role      CollectionChatRole
+  content   String
+  metadata  Json?
+  createdAt DateTime           @default(now())
+
+  session CollectionChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }

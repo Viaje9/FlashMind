@@ -43,11 +43,16 @@ export class CollectionPackListComponent {
   );
 
   constructor() {
-    this.searchControl.valueChanges.subscribe((value) => this.searchTerm.set(value));
+    void this.store.loadItems();
+    this.searchControl.valueChanges.subscribe((value) => {
+      this.searchTerm.set(value);
+      void this.store.loadItems(this.activeFilter(), value);
+    });
   }
 
   onFilterChange(filter: CollectionFilter): void {
     this.activeFilter.set(filter);
+    void this.store.loadItems(filter, this.searchTerm());
   }
 
   onHeaderTitleClick(): void {

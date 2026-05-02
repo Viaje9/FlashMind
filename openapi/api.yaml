@@ -747,6 +747,233 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ============================================================
+  # Collections
+  # ============================================================
+  /collections:
+    get:
+      operationId: listCollectionItems
+      tags:
+        - Collections
+      summary: 取得收藏包項目
+      description: 取得目前使用者的收藏包項目，支援分類、搜尋與 cursor-based 分頁。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: 收藏項目類型
+          schema:
+            $ref: "#/components/schemas/CollectionItemKind"
+        - name: q
+          in: query
+          required: false
+          description: 搜尋關鍵字
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: false
+          description: 下一頁 cursor
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: 每頁數量
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionItemListResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createCollectionItem
+      tags:
+        - Collections
+      summary: 建立收藏包項目
+      description: 使用者確認 AI 候選後，建立或更新收藏項目、關聯語塊與來源卡片連結。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCollectionItemRequest"
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionItemResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限連結指定卡片或非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /collections/{id}:
+    delete:
+      operationId: deleteCollectionItem
+      tags:
+        - Collections
+      summary: 刪除收藏包項目
+      description: 刪除目前使用者的指定收藏項目。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 收藏項目 ID
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 刪除成功
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 收藏項目不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /collections/chat-sessions:
+    post:
+      operationId: createCollectionChatSession
+      tags:
+        - Collections
+      summary: 建立收藏包聊天 session
+      description: 建立新的收藏包 AI 聊天 session。
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionChatSessionResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /collections/chat-sessions/{sessionId}/messages:
+    post:
+      operationId: createCollectionChatMessage
+      tags:
+        - Collections
+      summary: 送出收藏包聊天訊息
+      description: 將使用者訊息送到收藏包 AI agent，回傳 AI 回覆與可收藏候選。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: 聊天 session ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCollectionChatMessageRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionChatMessageResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取 session 或非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 聊天 session 不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ============================================================
   # AI
   # ============================================================
   /ai/generate-card-content:
@@ -2216,6 +2443,361 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/ImportCardsResult"
+
+    # ============================================================
+    # Collections
+    # ============================================================
+    CollectionItemKind:
+      type: string
+      enum: [sentence, collocation, phrase, clause]
+      description: 收藏項目類型
+
+    CollectionRelationType:
+      type: string
+      enum:
+        - sentence_has_collocation
+        - sentence_has_phrase
+        - sentence_has_clause
+        - phrase_has_collocation
+        - clause_has_collocation
+      description: 收藏項目語意關聯類型
+
+    CollectionChatIntent:
+      type: string
+      enum:
+        - translate_only
+        - analyze_sentence
+        - find_existing
+        - suggest_candidates
+        - correct_sentence
+        - explain_usage
+      description: 收藏包聊天 AI 判斷的使用者意圖
+
+    CollectionSourceCard:
+      type: object
+      required:
+        - id
+        - text
+      properties:
+        id:
+          type: string
+          description: 卡片 ID
+        text:
+          type: string
+          description: 卡片正面文字
+          example: schedule
+        meaning:
+          type: string
+          nullable: true
+          description: 第一筆中文詞義
+          example: 行程；時程
+
+    CollectionBreakdownItem:
+      type: object
+      required:
+        - id
+        - kind
+        - text
+        - meaning
+      properties:
+        id:
+          type: string
+          description: 收藏項目或候選項目 ID
+        kind:
+          $ref: "#/components/schemas/CollectionItemKind"
+        text:
+          type: string
+          example: fall behind schedule
+        meaning:
+          type: string
+          example: 進度落後
+        sourceWord:
+          type: string
+          nullable: true
+          example: schedule
+        collectionItemId:
+          type: string
+          nullable: true
+          description: 若已收藏，對應的收藏項目 ID
+
+    CollectionRelatedSentence:
+      type: object
+      required:
+        - id
+        - text
+        - meaning
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+          example: Because we fell behind schedule, we adjusted the plan.
+        meaning:
+          type: string
+          example: 因為我們進度落後，所以調整了計畫。
+
+    CollectionItem:
+      type: object
+      required:
+        - id
+        - kind
+        - text
+        - meaning
+        - sourceWords
+        - breakdownItems
+        - relatedChunks
+        - relatedSentences
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: "#/components/schemas/CollectionItemKind"
+        text:
+          type: string
+          example: We started to fall behind schedule.
+        meaning:
+          type: string
+          example: 我們開始進度落後。
+        sourceWords:
+          type: array
+          items:
+            type: string
+          example: [schedule]
+        sourceCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSourceCard"
+        breakdownItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionBreakdownItem"
+        relatedChunks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionBreakdownItem"
+        relatedSentences:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionRelatedSentence"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CollectionItemListResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionItem"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    CollectionItemResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/CollectionItem"
+
+    CollectionSaveRelatedCandidate:
+      type: object
+      required:
+        - type
+        - kind
+        - text
+      properties:
+        type:
+          $ref: "#/components/schemas/CollectionRelationType"
+        kind:
+          $ref: "#/components/schemas/CollectionItemKind"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        meaning:
+          type: string
+          nullable: true
+          maxLength: 500
+        sourceCardIds:
+          type: array
+          items:
+            type: string
+        sortOrder:
+          type: integer
+          default: 0
+
+    CreateCollectionItemRequest:
+      type: object
+      required:
+        - kind
+        - text
+      properties:
+        kind:
+          $ref: "#/components/schemas/CollectionItemKind"
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: We started to fall behind schedule.
+        meaning:
+          type: string
+          nullable: true
+          maxLength: 1000
+          example: 我們開始進度落後。
+        sourceCardIds:
+          type: array
+          description: 使用者既有卡片 ID
+          items:
+            type: string
+        relatedCandidates:
+          type: array
+          description: 使用者確認此候選時要一併保存的關聯語塊
+          items:
+            $ref: "#/components/schemas/CollectionSaveRelatedCandidate"
+
+    CollectionSuggestion:
+      type: object
+      required:
+        - id
+        - kind
+        - text
+        - meaning
+        - existing
+        - added
+      properties:
+        id:
+          type: string
+          description: 候選 ID，可由 AI 或後端產生
+        kind:
+          $ref: "#/components/schemas/CollectionItemKind"
+        text:
+          type: string
+          example: fall behind schedule
+        meaning:
+          type: string
+          example: 進度落後
+        sourceWord:
+          type: string
+          nullable: true
+          example: schedule
+        sourceCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSourceCard"
+        existing:
+          type: boolean
+          description: 是否已存在於收藏包
+        added:
+          type: boolean
+          description: 前端是否已在本次互動加入
+        collectionItemId:
+          type: string
+          nullable: true
+          description: 已存在或已加入時的收藏項目 ID
+        relatedCandidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSaveRelatedCandidate"
+
+    CollectionSuggestedCard:
+      type: object
+      required:
+        - text
+        - reason
+      properties:
+        text:
+          type: string
+          example: postpone
+        meaning:
+          type: string
+          nullable: true
+          example: 延期；延後
+        reason:
+          type: string
+          example: 這個字常用來表達會議或計畫延期。
+
+    CollectionChatSession:
+      type: object
+      required:
+        - id
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CollectionChatSessionResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/CollectionChatSession"
+
+    CreateCollectionChatMessageRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          example: 我想延期會議
+
+    CollectionChatMessageResult:
+      type: object
+      required:
+        - sessionId
+        - userMessage
+        - assistantMessage
+        - intent
+        - candidates
+        - suggestedCards
+      properties:
+        sessionId:
+          type: string
+        userMessage:
+          type: string
+        assistantMessage:
+          type: string
+        intent:
+          $ref: "#/components/schemas/CollectionChatIntent"
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSuggestion"
+        suggestedCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSuggestedCard"
+
+    CollectionChatMessageResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/CollectionChatMessageResult"
 
     # ============================================================
     # AI

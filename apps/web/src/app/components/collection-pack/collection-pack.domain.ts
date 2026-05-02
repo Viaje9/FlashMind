@@ -15,6 +15,11 @@ export interface CollectionItem {
   text: string;
   meaning: string;
   sourceWords: string[];
+  sourceCards?: Array<{
+    id: string;
+    word: string;
+    meaning?: string | null;
+  }>;
   breakdownItems: CollectionBreakdownItem[];
   relatedChunks: CollectionBreakdownItem[];
   relatedSentences: Array<{
@@ -30,8 +35,28 @@ export interface CollectionSuggestion {
   text: string;
   meaning: string;
   sourceWord?: string;
+  sourceCards?: Array<{
+    id: string;
+    word: string;
+    meaning?: string | null;
+  }>;
+  sourceCardIds?: string[];
   existing: boolean;
   added: boolean;
+  collectionItemId?: string | null;
+  relatedCandidates?: Array<{
+    kind: Exclude<CollectionItemKind, 'sentence'>;
+    text: string;
+    meaning?: string;
+    relationType:
+      | 'sentence_has_collocation'
+      | 'sentence_has_phrase'
+      | 'sentence_has_clause'
+      | 'phrase_has_collocation'
+      | 'clause_has_collocation';
+    sourceWord?: string;
+    sourceCardIds?: string[];
+  }>;
 }
 
 export interface CollectionChatGroup {

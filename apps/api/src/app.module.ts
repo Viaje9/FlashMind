@@ -10,6 +10,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { TtsModule } from './modules/tts/tts.module';
 import { StudyModule } from './modules/study/study.module';
 import { SpeakingModule } from './modules/speaking/speaking.module';
+import { CollectionModule } from './modules/collection/collection.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SpeakingModule } from './modules/speaking/speaking.module';
     TtsModule,
     StudyModule,
     SpeakingModule,
+    CollectionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -18,13 +18,31 @@
 
   <main class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-64 pt-4">
     <section class="rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm">
-      <h2 class="text-base font-bold text-white">新增收藏</h2>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-base font-bold text-white">新增收藏</h2>
+        <button
+          type="button"
+          class="rounded-full border border-slate-600 px-3 py-1 text-xs font-black text-slate-200 transition hover:border-primary hover:text-primary"
+          data-testid="collection-new-chat"
+          (click)="onStartNewChat()"
+        >
+          新對話
+        </button>
+      </div>
       <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
         直接跟 AI 說你想表達什麼，它會整理可收藏的句子與語塊。
       </p>
     </section>
 
     <section class="space-y-4" aria-label="新增收藏對話">
+      @if (store.errorMessage()) {
+        <p
+          class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-bold text-amber-100"
+        >
+          {{ store.errorMessage() }}
+        </p>
+      }
+
       @for (group of store.chatGroups(); track group.id) {
         <div class="flex justify-end">
           <div
@@ -51,6 +69,15 @@
           }
         </div>
       }
+      @if (store.chatLoading()) {
+        <div class="flex justify-start">
+          <div
+            class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 text-sm font-bold leading-relaxed text-slate-300"
+          >
+            AI 正在整理可收藏的表達...
+          </div>
+        </div>
+      }
       <div data-collection-chat-bottom></div>
     </section>
   </main>
@@ -71,7 +98,7 @@
         <fm-button
           size="sm"
           type="button"
-          [disabled]="!inputValue().trim()"
+          [disabled]="!inputValue().trim() || store.chatLoading()"
           testId="collection-chat-send"
           (click)="onSubmit()"
         >

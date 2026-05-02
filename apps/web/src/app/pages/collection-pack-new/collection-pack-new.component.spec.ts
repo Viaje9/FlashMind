@@ -1,6 +1,8 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { CollectionsService } from '@flashmind/api-client';
+import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionPackStore } from '../../components/collection-pack/collection-pack.store';
 import { CollectionPackNewComponent } from './collection-pack-new.component';
@@ -14,6 +16,79 @@ describe('CollectionPackNewComponent', () => {
       providers: [
         CollectionPackStore,
         {
+          provide: CollectionsService,
+          useValue: {
+            createCollectionChatSession: vi.fn().mockReturnValue(
+              of({
+                data: {
+                  id: 'session-1',
+                  providerThreadId: 'thread-1',
+                  title: null,
+                  createdAt: '2026-05-02T00:00:00.000Z',
+                  updatedAt: '2026-05-02T00:00:00.000Z',
+                },
+              }),
+            ),
+            createCollectionChatMessage: vi.fn().mockReturnValue(
+              of({
+                data: {
+                  sessionId: 'session-1',
+                  userMessage: '我想延期會議',
+                  assistantMessage: '可以這樣說，也可以收藏這個搭配詞。',
+                  intent: 'analyze_sentence',
+                  candidates: [
+                    {
+                      id: 'suggestion-delay-meeting',
+                      kind: 'sentence',
+                      text: 'I need to postpone the meeting.',
+                      meaning: '我需要延期會議。',
+                      sourceWord: null,
+                      existing: false,
+                      added: false,
+                      sourceCards: [],
+                      collectionItemId: null,
+                      relatedCandidates: [
+                        {
+                          kind: 'collocation',
+                          text: 'postpone the meeting',
+                          meaning: '延期會議',
+                          type: 'sentence_has_collocation',
+                          sourceCardIds: [],
+                        },
+                        {
+                          kind: 'clause',
+                          text: 'because the client changed the schedule',
+                          meaning: '因為客戶改了時程',
+                          type: 'sentence_has_clause',
+                          sourceCardIds: [],
+                        },
+                      ],
+                    },
+                  ],
+                  suggestedCards: [],
+                },
+              }),
+            ),
+            createCollectionItem: vi.fn().mockReturnValue(
+              of({
+                data: {
+                  id: 'collection-postpone-meeting',
+                  kind: 'collocation',
+                  text: 'postpone the meeting',
+                  meaning: '延期會議',
+                  sourceWords: ['meeting'],
+                  breakdownItems: [],
+                  relatedChunks: [],
+                  relatedSentences: [],
+                  createdAt: '2026-05-02T00:00:00.000Z',
+                  updatedAt: '2026-05-02T00:00:00.000Z',
+                },
+              }),
+            ),
+            deleteCollectionItem: vi.fn().mockReturnValue(of({})),
+          },
+        },
+        {
           provide: Router,
           useValue: {
             navigate: vi.fn().mockResolvedValue(true),
@@ -26,17 +101,29 @@ describe('CollectionPackNewComponent', () => {
     component = TestBed.runInInjectionContext(() => new CollectionPackNewComponent());
   });
 
-  it('送出文字後應追加 mock 對話與建議', () => {
+  it('送出文字後應追加 API 對話與建議', async () => {
     component.inputControl.setValue('我想延期會議');
 
-    component.onSubmit();
+    await component.onSubmit();
 
     expect(store.chatGroups().at(-1)?.userText).toBe('我想延期會議');
-    expect(store.chatGroups().at(-1)?.suggestions[0]?.text).toBe('postpone the meeting');
+    expect(
+      store
+        .chatGroups()
+        .at(-1)
+        ?.suggestions.map((item) => item.text),
+    ).toEqual([
+      'I need to postpone the meeting.',
+      'postpone the meeting',
+      'because the client changed the schedule',
+    ]);
     expect(component.inputControl.value).toBe('');
   });
 
-  it('加入與移除建議時應同步 mock 收藏狀態', () => {
+  it('加入與移除建議時應同步 API 收藏狀態', async () => {
+    component.inputControl.setValue('我想延期會議');
+    await component.onSubmit();
+
     const group = store.chatGroups()[0];
     const suggestion = group.suggestions.find((item) => !item.existing);
 
@@ -44,7 +131,7 @@ describe('CollectionPackNewComponent', () => {
     if (!suggestion) return;
 
     const initialCount = store.items().length;
-    component.onToggleSuggestion(group.id, suggestion);
+    await component.onToggleSuggestion(group.id, suggestion);
 
     expect(store.items().length).toBe(initialCount + 1);
     expect(store.chatGroups()[0].suggestions.find((item) => item.id === suggestion.id)?.added).toBe(
@@ -57,11 +144,24 @@ describe('CollectionPackNewComponent', () => {
     expect(addedSuggestion).toBeDefined();
     if (!addedSuggestion) return;
 
-    component.onToggleSuggestion(group.id, addedSuggestion);
+    await component.onToggleSuggestion(group.id, addedSuggestion);
 
     expect(store.items().length).toBe(initialCount);
     expect(store.chatGroups()[0].suggestions.find((item) => item.id === suggestion.id)?.added).toBe(
       false,
     );
+  });
+
+  it('新對話應清空目前訊息並建立下一個聊天 session', async () => {
+    component.inputControl.setValue('我想延期會議');
+    await component.onSubmit();
+
+    expect(store.chatGroups()).toHaveLength(1);
+
+    component.inputControl.setValue('暫存文字');
+    component.onStartNewChat();
+
+    expect(store.chatGroups()).toHaveLength(0);
+    expect(component.inputControl.value).toBe('');
   });
 });

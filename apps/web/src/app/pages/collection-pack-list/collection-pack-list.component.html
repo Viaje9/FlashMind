@@ -76,14 +76,30 @@
         </span>
       </div>
 
-      @for (item of visibleItems(); track item.id) {
-        <app-collection-item-card [item]="item"></app-collection-item-card>
-      } @empty {
-        <fm-empty-state
-          icon="inventory_2"
-          title="沒有符合的收藏"
-          description="換個分類或搜尋字詞試試。"
-        ></fm-empty-state>
+      @if (store.errorMessage()) {
+        <p
+          class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-bold text-amber-100"
+        >
+          {{ store.errorMessage() }}
+        </p>
+      }
+
+      @if (store.loading()) {
+        <div
+          class="rounded-2xl border border-slate-700 bg-surface-dark p-4 text-sm font-bold text-slate-300"
+        >
+          讀取收藏中...
+        </div>
+      } @else {
+        @for (item of visibleItems(); track item.id) {
+          <app-collection-item-card [item]="item"></app-collection-item-card>
+        } @empty {
+          <fm-empty-state
+            icon="inventory_2"
+            title="沒有符合的收藏"
+            description="換個分類或搜尋字詞試試。"
+          ></fm-empty-state>
+        }
       }
     </section>
   </main>

@@ -22,7 +22,7 @@ import { CollectionPackStore } from '../../components/collection-pack/collection
 export class CollectionPackNewComponent {
   private readonly router = inject(Router);
   readonly store = inject(CollectionPackStore);
-  readonly inputControl = new FormControl('如果我要說「我想延期會議」呢？', {
+  readonly inputControl = new FormControl('', {
     nonNullable: true,
   });
   readonly inputValue = signal(this.inputControl.value);
@@ -31,11 +31,11 @@ export class CollectionPackNewComponent {
     this.inputControl.valueChanges.subscribe((value) => this.inputValue.set(value));
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     const value = this.inputValue().trim();
     if (!value) return;
 
-    this.store.appendMockChat(value);
+    await this.store.sendChatMessage(value);
     this.inputControl.setValue('');
     setTimeout(() => {
       const suggestions = document.querySelectorAll('app-collection-suggestion-card');
@@ -49,13 +49,18 @@ export class CollectionPackNewComponent {
     });
   }
 
-  onToggleSuggestion(groupId: string, suggestion: CollectionSuggestion): void {
+  async onToggleSuggestion(groupId: string, suggestion: CollectionSuggestion): Promise<void> {
     if (suggestion.added) {
-      this.store.removeSuggestion(groupId, suggestion.id);
+      await this.store.removeSuggestion(groupId, suggestion.id);
       return;
     }
 
-    this.store.addSuggestion(groupId, suggestion.id);
+    await this.store.addSuggestion(groupId, suggestion.id);
+  }
+
+  onStartNewChat(): void {
+    this.store.startNewChat();
+    this.inputControl.setValue('');
   }
 
   onHeaderTitleClick(): void {

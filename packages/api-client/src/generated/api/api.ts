@@ -4,6 +4,8 @@ export * from "./auth.service";
 import { AuthService } from "./auth.service";
 export * from "./cards.service";
 import { CardsService } from "./cards.service";
+export * from "./collections.service";
+import { CollectionsService } from "./collections.service";
 export * from "./deck.service";
 import { DeckService } from "./deck.service";
 export * from "./decks.service";
@@ -18,6 +20,7 @@ export const APIS = [
   AIService,
   AuthService,
   CardsService,
+  CollectionsService,
   DeckService,
   DecksService,
   SpeakingService,
