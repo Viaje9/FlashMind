@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 
 const HOME_ENTRY_STORAGE_KEY = 'flashmind.home.lastEntry';
 
-type HomeEntryPath = '/decks' | '/speaking';
+type HomeEntryPath = '/decks' | '/speaking' | '/collections';
 
 interface HomeEntryPreference {
   date: string;
@@ -30,7 +30,11 @@ export class HomeEntryPreferenceService {
 
     try {
       const parsed = JSON.parse(raw) as Partial<HomeEntryPreference>;
-      if (parsed.path === '/decks' || parsed.path === '/speaking') {
+      if (
+        parsed.path === '/decks' ||
+        parsed.path === '/speaking' ||
+        parsed.path === '/collections'
+      ) {
         return parsed.path;
       }
       return null;

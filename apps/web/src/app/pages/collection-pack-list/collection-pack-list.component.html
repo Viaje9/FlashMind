@@ -1,0 +1,90 @@
+<div class="relative min-h-screen pb-10">
+  <fm-page-header
+    title="收藏包"
+    subtitle="FlashMind"
+    [titleClickable]="true"
+    (titleClick)="onHeaderTitleClick()"
+    testId="collection-pack-header"
+  >
+    <fm-icon-button class="fm-header-left" variant="ghost" ariaLabel="返回首頁" routerLink="/home">
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </fm-icon-button>
+    <fm-icon-button
+      class="fm-header-right"
+      variant="primary"
+      ariaLabel="新增收藏"
+      routerLink="/collections/new"
+    >
+      <span class="material-symbols-outlined text-[22px]">add</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-4">
+    <section
+      class="rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm"
+      aria-label="收藏包摘要"
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h2 class="text-base font-bold leading-snug text-white">收藏你想再用的英文表達。</h2>
+          <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+            可以是一整句，也可以是搭配詞、片語或子句；句子底下會保留關聯語塊。
+          </p>
+        </div>
+        <a
+          class="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90"
+          routerLink="/collections/new"
+          data-testid="collection-add-entry"
+        >
+          新增收藏
+        </a>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <div class="rounded-xl border border-slate-700 bg-background-dark/70 p-3">
+          <strong class="block text-xl font-black text-white">{{ store.collectionCount() }}</strong>
+          <span class="mt-1 block text-xs font-bold text-slate-300">收藏項目</span>
+        </div>
+        <div class="rounded-xl border border-slate-700 bg-background-dark/70 p-3">
+          <strong class="block text-xl font-black text-white"
+            >{{ store.vocabularyCoverage() }}%</strong
+          >
+          <span class="mt-1 block text-xs font-bold text-slate-300">單字覆蓋率</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-3" aria-label="搜尋與分類">
+      <fm-search-input
+        [formControl]="searchControl"
+        placeholder="搜尋句子、語塊、中文或來源單字"
+        ariaLabel="搜尋收藏"
+        testId="collection-search"
+      ></fm-search-input>
+
+      <app-collection-filter-tabs
+        [activeFilter]="activeFilter()"
+        (filterChange)="onFilterChange($event)"
+      ></app-collection-filter-tabs>
+    </section>
+
+    <section class="space-y-3" aria-label="收藏列表">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-white">收藏列表</h2>
+        <span class="text-xs font-bold text-slate-300" data-testid="collection-visible-count">
+          {{ visibleItems().length }} 個項目
+        </span>
+      </div>
+
+      @for (item of visibleItems(); track item.id) {
+        <app-collection-item-card [item]="item"></app-collection-item-card>
+      } @empty {
+        <fm-empty-state
+          icon="inventory_2"
+          title="沒有符合的收藏"
+          description="換個分類或搜尋字詞試試。"
+        ></fm-empty-state>
+      }
+    </section>
+  </main>
+</div>

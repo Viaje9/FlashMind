@@ -49,6 +49,22 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'collections/new',
+    loadComponent: () =>
+      import('./pages/collection-pack-new/collection-pack-new.component').then(
+        (module) => module.CollectionPackNewComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'collections',
+    loadComponent: () =>
+      import('./pages/collection-pack-list/collection-pack-list.component').then(
+        (module) => module.CollectionPackListComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'speaking',
     loadComponent: () =>
       import('./pages/speaking/speaking.component').then((module) => module.SpeakingComponent),
