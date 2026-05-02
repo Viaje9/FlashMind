@@ -3,6 +3,9 @@ import { COLLECTION_KIND_LABEL, type CollectionSuggestion } from './collection-p
 
 @Component({
   selector: 'app-collection-suggestion-card',
+  host: {
+    class: 'block',
+  },
   template: `
     <article
       class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm"
