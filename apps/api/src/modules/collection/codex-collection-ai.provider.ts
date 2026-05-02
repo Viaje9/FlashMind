@@ -19,8 +19,18 @@ import {
 import { CollectionToolService } from './collection-tool.service';
 import { CollectionItemKindDto, CollectionRelationTypeDto } from './dto';
 
-const DEFAULT_MODEL = 'gpt-5.2';
+const DEFAULT_MODEL = 'gpt-5.5';
+const DEFAULT_MODEL_REASONING_EFFORT = 'low';
 const DEFAULT_TIMEOUT_MS = 45_000;
+const MODEL_REASONING_EFFORTS = [
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+] as const;
+
+type ModelReasoningEffort = (typeof MODEL_REASONING_EFFORTS)[number];
 
 type CodexThreadOptions = ReturnType<
   CodexCollectionAiProvider['createThreadOptions']
@@ -129,6 +139,7 @@ const COLLECTION_AGENT_OUTPUT_SCHEMA = {
 export class CodexCollectionAiProvider extends CollectionAiProvider {
   private codex: CodexClient | null = null;
   private readonly model: string;
+  private readonly modelReasoningEffort: ModelReasoningEffort;
   private readonly timeoutMs: number;
 
   constructor(
@@ -138,6 +149,9 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     super();
     this.model =
       configService.get<string>('COLLECTION_CODEX_MODEL') ?? DEFAULT_MODEL;
+    this.modelReasoningEffort = this.parseModelReasoningEffort(
+      configService.get<string>('COLLECTION_CODEX_REASONING_EFFORT'),
+    );
     this.timeoutMs =
       Number(configService.get<string>('COLLECTION_CODEX_TIMEOUT_MS')) ||
       DEFAULT_TIMEOUT_MS;
@@ -197,13 +211,26 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
   private createThreadOptions() {
     return {
       model: this.model,
-      modelReasoningEffort: 'medium' as const,
+      modelReasoningEffort: this.modelReasoningEffort,
       sandboxMode: 'read-only' as const,
       approvalPolicy: 'never' as const,
       networkAccessEnabled: false,
       skipGitRepoCheck: true,
       workingDirectory: process.cwd(),
     };
+  }
+
+  private parseModelReasoningEffort(
+    value: string | undefined,
+  ): ModelReasoningEffort {
+    if (
+      value &&
+      MODEL_REASONING_EFFORTS.includes(value as ModelReasoningEffort)
+    ) {
+      return value as ModelReasoningEffort;
+    }
+
+    return DEFAULT_MODEL_REASONING_EFFORT;
   }
 
   private async getCodex(): Promise<CodexClient> {

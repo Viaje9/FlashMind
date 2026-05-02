@@ -20,6 +20,23 @@ describe('CodexCollectionAiProvider', () => {
     );
   }
 
+  function createProviderWithConfig(config: Record<string, string>) {
+    const tools = {
+      getUserVocabularySummary: jest.fn(),
+      searchUserCards: jest.fn(),
+      searchCollectionItems: jest.fn(),
+      normalizeText: (text: string) => text.trim().toLowerCase(),
+      findCollectionItemsByText: jest.fn(),
+    };
+
+    return new CodexCollectionAiProvider(
+      tools as any,
+      {
+        get: jest.fn((key: string) => config[key]),
+      } as unknown as ConfigService,
+    );
+  }
+
   function buildPrompt(message: string) {
     const provider = createProvider();
 
@@ -63,6 +80,31 @@ describe('CodexCollectionAiProvider', () => {
       '本輪意圖判斷：使用者只貼一句中文或英文，沒有其他明確意圖，請使用 analyze_sentence',
     );
     expect(prompt).toContain('裸句子不能判成 translate_only');
+  });
+
+  it('預設應使用 gpt-5.5 與 low reasoning effort', () => {
+    const provider = createProvider();
+
+    expect((provider as any).createThreadOptions()).toEqual(
+      expect.objectContaining({
+        model: 'gpt-5.5',
+        modelReasoningEffort: 'low',
+      }),
+    );
+  });
+
+  it('可用環境設定覆蓋模型與 reasoning effort', () => {
+    const provider = createProviderWithConfig({
+      COLLECTION_CODEX_MODEL: 'gpt-5.4-mini',
+      COLLECTION_CODEX_REASONING_EFFORT: 'minimal',
+    });
+
+    expect((provider as any).createThreadOptions()).toEqual(
+      expect.objectContaining({
+        model: 'gpt-5.4-mini',
+        modelReasoningEffort: 'minimal',
+      }),
+    );
   });
 
   it('prompt 應明確要求把有主詞與動詞的 because/although 片段拆成子句', () => {
