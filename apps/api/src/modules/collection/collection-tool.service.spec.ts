@@ -61,6 +61,61 @@ describe('CollectionToolService', () => {
     );
   });
 
+  it('搜尋中文句子時會用中文片段比對單字卡意思', async () => {
+    const { prisma, service } = createService();
+    prisma.card.findMany.mockResolvedValue([]);
+
+    await service.searchUserCards('user-1', '我想比較價格並找到好優惠', 5);
+
+    expect(prisma.card.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          deck: { userId: 'user-1' },
+          OR: expect.arrayContaining([
+            {
+              meanings: {
+                some: {
+                  zhMeaning: { contains: '價格', mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              meanings: {
+                some: {
+                  zhMeaning: { contains: '優惠', mode: 'insensitive' },
+                },
+              },
+            },
+          ]),
+        }),
+        take: 5,
+      }),
+    );
+  });
+
+  it('可依候選語塊文字找出已存在的單字卡並支援複數還原', async () => {
+    const { prisma, service } = createService();
+    prisma.card.findMany.mockResolvedValue([]);
+
+    await service.findUserCardsByCandidateTexts('user-1', [
+      'compare prices',
+      'find a good deal',
+    ]);
+
+    expect(prisma.card.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          deck: { userId: 'user-1' },
+          OR: expect.arrayContaining([
+            { front: { equals: 'compare', mode: 'insensitive' } },
+            { front: { equals: 'price', mode: 'insensitive' } },
+            { front: { equals: 'deal', mode: 'insensitive' } },
+          ]),
+        },
+      }),
+    );
+  });
+
   it('搜尋收藏時會限制使用者並比對英文與中文', async () => {
     const { prisma, service } = createService();
     prisma.collectionItem.findMany.mockResolvedValue([]);

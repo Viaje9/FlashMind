@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
   CollectionsService,
@@ -16,10 +17,12 @@ import {
   type CollectionItemKind,
   type CollectionSuggestion,
 } from './collection-pack.domain';
+import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
 
 @Injectable({ providedIn: 'root' })
 export class CollectionPackStore {
   private readonly collectionsApi = inject(CollectionsService);
+  private readonly skipLoadingContext = new HttpContext().set(SKIP_LOADING, true);
   private readonly chatSessionId = signal<string | null>(null);
 
   readonly items = signal<CollectionItem[]>([]);
@@ -57,33 +60,39 @@ export class CollectionPackStore {
 
     this.chatLoading.set(true);
     this.errorMessage.set(null);
+    const groupId = `pending-${Date.now()}`;
+    this.chatGroups.update((groups) => [
+      ...groups,
+      {
+        id: groupId,
+        userText: normalized,
+        suggestions: [],
+      },
+    ]);
 
     try {
       const sessionId = await this.ensureChatSession();
       const response = await firstValueFrom(
-        this.collectionsApi.createCollectionChatMessage(sessionId, {
-          message: normalized,
-        }),
+        this.collectionsApi.createCollectionChatMessage(
+          sessionId,
+          {
+            message: normalized,
+          },
+          'body',
+          false,
+          { context: this.skipLoadingContext },
+        ),
       );
-      this.chatGroups.update((groups) => [
-        ...groups,
-        {
-          id: `${response.data.sessionId}-${groups.length + 1}`,
-          userText: response.data.userMessage,
-          assistantText: response.data.assistantMessage,
-          suggestions: this.mapSuggestions(response.data.candidates),
-        },
-      ]);
+      this.patchChatGroup(groupId, {
+        userText: response.data.userMessage,
+        assistantText: response.data.assistantMessage,
+        suggestions: this.mapSuggestions(response.data.candidates),
+      });
     } catch {
-      this.chatGroups.update((groups) => [
-        ...groups,
-        {
-          id: `failed-${Date.now()}`,
-          userText: normalized,
-          assistantText: 'AI 暫時無法回覆，稍後再試一次。',
-          suggestions: [],
-        },
-      ]);
+      this.patchChatGroup(groupId, {
+        assistantText: 'AI 暫時無法回覆，稍後再試一次。',
+        suggestions: [],
+      });
       this.errorMessage.set('AI 回覆失敗，請稍後再試。');
     } finally {
       this.chatLoading.set(false);
@@ -137,7 +146,11 @@ export class CollectionPackStore {
     const existingSessionId = this.chatSessionId();
     if (existingSessionId) return existingSessionId;
 
-    const response = await firstValueFrom(this.collectionsApi.createCollectionChatSession());
+    const response = await firstValueFrom(
+      this.collectionsApi.createCollectionChatSession('body', false, {
+        context: this.skipLoadingContext,
+      }),
+    );
     this.chatSessionId.set(response.data.id);
 
     return response.data.id;
@@ -153,6 +166,12 @@ export class CollectionPackStore {
     return this.chatGroups()
       .find((group) => group.id === groupId)
       ?.suggestions.find((suggestion) => suggestion.id === suggestionId);
+  }
+
+  private patchChatGroup(groupId: string, patch: Partial<CollectionChatGroup>): void {
+    this.chatGroups.update((groups) =>
+      groups.map((group) => (group.id === groupId ? { ...group, ...patch } : group)),
+    );
   }
 
   private patchSuggestion(
@@ -215,17 +234,37 @@ export class CollectionPackStore {
   private mapSuggestions(suggestions: ApiCollectionSuggestion[]): CollectionSuggestion[] {
     const visibleSuggestions: CollectionSuggestion[] = [];
     const seen = new Set<string>();
+    const sourceCardById = new Map(
+      suggestions.flatMap((suggestion) =>
+        (suggestion.sourceCards ?? []).map(
+          (card) =>
+            [
+              card.id,
+              {
+                id: card.id,
+                word: card.text,
+                meaning: card.meaning,
+              },
+            ] as const,
+        ),
+      ),
+    );
 
     for (const suggestion of suggestions) {
       const mappedSuggestion = this.mapSuggestion(suggestion);
       this.pushUniqueSuggestion(visibleSuggestions, seen, mappedSuggestion);
 
       for (const [index, relatedCandidate] of (suggestion.relatedCandidates ?? []).entries()) {
+        const sourceCards = (relatedCandidate.sourceCardIds ?? [])
+          .map((cardId) => sourceCardById.get(cardId))
+          .filter((card): card is NonNullable<typeof card> => Boolean(card));
         this.pushUniqueSuggestion(visibleSuggestions, seen, {
           id: `${suggestion.id}-related-${index}`,
           kind: relatedCandidate.kind as Exclude<CollectionItemKind, 'sentence'>,
           text: relatedCandidate.text,
           meaning: relatedCandidate.meaning ?? '',
+          sourceWord: sourceCards[0]?.word,
+          sourceCards,
           sourceCardIds: relatedCandidate.sourceCardIds,
           existing: false,
           added: false,
@@ -256,7 +295,7 @@ export class CollectionPackStore {
       kind: suggestion.kind as CollectionItemKind,
       text: suggestion.text,
       meaning: suggestion.meaning,
-      sourceWord: suggestion.sourceWord ?? undefined,
+      sourceWord: suggestion.sourceWord ?? suggestion.sourceCards?.[0]?.text ?? undefined,
       sourceCards: suggestion.sourceCards?.map((card) => ({
         id: card.id,
         word: card.text,

@@ -62,7 +62,7 @@ export interface CollectionSuggestion {
 export interface CollectionChatGroup {
   id: string;
   userText: string;
-  assistantText: string;
+  assistantText?: string;
   suggestions: CollectionSuggestion[];
 }
 

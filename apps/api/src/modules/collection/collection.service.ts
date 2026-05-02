@@ -300,6 +300,17 @@ export class CollectionService {
     sessionId: string,
     candidates: CollectionAiCandidate[],
   ) {
+    const candidateTexts = candidates.flatMap((candidate) => [
+      candidate.text,
+      ...(candidate.relatedCandidates ?? []).map(
+        (relatedCandidate) => relatedCandidate.text,
+      ),
+    ]);
+    const matchedCards = await this.tools.findUserCardsByCandidateTexts(
+      userId,
+      candidateTexts,
+    );
+    const matchedCardIds = matchedCards.map((card) => card.id);
     const sourceCardIds = [
       ...new Set(
         candidates.flatMap((candidate) => [
@@ -310,10 +321,11 @@ export class CollectionService {
         ]),
       ),
     ];
-    const cards = sourceCardIds.length
+    const cardsToFetch = [...new Set([...sourceCardIds, ...matchedCardIds])];
+    const explicitCards = cardsToFetch.length
       ? await this.prisma.card.findMany({
           where: {
-            id: { in: sourceCardIds },
+            id: { in: cardsToFetch },
             deck: { userId },
           },
           include: {
@@ -324,11 +336,41 @@ export class CollectionService {
           },
         })
       : [];
-    const cardById = new Map(cards.map((card) => [card.id, card]));
+    const cardById = new Map(
+      [...matchedCards, ...explicitCards].map((card) => [card.id, card]),
+    );
+    const availableCards = [...cardById.values()];
 
     return candidates
       .map((candidate, index) => {
-        const sourceCards = (candidate.sourceCardIds ?? [])
+        const relatedCandidates = (candidate.relatedCandidates ?? []).map(
+          (relatedCandidate) => {
+            const relatedSourceCardIds = this.mergeCardIds(
+              relatedCandidate.sourceCardIds ?? [],
+              this.findMatchedCardIds(relatedCandidate.text, availableCards),
+            );
+
+            return {
+              type: relatedCandidate.type,
+              kind: relatedCandidate.kind,
+              text: relatedCandidate.text,
+              meaning: relatedCandidate.meaning,
+              sourceCardIds: relatedSourceCardIds.filter((cardId) =>
+                cardById.has(cardId),
+              ),
+            };
+          },
+        );
+        const candidateSourceCardIds = this.mergeCardIds(
+          candidate.sourceCardIds ?? [],
+          this.findMatchedCardIds(candidate.text, availableCards),
+          candidate.kind === CollectionItemKindDto.SENTENCE
+            ? relatedCandidates.flatMap(
+                (relatedCandidate) => relatedCandidate.sourceCardIds,
+              )
+            : [],
+        );
+        const sourceCards = candidateSourceCardIds
           .map((cardId) => cardById.get(cardId))
           .filter((card): card is NonNullable<typeof card> => Boolean(card))
           .map((card) => ({
@@ -336,17 +378,6 @@ export class CollectionService {
             text: card.front,
             meaning: card.meanings[0]?.zhMeaning ?? null,
           }));
-        const relatedCandidates = (candidate.relatedCandidates ?? []).map(
-          (relatedCandidate) => ({
-            type: relatedCandidate.type,
-            kind: relatedCandidate.kind,
-            text: relatedCandidate.text,
-            meaning: relatedCandidate.meaning,
-            sourceCardIds: (relatedCandidate.sourceCardIds ?? []).filter(
-              (cardId) => cardById.has(cardId),
-            ),
-          }),
-        );
 
         return {
           id: `${sessionId}-${Date.now()}-${index}`,
@@ -366,6 +397,35 @@ export class CollectionService {
           candidate.kind === CollectionItemKindDto.SENTENCE ||
           candidate.sourceCards.length > 0,
       );
+  }
+
+  private mergeCardIds(...groups: string[][]): string[] {
+    return [...new Set(groups.flat().filter((cardId) => cardId.length > 0))];
+  }
+
+  private findMatchedCardIds(
+    text: string,
+    cards: Array<{ id: string; front: string }>,
+  ): string[] {
+    const normalizedText = this.tools.normalizeText(text);
+
+    return cards
+      .filter((card) => {
+        const normalizedFront = this.tools.normalizeText(card.front);
+        if (!normalizedFront) return false;
+        if (normalizedFront.includes(' ')) {
+          return normalizedText.includes(normalizedFront);
+        }
+
+        return new RegExp(`\\b${this.escapeRegExp(normalizedFront)}s?\\b`).test(
+          normalizedText,
+        );
+      })
+      .map((card) => card.id);
+  }
+
+  private escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   private async upsertItem(

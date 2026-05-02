@@ -52,29 +52,57 @@
           </div>
         </div>
 
-        <div class="flex justify-start">
-          <div
-            class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 text-sm font-bold leading-relaxed text-slate-200"
-          >
-            {{ group.assistantText }}
+        @if (group.assistantText) {
+          <div class="flex justify-start">
+            <div
+              class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 text-sm font-bold leading-relaxed text-slate-200"
+            >
+              {{ group.assistantText }}
+            </div>
           </div>
-        </div>
+        }
 
-        <div class="space-y-3 scroll-mb-44">
-          @for (suggestion of group.suggestions; track suggestion.id) {
-            <app-collection-suggestion-card
-              [suggestion]="suggestion"
-              (suggestionToggle)="onToggleSuggestion(group.id, $event)"
-            ></app-collection-suggestion-card>
-          }
-        </div>
+        @if (group.suggestions.length > 0) {
+          <div class="space-y-3 scroll-mb-44">
+            @for (suggestion of group.suggestions; track suggestion.id) {
+              <app-collection-suggestion-card
+                [suggestion]="suggestion"
+                (suggestionToggle)="onToggleSuggestion(group.id, $event)"
+              ></app-collection-suggestion-card>
+            }
+          </div>
+        }
       }
       @if (store.chatLoading()) {
-        <div class="flex justify-start">
+        <div
+          class="flex justify-start"
+          aria-live="polite"
+          data-testid="collection-chat-loading-message"
+        >
           <div
-            class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 text-sm font-bold leading-relaxed text-slate-300"
+            class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 shadow-sm"
           >
-            AI 正在整理可收藏的表達...
+            <div class="flex items-center gap-3">
+              <span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary/15">
+                <span class="material-symbols-outlined text-[18px] text-primary">
+                  auto_awesome
+                </span>
+              </span>
+              <div class="min-w-0">
+                <p class="text-sm font-bold leading-relaxed text-slate-200">
+                  AI 正在整理可收藏的表達
+                </p>
+                <div class="mt-2 flex items-center gap-1.5" aria-hidden="true">
+                  <span class="size-1.5 animate-pulse rounded-full bg-primary"></span>
+                  <span
+                    class="size-1.5 animate-pulse rounded-full bg-primary [animation-delay:120ms]"
+                  ></span>
+                  <span
+                    class="size-1.5 animate-pulse rounded-full bg-primary [animation-delay:240ms]"
+                  ></span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       }

@@ -35,8 +35,21 @@ export class CollectionPackNewComponent {
     const value = this.inputValue().trim();
     if (!value) return;
 
-    await this.store.sendChatMessage(value);
+    const sendMessage = this.store.sendChatMessage(value);
     this.inputControl.setValue('');
+    setTimeout(() => this.scrollChatBottom());
+    await sendMessage;
+    this.scrollToLastSuggestion();
+  }
+
+  private scrollChatBottom(): void {
+    const bottom = document.querySelector('[data-collection-chat-bottom]');
+    if (bottom instanceof HTMLElement && typeof bottom.scrollIntoView === 'function') {
+      bottom.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }
+  }
+
+  private scrollToLastSuggestion(): void {
     setTimeout(() => {
       const suggestions = document.querySelectorAll('app-collection-suggestion-card');
       const lastSuggestion = suggestions.item(suggestions.length - 1);

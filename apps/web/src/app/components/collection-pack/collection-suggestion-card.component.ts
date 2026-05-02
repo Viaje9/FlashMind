@@ -37,7 +37,15 @@ import { COLLECTION_KIND_LABEL, type CollectionSuggestion } from './collection-p
               將新增
             </span>
           }
-          @if (suggestion().sourceWord) {
+          @if ((suggestion().sourceCards?.length ?? 0) > 0) {
+            @for (sourceCard of suggestion().sourceCards; track sourceCard.id) {
+              <span
+                class="rounded-full bg-slate-700/70 px-2.5 py-1 text-xs font-bold text-slate-300"
+              >
+                {{ sourceCard.word }}
+              </span>
+            }
+          } @else if (suggestion().sourceWord) {
             <span class="rounded-full bg-slate-700/70 px-2.5 py-1 text-xs font-bold text-slate-300">
               {{ suggestion().sourceWord }}
             </span>

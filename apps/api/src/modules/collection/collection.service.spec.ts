@@ -83,12 +83,14 @@ describe('CollectionService', () => {
           .replace(/\s+/g, ' ')
           .trim()
           .toLowerCase(),
+      findUserCardsByCandidateTexts: jest.fn().mockResolvedValue([]),
     };
 
     return {
       tx,
       prisma,
       aiProvider,
+      tools,
       service: new CollectionService(
         prisma as any,
         aiProvider as any,
@@ -280,7 +282,95 @@ describe('CollectionService', () => {
             kind: CollectionItemKindDto.PHRASE,
             text: 'after falling behind schedule',
             meaning: '在進度落後之後',
-            sourceCardIds: [],
+            sourceCardIds: ['card-schedule'],
+          },
+        ],
+      }),
+    );
+  });
+
+  it('聊天候選缺少 sourceCardIds 時會依候選文字自動連結既有單字卡', async () => {
+    const { service, prisma, aiProvider, tools } = createService();
+    prisma.collectionChatSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      providerThreadId: 'thread-1',
+    });
+    tools.findUserCardsByCandidateTexts.mockResolvedValue([
+      {
+        id: 'card-price',
+        front: 'price',
+        meanings: [{ zhMeaning: '價格' }],
+      },
+    ]);
+    prisma.card.findMany.mockResolvedValue([]);
+    aiProvider.runChat.mockResolvedValue({
+      providerThreadId: 'thread-1',
+      intent: CollectionChatIntent.ANALYZE_SENTENCE,
+      message: '可以收藏整句，也能拆出 compare prices。',
+      candidates: [
+        {
+          kind: CollectionItemKindDto.SENTENCE,
+          text: 'I want to compare prices and find a good deal before I buy.',
+          meaning: '我想比較價格並在購買前找到好優惠。',
+          sourceCardIds: [],
+          relatedCandidates: [
+            {
+              type: CollectionRelationTypeDto.SENTENCE_HAS_COLLOCATION,
+              kind: CollectionItemKindDto.COLLOCATION,
+              text: 'compare prices',
+              meaning: '比較價格',
+              sourceCardIds: [],
+            },
+          ],
+        },
+        {
+          kind: CollectionItemKindDto.COLLOCATION,
+          text: 'compare prices',
+          meaning: '比較價格',
+          sourceCardIds: [],
+        },
+      ],
+      suggestedCards: [],
+    });
+
+    const result = await service.createChatMessage('user-1', 'session-1', {
+      message: '我想比較價格並找到好優惠',
+    });
+
+    expect(tools.findUserCardsByCandidateTexts).toHaveBeenCalledWith('user-1', [
+      'I want to compare prices and find a good deal before I buy.',
+      'compare prices',
+      'compare prices',
+    ]);
+    expect(result.data.candidates).toHaveLength(2);
+    expect(result.data.candidates[0]).toEqual(
+      expect.objectContaining({
+        kind: CollectionItemKindDto.SENTENCE,
+        sourceCards: [
+          {
+            id: 'card-price',
+            text: 'price',
+            meaning: '價格',
+          },
+        ],
+        relatedCandidates: [
+          expect.objectContaining({
+            text: 'compare prices',
+            sourceCardIds: ['card-price'],
+          }),
+        ],
+      }),
+    );
+    expect(result.data.candidates[1]).toEqual(
+      expect.objectContaining({
+        kind: CollectionItemKindDto.COLLOCATION,
+        text: 'compare prices',
+        sourceCards: [
+          {
+            id: 'card-price',
+            text: 'price',
+            meaning: '價格',
           },
         ],
       }),
