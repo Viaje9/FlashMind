@@ -283,6 +283,7 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     return [
       '你是 FlashMind 收藏包的英文學習助理。',
       '你的任務是依使用者意圖回覆，並在適合時提出可收藏的句子、搭配詞、片語、子句候選。message 請簡短，不要把 candidates 逐字重複列成清單。',
+      '純聊天偏好延續規則：如果同一個 Codex thread 歷史中，使用者曾要求「純聊天、不要卡片、不要收藏候選、不要回傳任何卡片」，後續每一輪都必須維持 candidates 與 suggestedCards 為空陣列，只用 message 自然聊天或回答問題。這個偏好會持續到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」才解除。',
       '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。頂層語塊候選必須盡量錨定至少一張既有單字卡；若沒有可錨定的既有單字卡，可以只回句子候選並在 message 提醒建議新增的單字。',
       '分類定義：',
       '- sentence：完整英文句子，通常有主詞與主要動詞，可獨立表達完整意思。',
@@ -301,6 +302,7 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
       '句子拆解範例：Although the deadline is tight, we can still finish the project. 的 relatedCandidates 至少應包含 tight deadline（collocation，緊迫期限）與 Although the deadline is tight（clause，雖然期限很緊）。',
       'relation type 規則：sentence -> collocation 用 sentence_has_collocation；sentence -> phrase 用 sentence_has_phrase；sentence -> clause 用 sentence_has_clause；phrase -> collocation 用 phrase_has_collocation；clause -> collocation 用 clause_has_collocation。',
       'translate_only 僅限使用者明確要求「只翻譯 / 單純翻譯 / translate only / 不要收藏候選」時使用，candidates 必須是空陣列。',
+      '口說練習情境規則：如果使用者要求練習口說情境、roleplay、對話主題，或用「第一個、開始、換旅遊、再難一點、簡單一點」延續上一輪情境，message 只回情境任務或下一句角色扮演提示；candidates 與 suggestedCards 必須為空陣列。只有當使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容」時才產生候選。',
       '如果使用者只貼一句中文或英文，沒有明確要求只翻譯，裸句子不能判成 translate_only；必須用 analyze_sentence，至少提供一個 sentence 候選，並在 relatedCandidates 放可拆出的高品質語塊。',
       '輸出必須符合 JSON schema，不要輸出 schema 以外欄位。',
       intentPolicy,
@@ -318,6 +320,10 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
   private buildIntentPolicy(input: CollectionAiChatInput) {
     if (this.isExplicitTranslateOnlyRequest(input)) {
       return '本輪意圖判斷：使用者明確要求單純翻譯，請使用 translate_only，且 candidates 必須為空陣列。';
+    }
+
+    if (this.isPureChatPreferenceRequest(input)) {
+      return '本輪意圖判斷：使用者要求純聊天或不要回傳卡片，請使用 explain_usage，且 candidates 和 suggestedCards 必須為空陣列。請在 message 確認接下來會維持純聊天，直到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」。';
     }
 
     if (
@@ -347,6 +353,10 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
       return '本輪意圖判斷：使用者想搜尋既有收藏，請使用 find_existing，優先根據既有收藏搜尋結果回覆；不要為了湊數硬產新候選。';
     }
 
+    if (this.isSpeakingPracticeScenarioRequest(input)) {
+      return '本輪意圖判斷：使用者想取得口說練習情境或延續 roleplay 任務，請使用 suggest_candidates，但 candidates 和 suggestedCards 必須為空陣列。message 請提供 2 到 4 個口說情境、任務說明或下一句角色扮演提示；若是「第一個 / 開始 / 再難一點 / 換旅遊」等延續指令，請根據同一個 session 上下文延續。除非使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容」，否則不要產生收藏候選。';
+    }
+
     if (
       this.matchesIntent(
         input,
@@ -359,13 +369,53 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     return '本輪意圖判斷：使用者只貼一句中文或英文，沒有其他明確意圖，請使用 analyze_sentence。裸句子不能判成 translate_only，請產生可收藏候選。';
   }
 
+  private isPureChatPreferenceRequest(input: CollectionAiChatInput) {
+    const analyzeSentenceIntent: string = CollectionChatIntent.ANALYZE_SENTENCE;
+
+    if (input.intentHint && input.intentHint !== analyzeSentenceIntent) {
+      return false;
+    }
+
+    return /純聊天|單純聊天|只聊天|不要卡片|不用卡片|不要回傳.*卡片|不要.*收藏候選|不用.*收藏候選|不要.*candidates|no cards|no candidates|chat only|just chat/i.test(
+      input.message,
+    );
+  }
+
   private isExplicitTranslateOnlyRequest(input: CollectionAiChatInput) {
     if (input.intentHint === CollectionChatIntent.TRANSLATE_ONLY) {
       return true;
     }
 
-    return /只要?翻譯|單純翻譯|純翻譯|不要收藏|不用收藏|translate only|translation only/i.test(
+    return /只要?翻譯|單純翻譯|純翻譯|translate only|translation only|翻譯.*(不要|不用).*收藏|翻譯.*(不要|不用).*候選|(不要|不用).*收藏.*翻譯|(不要|不用).*候選.*翻譯/i.test(
       input.message,
+    );
+  }
+
+  private isSpeakingPracticeScenarioRequest(input: CollectionAiChatInput) {
+    const analyzeSentenceIntent: string = CollectionChatIntent.ANALYZE_SENTENCE;
+
+    if (input.intentHint && input.intentHint !== analyzeSentenceIntent) {
+      return false;
+    }
+
+    const message = input.message.trim();
+    if (this.hasCandidateRequest(message)) {
+      return false;
+    }
+
+    return (
+      /口說|口語|開口|speaking|roleplay|role-play|角色扮演|情境|場景|任務|聊天主題|對話主題|conversation topic|practice scenario|scenario|練習.*對話|對話.*練習|練習.*英文|練習.*說英文/i.test(
+        message,
+      ) ||
+      /^(好|好啊|可以|開始|開始吧|選第一個|第一個|第二個|第三個|換一個|再一個|再難一點|簡單一點|換旅遊|不要職場|換成旅遊|換成工作|加入.*情境|讓我.*道歉)[。！!？?\s]*$/i.test(
+        message,
+      )
+    );
+  }
+
+  private hasCandidateRequest(message: string) {
+    return /收藏|語塊|搭配詞|片語|子句|怎麼說|如何說|幫我說|我想說|可以怎麼表達|拆|拆解|整理.*收藏|翻譯|修正|改正|糾正|更自然|這句對嗎|文法|translate|correct|fix|grammar|candidate/i.test(
+      message,
     );
   }
 

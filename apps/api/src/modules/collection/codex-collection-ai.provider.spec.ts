@@ -137,4 +137,36 @@ describe('CodexCollectionAiProvider', () => {
 
     expect(prompt).toContain(`請使用 ${expectedIntent}`);
   });
+
+  it.each([
+    '可以幫我想個練習口說的情境嗎',
+    '給我三個 roleplay 任務',
+    '選第一個',
+    '再難一點',
+    '換旅遊',
+  ])('口說情境或 roleplay 延續指令不應產生收藏候選：%s', (message) => {
+    const prompt = buildPrompt(message);
+
+    expect(prompt).toContain('使用者想取得口說練習情境或延續 roleplay 任務');
+    expect(prompt).toContain('candidates 和 suggestedCards 必須為空陣列');
+  });
+
+  it('口說情境中明確要求怎麼說時仍應產生可收藏候選', () => {
+    const prompt = buildPrompt('在剛剛的口說情境裡，我想說「我需要延後會議」');
+
+    expect(prompt).toContain('使用者想取得可收藏表達');
+    expect(prompt).toContain('請使用 suggest_candidates');
+  });
+
+  it.each([
+    '接下來不要回傳任何卡片，純聊天就好',
+    '先不要給我收藏候選，只聊天',
+    'chat only, no cards',
+  ])('純聊天偏好指令應要求後續不產生收藏候選：%s', (message) => {
+    const prompt = buildPrompt(message);
+
+    expect(prompt).toContain('純聊天偏好延續規則');
+    expect(prompt).toContain('使用者要求純聊天或不要回傳卡片');
+    expect(prompt).toContain('candidates 和 suggestedCards 必須為空陣列');
+  });
 });
