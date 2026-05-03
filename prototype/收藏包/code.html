@@ -736,6 +736,278 @@
         font-size: 0.68rem;
       }
 
+      .vocab-suggestion-list {
+        display: grid;
+        gap: 0.58rem;
+        margin: 0.18rem 0 0.35rem;
+        scroll-margin-bottom: 11rem;
+      }
+
+      .suggestion-section-title {
+        margin: 0.45rem 0 0.2rem;
+        color: var(--secondary-text);
+        font-size: 0.74rem;
+        font-weight: 950;
+      }
+
+      .vocab-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.7rem;
+        align-items: center;
+        border: 1px solid color-mix(in srgb, var(--amber) 30%, var(--line));
+        border-radius: 1rem;
+        background: linear-gradient(
+          180deg,
+          rgb(50 43 28 / 0.92),
+          rgb(34 43 41 / 0.95)
+        );
+        padding: 0.78rem;
+        box-shadow: 0 10px 24px rgb(0 0 0 / 0.12);
+      }
+
+      .vocab-card strong {
+        display: block;
+        color: var(--ink);
+        font-size: 0.98rem;
+        font-weight: 950;
+        line-height: 1.3;
+      }
+
+      .vocab-card p {
+        margin: 0.18rem 0 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 760;
+        line-height: 1.45;
+      }
+
+      .vocab-card.added {
+        border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+        background: var(--green-soft);
+      }
+
+      .vocab-card.added .add-vocab {
+        background: rgb(34 197 94 / 0.18);
+        color: var(--green);
+      }
+
+      .add-vocab {
+        display: grid;
+        width: 2.35rem;
+        height: 2.35rem;
+        place-items: center;
+        border-radius: 0.78rem;
+        background: var(--amber-soft);
+        color: #fde68a;
+        font-size: 1.25rem;
+        font-weight: 950;
+      }
+
+      .modal-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: grid;
+        place-items: end center;
+        padding: 1rem;
+        background: rgb(3 10 12 / 0.62);
+        backdrop-filter: blur(14px);
+      }
+
+      .modal-layer[hidden] {
+        display: none;
+      }
+
+      .modal-card {
+        width: min(398px, 100%);
+        max-height: calc(100dvh - 2rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border: 1px solid var(--line);
+        border-radius: 1.28rem;
+        background: var(--surface);
+        box-shadow: 0 24px 64px rgb(0 0 0 / 0.42);
+        padding: 1rem;
+      }
+
+      .modal-card.flashcard-card {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        width: min(450px, 100%);
+      }
+
+      .modal-card h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 1.02rem;
+        font-weight: 950;
+      }
+
+      .modal-card p {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 760;
+        line-height: 1.5;
+      }
+
+      .deck-options {
+        display: grid;
+        gap: 0.55rem;
+        margin-top: 0.9rem;
+      }
+
+      .deck-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-height: 3.2rem;
+        border: 1px solid var(--line);
+        border-radius: 0.95rem;
+        background: rgb(15 28 32 / 0.58);
+        padding: 0.7rem 0.82rem;
+        color: var(--ink);
+        text-align: left;
+      }
+
+      .deck-option strong {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 950;
+      }
+
+      .deck-option span {
+        color: var(--secondary-text);
+        font-size: 0.72rem;
+        font-weight: 800;
+      }
+
+      .deck-option.selected {
+        border-color: color-mix(in srgb, var(--primary) 66%, var(--line));
+        background: var(--blue-soft);
+      }
+
+      .deck-option.selected::after {
+        content: "✓";
+        color: var(--primary);
+        font-weight: 950;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 0.72rem;
+        margin-top: 0.9rem;
+      }
+
+      .flashcard-card .form-grid {
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 0.12rem;
+      }
+
+      .flashcard-tools {
+        display: flex;
+        justify-content: flex-start;
+      }
+
+      .ai-fill-btn,
+      .add-meaning-btn {
+        min-height: 2.3rem;
+        border: 1px solid var(--line);
+        border-radius: 0.78rem;
+        background: rgb(255 255 255 / 0.06);
+        padding: 0 0.8rem;
+        color: var(--primary);
+        font-size: 0.78rem;
+        font-weight: 950;
+      }
+
+      .meaning-list {
+        display: grid;
+        gap: 0.62rem;
+      }
+
+      .meaning-block {
+        display: grid;
+        gap: 0.62rem;
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: rgb(15 28 32 / 0.46);
+        padding: 0.76rem;
+      }
+
+      .meaning-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .meaning-header strong {
+        color: var(--ink);
+        font-size: 0.82rem;
+        font-weight: 950;
+      }
+
+      .remove-meaning {
+        color: #fca5a5;
+        font-size: 0.72rem;
+        font-weight: 950;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.32rem;
+      }
+
+      .field label {
+        color: var(--secondary-text);
+        font-size: 0.72rem;
+        font-weight: 900;
+      }
+
+      .field input,
+      .field textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 0.82rem;
+        background: rgb(15 28 32 / 0.68);
+        color: var(--ink);
+        outline: 0;
+        padding: 0.72rem;
+        font-size: 0.88rem;
+        font-weight: 780;
+      }
+
+      .field textarea {
+        min-height: 5.6rem;
+        resize: vertical;
+        line-height: 1.5;
+      }
+
+      .meaning-block .field textarea {
+        min-height: 4.4rem;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.55rem;
+        margin-top: 0.95rem;
+      }
+
+      .secondary-btn {
+        min-height: 2.35rem;
+        border-radius: 0.78rem;
+        background: rgb(255 255 255 / 0.06);
+        padding: 0 0.88rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 950;
+      }
+
       .chat-composer {
         display: grid;
         gap: 0.55rem;
@@ -1160,9 +1432,11 @@
                 我不知道「我需要在餐廳訂滿之前先訂位」怎麼自然地說。
               </div>
               <div class="message ai">
-                可以這樣說。我也幫你拆出幾個可以收藏的表達，點加號就能加入待收藏清單。
+                可以這樣說。我也幫你拆出幾個可以收藏的表達；另外 restaurant 和
+                booked 還不在你的單字卡裡，可以先加入牌組。
               </div>
 
+              <p class="suggestion-section-title">可收藏表達</p>
               <section
                 class="suggestion-list"
                 id="suggestionList"
@@ -1234,6 +1508,62 @@
                   </button>
                 </article>
               </section>
+
+              <p class="suggestion-section-title">建議新增單字</p>
+              <section class="vocab-suggestion-list" aria-label="建議新增單字">
+                <article
+                  class="vocab-card"
+                  data-word="restaurant"
+                  data-meaning="餐廳"
+                  data-example="I need to make a reservation before the restaurant gets fully booked."
+                  data-zh-example="我需要在餐廳訂滿之前先訂位。"
+                >
+                  <div>
+                    <strong>restaurant</strong>
+                    <p>
+                      餐廳。這個字是句子裡的主要情境字，但目前找不到對應單字卡。
+                    </p>
+                    <div class="chunk-meta">
+                      <span class="pill source">建議單字</span>
+                      <span class="pill state-new">將新增</span>
+                    </div>
+                  </div>
+                  <button
+                    class="add-vocab"
+                    type="button"
+                    aria-label="新增 restaurant"
+                  >
+                    ＋
+                  </button>
+                </article>
+
+                <article
+                  class="vocab-card"
+                  data-word="booked"
+                  data-meaning="被訂滿的；已預訂的"
+                  data-example="The restaurant gets fully booked quickly."
+                  data-zh-example="這間餐廳很快就會被訂滿。"
+                >
+                  <div>
+                    <strong>booked</strong>
+                    <p>
+                      被訂滿的；已預訂的。可以連到 fully booked
+                      這個很常用的表達。
+                    </p>
+                    <div class="chunk-meta">
+                      <span class="pill source">建議單字</span>
+                      <span class="pill state-new">將新增</span>
+                    </div>
+                  </div>
+                  <button
+                    class="add-vocab"
+                    type="button"
+                    aria-label="新增 booked"
+                  >
+                    ＋
+                  </button>
+                </article>
+              </section>
             </section>
 
             <div class="chat-composer-wrap">
@@ -1254,6 +1584,75 @@
       </main>
     </div>
 
+    <div class="modal-layer" id="deckModal" hidden>
+      <section
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deckModalTitle"
+      >
+        <h3 id="deckModalTitle">加入到哪個牌組？</h3>
+        <p>這次選擇會記住，下次新增單字會自動預選同一個牌組。</p>
+        <div class="deck-options" id="deckOptions"></div>
+        <div class="modal-actions">
+          <button class="secondary-btn" type="button" id="cancelDeckModal">
+            取消
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="flashcardModal" hidden>
+      <section
+        class="modal-card flashcard-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="flashcardModalTitle"
+      >
+        <h3 id="flashcardModalTitle">新增快閃卡</h3>
+        <p id="flashcardDeckHint">加入到牌組</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="flashcardFront">正面</label>
+            <input id="flashcardFront" type="text" />
+          </div>
+          <div class="flashcard-tools">
+            <button class="ai-fill-btn" type="button">AI 生成詞義與例句</button>
+          </div>
+          <div class="meaning-list" id="meaningList">
+            <section class="meaning-block">
+              <div class="meaning-header">
+                <strong>詞義 1</strong>
+              </div>
+              <div class="field">
+                <label for="flashcardZhMeaning">中文解釋</label>
+                <input id="flashcardZhMeaning" type="text" />
+              </div>
+              <div class="field">
+                <label for="flashcardEnExample">英文例句</label>
+                <textarea id="flashcardEnExample"></textarea>
+              </div>
+              <div class="field">
+                <label for="flashcardZhExample">中文例句翻譯</label>
+                <textarea id="flashcardZhExample"></textarea>
+              </div>
+            </section>
+          </div>
+          <button class="add-meaning-btn" type="button" id="addMeaning">
+            ＋ 新增詞義
+          </button>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" type="button" id="cancelFlashcardModal">
+            取消
+          </button>
+          <button class="primary-btn" type="button" id="saveFlashcard">
+            新增
+          </button>
+        </div>
+      </section>
+    </div>
+
     <script>
       const tabs = Array.from(document.querySelectorAll(".tab"));
       let cards = Array.from(document.querySelectorAll(".chunk-card"));
@@ -1271,12 +1670,36 @@
       const sendMessage = document.querySelector("#sendMessage");
       const chatInput = document.querySelector("#chatInput");
       const chatThread = document.querySelector(".chat-thread");
+      const deckModal = document.querySelector("#deckModal");
+      const deckOptions = document.querySelector("#deckOptions");
+      const cancelDeckModal = document.querySelector("#cancelDeckModal");
+      const flashcardModal = document.querySelector("#flashcardModal");
+      const flashcardDeckHint = document.querySelector("#flashcardDeckHint");
+      const flashcardFront = document.querySelector("#flashcardFront");
+      const meaningList = document.querySelector("#meaningList");
+      const flashcardZhMeaning = document.querySelector("#flashcardZhMeaning");
+      const flashcardEnExample = document.querySelector("#flashcardEnExample");
+      const flashcardZhExample = document.querySelector("#flashcardZhExample");
+      const addMeaning = document.querySelector("#addMeaning");
+      const cancelFlashcardModal = document.querySelector(
+        "#cancelFlashcardModal",
+      );
+      const saveFlashcard = document.querySelector("#saveFlashcard");
+      const deckStorageKey = "flashmind.prototype.collection.selectedDeck";
+      const deckChoices = [
+        { id: "travel", name: "Travel English", meta: "旅行、飯店、餐廳" },
+        { id: "work", name: "Workplace English", meta: "會議、專案、時程" },
+        { id: "daily", name: "Daily Conversation", meta: "日常口說" },
+      ];
       const kindLabels = {
         collocation: "搭配詞",
         phrase: "片語",
         clause: "子句",
       };
       let activeFilter = "all";
+      let pendingVocabCard = null;
+      let selectedDeckId =
+        localStorage.getItem(deckStorageKey) || deckChoices[0].id;
 
       function escapeHtml(value) {
         return value
@@ -1500,6 +1923,152 @@
         bindSuggestion(card);
       }
 
+      function getDeck(deckId) {
+        return deckChoices.find((deck) => deck.id === deckId) ?? deckChoices[0];
+      }
+
+      function renderDeckOptions() {
+        deckOptions.innerHTML = "";
+
+        for (const deck of deckChoices) {
+          const option = document.createElement("button");
+          option.className = "deck-option";
+          option.type = "button";
+          option.classList.toggle("selected", deck.id === selectedDeckId);
+          option.innerHTML = `
+            <span>
+              <strong>${escapeHtml(deck.name)}</strong>
+              <span>${escapeHtml(deck.meta)}</span>
+            </span>
+          `;
+          option.addEventListener("click", () => {
+            selectedDeckId = deck.id;
+            localStorage.setItem(deckStorageKey, selectedDeckId);
+            closeDeckModal();
+            openFlashcardModal();
+          });
+          deckOptions.append(option);
+        }
+      }
+
+      function openDeckModal(card) {
+        pendingVocabCard = card;
+        renderDeckOptions();
+        deckModal.hidden = false;
+      }
+
+      function closeDeckModal() {
+        deckModal.hidden = true;
+      }
+
+      function resetMeaningBlocks() {
+        const extraBlocks = Array.from(
+          meaningList.querySelectorAll(".meaning-block"),
+        ).slice(1);
+
+        for (const block of extraBlocks) {
+          block.remove();
+        }
+      }
+
+      function openFlashcardModal() {
+        if (!pendingVocabCard) return;
+
+        const deck = getDeck(selectedDeckId);
+        const word = pendingVocabCard.dataset.word;
+        const meaning = pendingVocabCard.dataset.meaning;
+        const example = pendingVocabCard.dataset.example;
+        const zhExample = pendingVocabCard.dataset.zhExample || "";
+
+        resetMeaningBlocks();
+        flashcardDeckHint.textContent = `加入到「${deck.name}」`;
+        flashcardFront.value = word;
+        flashcardZhMeaning.value = meaning;
+        flashcardEnExample.value = example;
+        flashcardZhExample.value = zhExample;
+        flashcardModal.hidden = false;
+        flashcardFront.focus();
+      }
+
+      function closeFlashcardModal() {
+        flashcardModal.hidden = true;
+      }
+
+      function markVocabAdded() {
+        if (!pendingVocabCard) return;
+
+        const deck = getDeck(selectedDeckId);
+        const button = pendingVocabCard.querySelector(".add-vocab");
+        const state = pendingVocabCard.querySelector(".state-new");
+
+        pendingVocabCard.classList.add("added");
+        if (button) button.textContent = "✓";
+        if (state) state.textContent = `已加入 ${deck.name}`;
+        closeFlashcardModal();
+        pendingVocabCard = null;
+      }
+
+      function bindVocabSuggestion(card) {
+        const button = card.querySelector(".add-vocab");
+        if (!button) return;
+
+        button.addEventListener("click", () => {
+          if (card.classList.contains("added")) return;
+          openDeckModal(card);
+        });
+      }
+
+      for (const card of document.querySelectorAll(".vocab-card")) {
+        bindVocabSuggestion(card);
+      }
+
+      cancelDeckModal.addEventListener("click", () => {
+        closeDeckModal();
+        pendingVocabCard = null;
+      });
+
+      cancelFlashcardModal.addEventListener("click", () => {
+        closeFlashcardModal();
+      });
+
+      saveFlashcard.addEventListener("click", markVocabAdded);
+
+      addMeaning.addEventListener("click", () => {
+        const index = meaningList.querySelectorAll(".meaning-block").length + 1;
+        const block = document.createElement("section");
+        block.className = "meaning-block";
+        block.innerHTML = `
+          <div class="meaning-header">
+            <strong>詞義 ${index}</strong>
+            <button class="remove-meaning" type="button">刪除</button>
+          </div>
+          <div class="field">
+            <label>中文解釋</label>
+            <input type="text" placeholder="例如：延期；延後" />
+          </div>
+          <div class="field">
+            <label>英文例句</label>
+            <textarea placeholder="例如：I would like to postpone the meeting."></textarea>
+          </div>
+          <div class="field">
+            <label>中文例句翻譯</label>
+            <textarea placeholder="例如：我想延期會議。"></textarea>
+          </div>
+        `;
+        block.querySelector(".remove-meaning").addEventListener("click", () => {
+          block.remove();
+        });
+        meaningList.append(block);
+      });
+
+      for (const modal of [deckModal, flashcardModal]) {
+        modal.addEventListener("click", (event) => {
+          if (event.target !== modal) return;
+          modal.hidden = true;
+          if (modal === deckModal) pendingVocabCard = null;
+        });
+      }
+
       sendMessage.addEventListener("click", () => {
         const text = chatInput.value.trim() || "我想延期會議";
         const userMessage = document.createElement("div");
@@ -1535,8 +2104,36 @@
         suggestionGroup.append(card);
         chatThread.append(suggestionGroup);
         bindSuggestion(card);
+
+        const vocabTitle = document.createElement("p");
+        const vocabGroup = document.createElement("section");
+        const vocabCard = document.createElement("article");
+
+        vocabTitle.className = "suggestion-section-title";
+        vocabTitle.textContent = "建議新增單字";
+        vocabGroup.className = "vocab-suggestion-list";
+        vocabGroup.setAttribute("aria-label", "建議新增單字");
+        vocabCard.className = "vocab-card";
+        vocabCard.dataset.word = "postpone";
+        vocabCard.dataset.meaning = "延期；延後";
+        vocabCard.dataset.example = "I would like to postpone the meeting.";
+        vocabCard.dataset.zhExample = "我想延期會議。";
+        vocabCard.innerHTML = `
+          <div>
+            <strong>postpone</strong>
+            <p>延期；延後。這是 postpone the meeting 的主要動詞，目前找不到對應單字卡。</p>
+            <div class="chunk-meta">
+              <span class="pill source">建議單字</span>
+              <span class="pill state-new">將新增</span>
+            </div>
+          </div>
+          <button class="add-vocab" type="button" aria-label="新增 postpone">＋</button>
+        `;
+        vocabGroup.append(vocabCard);
+        chatThread.append(vocabTitle, vocabGroup);
+        bindVocabSuggestion(vocabCard);
         chatInput.value = "";
-        suggestionGroup.scrollIntoView({ block: "end", behavior: "smooth" });
+        vocabGroup.scrollIntoView({ block: "end", behavior: "smooth" });
       });
 
       searchInput.addEventListener("input", updateCards);
