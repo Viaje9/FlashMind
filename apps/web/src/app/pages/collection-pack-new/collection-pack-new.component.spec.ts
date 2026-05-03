@@ -1,10 +1,11 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { CollectionsService } from '@flashmind/api-client';
+import { AIService, CardsService, CollectionsService, DecksService } from '@flashmind/api-client';
 import { Subject, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionPackStore } from '../../components/collection-pack/collection-pack.store';
+import { TtsStore } from '../../components/tts/tts.store';
 import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
 import { CollectionPackNewComponent } from './collection-pack-new.component';
 
@@ -16,6 +17,19 @@ describe('CollectionPackNewComponent', () => {
     createCollectionChatMessage: ReturnType<typeof vi.fn>;
     createCollectionItem: ReturnType<typeof vi.fn>;
     deleteCollectionItem: ReturnType<typeof vi.fn>;
+  };
+  let cardsApiMock: {
+    createCard: ReturnType<typeof vi.fn>;
+  };
+  let decksApiMock: {
+    listDecks: ReturnType<typeof vi.fn>;
+  };
+  let aiApiMock: {
+    generateCardContent: ReturnType<typeof vi.fn>;
+  };
+  let ttsStoreMock: {
+    isPlaying: ReturnType<typeof vi.fn>;
+    play: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -67,7 +81,22 @@ describe('CollectionPackNewComponent', () => {
                 ],
               },
             ],
-            suggestedCards: [],
+            suggestedCards: [
+              {
+                id: 'suggest-restaurant',
+                front: 'restaurant',
+                meanings: [
+                  {
+                    zhMeaning: '餐廳',
+                    enExample: 'I need to book a table at the restaurant.',
+                    zhExample: '我需要在那間餐廳訂位。',
+                  },
+                ],
+                reason: '這是句子的主要情境字，目前找不到對應單字卡。',
+                existingCardId: null,
+                added: false,
+              },
+            ],
           },
         }),
       ),
@@ -89,6 +118,59 @@ describe('CollectionPackNewComponent', () => {
       ),
       deleteCollectionItem: vi.fn().mockReturnValue(of({})),
     };
+    cardsApiMock = {
+      createCard: vi.fn().mockReturnValue(
+        of({
+          data: {
+            id: 'card-restaurant',
+            front: 'restaurant',
+            meanings: [],
+            createdAt: '2026-05-02T00:00:00.000Z',
+            updatedAt: '2026-05-02T00:00:00.000Z',
+          },
+        }),
+      ),
+    };
+    decksApiMock = {
+      listDecks: vi.fn().mockReturnValue(
+        of({
+          data: [
+            {
+              id: 'deck-travel',
+              name: 'Travel English',
+              newCount: 0,
+              reviewCount: 0,
+              totalCount: 0,
+              completedCount: 0,
+              progress: 0,
+              dailyNewCards: 20,
+              dailyReviewCards: 100,
+              todayNewStudied: 0,
+              todayReviewStudied: 0,
+            },
+          ],
+        }),
+      ),
+    };
+    aiApiMock = {
+      generateCardContent: vi.fn().mockReturnValue(
+        of({
+          data: {
+            meanings: [
+              {
+                zhMeaning: '餐廳；飯店',
+                enExample: 'This restaurant gets busy on weekends.',
+                zhExample: '這間餐廳週末會很忙。',
+              },
+            ],
+          },
+        }),
+      ),
+    };
+    ttsStoreMock = {
+      isPlaying: vi.fn().mockReturnValue(false),
+      play: vi.fn().mockResolvedValue(undefined),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -96,6 +178,22 @@ describe('CollectionPackNewComponent', () => {
         {
           provide: CollectionsService,
           useValue: collectionsApiMock,
+        },
+        {
+          provide: CardsService,
+          useValue: cardsApiMock,
+        },
+        {
+          provide: DecksService,
+          useValue: decksApiMock,
+        },
+        {
+          provide: AIService,
+          useValue: aiApiMock,
+        },
+        {
+          provide: TtsStore,
+          useValue: ttsStoreMock,
         },
         {
           provide: Router,
@@ -149,6 +247,7 @@ describe('CollectionPackNewComponent', () => {
         id: expect.stringMatching(/^pending-/),
         userText: '我想說明專案延期',
         suggestions: [],
+        suggestedCards: [],
       },
     ]);
 
@@ -205,6 +304,104 @@ describe('CollectionPackNewComponent', () => {
     expect(store.chatGroups()[0].suggestions.find((item) => item.id === suggestion.id)?.added).toBe(
       false,
     );
+  });
+
+  it('可從建議單字選擇牌組並預填新增快閃卡', async () => {
+    component.inputControl.setValue('我需要在餐廳訂滿之前先訂位');
+    await component.onSubmit();
+
+    const group = store.chatGroups()[0];
+    const suggestedCard = group.suggestedCards[0];
+
+    expect(suggestedCard.front).toBe('restaurant');
+
+    await component.onAddSuggestedCard(group.id, suggestedCard);
+
+    expect(decksApiMock.listDecks).toHaveBeenCalled();
+    expect(component.deckPickerContext()?.suggestedCard.id).toBe('suggest-restaurant');
+    expect(component.selectedDeckId()).toBe('deck-travel');
+
+    component.onConfirmDeckPicker();
+
+    expect(component.flashcardContext()?.deck.name).toBe('Travel English');
+    expect(component.flashcardFront()).toBe('restaurant');
+    expect(component.flashcardMeanings()[0]).toEqual({
+      zhMeaning: '餐廳',
+      enExample: 'I need to book a table at the restaurant.',
+      zhExample: '我需要在那間餐廳訂位。',
+    });
+
+    await component.onSaveFlashcard();
+
+    expect(cardsApiMock.createCard).toHaveBeenCalledWith('deck-travel', {
+      front: 'restaurant',
+      meanings: [
+        {
+          zhMeaning: '餐廳',
+          enExample: 'I need to book a table at the restaurant.',
+          zhExample: '我需要在那間餐廳訂位。',
+        },
+      ],
+    });
+    expect(
+      store.chatGroups()[0].suggestedCards.find((card) => card.id === 'suggest-restaurant')?.status,
+    ).toBe('added');
+    expect(component.flashcardContext()).toBeNull();
+  });
+
+  it('新增快閃卡表單應可播放英文例句語音', async () => {
+    component.inputControl.setValue('我需要在餐廳訂滿之前先訂位');
+    await component.onSubmit();
+
+    const group = store.chatGroups()[0];
+    const suggestedCard = group.suggestedCards[0];
+    await component.onAddSuggestedCard(group.id, suggestedCard);
+    component.onConfirmDeckPicker();
+
+    const example = component.flashcardMeanings()[0].enExample;
+
+    component.onPlayFlashcardSentenceAudio(example);
+
+    expect(ttsStoreMock.play).toHaveBeenCalledWith('I need to book a table at the restaurant.');
+  });
+
+  it('新增快閃卡表單應可用 AI 生成詞義與例句', async () => {
+    component.inputControl.setValue('我需要在餐廳訂滿之前先訂位');
+    await component.onSubmit();
+
+    const group = store.chatGroups()[0];
+    const suggestedCard = group.suggestedCards[0];
+    await component.onAddSuggestedCard(group.id, suggestedCard);
+    component.onConfirmDeckPicker();
+
+    expect(component.canFlashcardAiGenerate()).toBe(true);
+
+    await component.onFlashcardAiGenerate();
+
+    expect(aiApiMock.generateCardContent).toHaveBeenCalledWith({ text: 'restaurant' });
+    expect(component.flashcardMeanings()).toEqual([
+      {
+        zhMeaning: '餐廳；飯店',
+        enExample: 'This restaurant gets busy on weekends.',
+        zhExample: '這間餐廳週末會很忙。',
+      },
+    ]);
+  });
+
+  it('沒有牌組時應提示先建立牌組且不開啟新增表單', async () => {
+    decksApiMock.listDecks.mockReturnValue(of({ data: [] }));
+    component.inputControl.setValue('我需要在餐廳訂滿之前先訂位');
+    await component.onSubmit();
+
+    const group = store.chatGroups()[0];
+    const suggestedCard = group.suggestedCards[0];
+
+    await component.onAddSuggestedCard(group.id, suggestedCard);
+
+    expect(component.deckPickerNotice()).toBe('目前還沒有可加入的牌組，請先建立牌組後再新增單字。');
+    expect(component.deckPickerContext()).toBeNull();
+    expect(component.flashcardContext()).toBeNull();
+    expect(cardsApiMock.createCard).not.toHaveBeenCalled();
   });
 
   it('新對話應清空目前訊息並建立下一個聊天 session', async () => {

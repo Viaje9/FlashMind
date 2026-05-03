@@ -43,9 +43,9 @@ describe('CollectionToolService', () => {
 
     expect(prisma.card.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
+        where: expect.objectContaining({
           deck: { userId: 'user-1' },
-          OR: [
+          OR: expect.arrayContaining([
             { front: { contains: '進度', mode: 'insensitive' } },
             {
               meanings: {
@@ -54,8 +54,8 @@ describe('CollectionToolService', () => {
                 },
               },
             },
-          ],
-        },
+          ]),
+        }),
         take: 5,
       }),
     );
@@ -83,6 +83,35 @@ describe('CollectionToolService', () => {
               meanings: {
                 some: {
                   zhMeaning: { contains: '優惠', mode: 'insensitive' },
+                },
+              },
+            },
+          ]),
+        }),
+        take: 5,
+      }),
+    );
+  });
+
+  it('搜尋中文句子時會保留非功能字單字，避免漏掉醬這類短詞', async () => {
+    const { prisma, service } = createService();
+    prisma.card.findMany.mockResolvedValue([]);
+
+    await service.searchUserCards(
+      'user-1',
+      '我在餐廳點餐我想跟服務生說「不要醬」可以怎麼說',
+      5,
+    );
+
+    expect(prisma.card.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          deck: { userId: 'user-1' },
+          OR: expect.arrayContaining([
+            {
+              meanings: {
+                some: {
+                  zhMeaning: { contains: '醬', mode: 'insensitive' },
                 },
               },
             },

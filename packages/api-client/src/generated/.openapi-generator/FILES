@@ -23,8 +23,11 @@ model/cardMeaning.ts
 model/cardResponse.ts
 model/collectionBreakdownItem.ts
 model/collectionChatIntent.ts
+model/collectionChatMessageItem.ts
+model/collectionChatMessageListResponse.ts
 model/collectionChatMessageResponse.ts
 model/collectionChatMessageResult.ts
+model/collectionChatRole.ts
 model/collectionChatSession.ts
 model/collectionChatSessionResponse.ts
 model/collectionItem.ts

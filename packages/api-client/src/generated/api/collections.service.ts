@@ -22,6 +22,8 @@ import { Observable } from "rxjs";
 import { OpenApiHttpParams, QueryParamStyle } from "../query.params";
 
 // @ts-ignore
+import { CollectionChatMessageListResponse } from "../model/collectionChatMessageListResponse";
+// @ts-ignore
 import { CollectionChatMessageResponse } from "../model/collectionChatMessageResponse";
 // @ts-ignore
 import { CollectionChatSessionResponse } from "../model/collectionChatSessionResponse";
@@ -493,6 +495,112 @@ export class CollectionsService extends BaseService {
     const { basePath, withCredentials } = this.configuration;
     return this.httpClient.request<any>(
       "delete",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 取得收藏包聊天訊息
+   * 取得收藏包聊天 session 內的歷史訊息與 assistant metadata。
+   * @endpoint get /collections/chat-sessions/{sessionId}/messages
+   * @param sessionId 聊天 session ID
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public listCollectionChatMessages(
+    sessionId: string,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<CollectionChatMessageListResponse>;
+  public listCollectionChatMessages(
+    sessionId: string,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<CollectionChatMessageListResponse>>;
+  public listCollectionChatMessages(
+    sessionId: string,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<CollectionChatMessageListResponse>>;
+  public listCollectionChatMessages(
+    sessionId: string,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (sessionId === null || sessionId === undefined) {
+      throw new Error(
+        "Required parameter sessionId was null or undefined when calling listCollectionChatMessages.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/collections/chat-sessions/${this.configuration.encodeParam({ name: "sessionId", value: sessionId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}/messages`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<CollectionChatMessageListResponse>(
+      "get",
       `${basePath}${localVarPath}`,
       {
         context: localVarHttpContext,

@@ -2,33 +2,44 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpContext } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
+  CardsService,
+  DecksService,
   CollectionsService,
   type CollectionItem as ApiCollectionItem,
   type CollectionItemKind as ApiCollectionItemKind,
   type CollectionSaveRelatedCandidate,
   type CollectionSuggestion as ApiCollectionSuggestion,
+  type CollectionSuggestedCard as ApiCollectionSuggestedCard,
   type CreateCollectionItemRequest,
 } from '@flashmind/api-client';
 
 import {
   type CollectionChatGroup,
+  type CollectionDeckOption,
   type CollectionFilter,
   type CollectionItem,
   type CollectionItemKind,
   type CollectionSuggestion,
+  type CollectionSuggestedCard,
+  mapCollectionSuggestedCard,
+  patchSuggestedCard as patchSuggestedCardList,
 } from './collection-pack.domain';
 import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
 
 @Injectable({ providedIn: 'root' })
 export class CollectionPackStore {
   private readonly collectionsApi = inject(CollectionsService);
+  private readonly cardsApi = inject(CardsService);
+  private readonly decksApi = inject(DecksService);
   private readonly skipLoadingContext = new HttpContext().set(SKIP_LOADING, true);
   private readonly chatSessionId = signal<string | null>(null);
 
   readonly items = signal<CollectionItem[]>([]);
   readonly chatGroups = signal<CollectionChatGroup[]>([]);
+  readonly deckOptions = signal<CollectionDeckOption[]>([]);
   readonly loading = signal(false);
   readonly chatLoading = signal(false);
+  readonly deckLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly collectionCount = computed(() => this.items().length);
   readonly vocabularyCoverage = signal(0);
@@ -67,6 +78,7 @@ export class CollectionPackStore {
         id: groupId,
         userText: normalized,
         suggestions: [],
+        suggestedCards: [],
       },
     ]);
 
@@ -87,11 +99,13 @@ export class CollectionPackStore {
         userText: response.data.userMessage,
         assistantText: response.data.assistantMessage,
         suggestions: this.mapSuggestions(response.data.candidates),
+        suggestedCards: this.mapSuggestedCards(response.data.suggestedCards),
       });
     } catch {
       this.patchChatGroup(groupId, {
         assistantText: 'AI 暫時無法回覆，稍後再試一次。',
         suggestions: [],
+        suggestedCards: [],
       });
       this.errorMessage.set('AI 回覆失敗，請稍後再試。');
     } finally {
@@ -142,6 +156,71 @@ export class CollectionPackStore {
     }
   }
 
+  async loadDeckOptions(): Promise<void> {
+    if (this.deckOptions().length > 0) return;
+
+    this.deckLoading.set(true);
+    this.errorMessage.set(null);
+
+    try {
+      const response = await firstValueFrom(this.decksApi.listDecks());
+      this.deckOptions.set(response.data.map((deck) => ({ id: deck.id, name: deck.name })));
+    } catch {
+      this.errorMessage.set('牌組讀取失敗，請稍後再試。');
+    } finally {
+      this.deckLoading.set(false);
+    }
+  }
+
+  async addSuggestedCard(
+    groupId: string,
+    suggestedCardId: string,
+    deck: CollectionDeckOption,
+    cardData?: {
+      front: string;
+      meanings: CollectionSuggestedCard['meanings'];
+    },
+  ): Promise<boolean> {
+    const suggestedCard = this.findSuggestedCard(groupId, suggestedCardId);
+    if (!suggestedCard || suggestedCard.status === 'existing' || suggestedCard.status === 'added') {
+      return false;
+    }
+
+    this.patchSuggestedCard(groupId, suggestedCardId, {
+      status: 'adding',
+      deckId: deck.id,
+      deckName: deck.name,
+    });
+
+    try {
+      await firstValueFrom(
+        this.cardsApi.createCard(deck.id, {
+          front: (cardData?.front ?? suggestedCard.front).trim(),
+          meanings: (cardData?.meanings ?? suggestedCard.meanings).map((meaning) => ({
+            zhMeaning: meaning.zhMeaning,
+            enExample: meaning.enExample || undefined,
+            zhExample: meaning.zhExample || undefined,
+          })),
+        }),
+      );
+      this.patchSuggestedCard(groupId, suggestedCardId, {
+        added: true,
+        status: 'added',
+        deckId: deck.id,
+        deckName: deck.name,
+      });
+      return true;
+    } catch {
+      this.patchSuggestedCard(groupId, suggestedCardId, {
+        status: 'error',
+        deckId: deck.id,
+        deckName: deck.name,
+      });
+      this.errorMessage.set('單字卡新增失敗，請稍後再試。');
+      return false;
+    }
+  }
+
   private async ensureChatSession(): Promise<string> {
     const existingSessionId = this.chatSessionId();
     if (existingSessionId) return existingSessionId;
@@ -168,6 +247,15 @@ export class CollectionPackStore {
       ?.suggestions.find((suggestion) => suggestion.id === suggestionId);
   }
 
+  private findSuggestedCard(
+    groupId: string,
+    suggestedCardId: string,
+  ): CollectionSuggestedCard | undefined {
+    return this.chatGroups()
+      .find((group) => group.id === groupId)
+      ?.suggestedCards.find((card) => card.id === suggestedCardId);
+  }
+
   private patchChatGroup(groupId: string, patch: Partial<CollectionChatGroup>): void {
     this.chatGroups.update((groups) =>
       groups.map((group) => (group.id === groupId ? { ...group, ...patch } : group)),
@@ -188,6 +276,23 @@ export class CollectionPackStore {
               suggestions: group.suggestions.map((suggestion) =>
                 suggestion.id === suggestionId ? { ...suggestion, ...patch } : suggestion,
               ),
+            },
+      ),
+    );
+  }
+
+  private patchSuggestedCard(
+    groupId: string,
+    suggestedCardId: string,
+    patch: Partial<CollectionSuggestedCard>,
+  ): void {
+    this.chatGroups.update((groups) =>
+      groups.map((group) =>
+        group.id !== groupId
+          ? group
+          : {
+              ...group,
+              suggestedCards: patchSuggestedCardList(group.suggestedCards, suggestedCardId, patch),
             },
       ),
     );
@@ -275,6 +380,12 @@ export class CollectionPackStore {
     }
 
     return visibleSuggestions;
+  }
+
+  private mapSuggestedCards(cards: ApiCollectionSuggestedCard[]): CollectionSuggestedCard[] {
+    return cards
+      .map((card) => mapCollectionSuggestedCard(card))
+      .filter((card): card is CollectionSuggestedCard => Boolean(card));
   }
 
   private pushUniqueSuggestion(

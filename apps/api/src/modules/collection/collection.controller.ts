@@ -55,6 +55,14 @@ export class CollectionController {
     return this.collectionService.createChatSession(req.user.id);
   }
 
+  @Get('chat-sessions/:sessionId/messages')
+  async listChatMessages(
+    @Req() req: AuthenticatedRequest,
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.collectionService.listChatMessages(req.user.id, sessionId);
+  }
+
   @Post('chat-sessions/:sessionId/messages')
   async createChatMessage(
     @Req() req: AuthenticatedRequest,

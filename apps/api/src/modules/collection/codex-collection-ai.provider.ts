@@ -11,6 +11,7 @@ import { join } from 'node:path';
 
 import {
   CollectionAiCandidate,
+  CollectionAiCard,
   CollectionAiChatInput,
   CollectionAiChatResult,
   CollectionAiProvider,
@@ -123,10 +124,32 @@ const COLLECTION_AGENT_OUTPUT_SCHEMA = {
         type: 'object',
         properties: {
           id: { type: 'string' },
-          word: { type: 'string' },
-          meaning: { type: ['string', 'null'] },
+          front: { type: 'string' },
+          meanings: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                zhMeaning: { type: 'string' },
+                enExample: { type: ['string', 'null'] },
+                zhExample: { type: ['string', 'null'] },
+              },
+              required: ['zhMeaning', 'enExample', 'zhExample'],
+              additionalProperties: false,
+            },
+          },
+          reason: { type: 'string' },
+          existingCardId: { type: ['string', 'null'] },
+          added: { type: 'boolean' },
         },
-        required: ['id', 'word', 'meaning'],
+        required: [
+          'id',
+          'front',
+          'meanings',
+          'reason',
+          'existingCardId',
+          'added',
+        ],
         additionalProperties: false,
       },
     },
@@ -186,20 +209,28 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
         },
       );
       const parsed = this.parseResult(turn.finalResponse);
+      const cleanParsed = this.removeLowValueSourceCardIds(parsed, [
+        ...vocabularySummary.sampleCards,
+        ...searchedCards,
+      ]);
       const candidates = await this.markExistingCandidates(
         input.userId,
-        parsed,
+        cleanParsed,
       );
+      const suggestedCards = this.filterSuggestedCards(
+        cleanParsed.suggestedCards,
+        [...vocabularySummary.sampleCards, ...searchedCards],
+      );
+      const shouldReturnSuggestions =
+        parsed.intent !== CollectionChatIntent.TRANSLATE_ONLY &&
+        !this.isSuppressedSuggestionIntent(input);
 
       return {
         providerThreadId: thread.id ?? input.providerThreadId,
         intent: parsed.intent,
         message: parsed.message,
-        candidates:
-          parsed.intent === CollectionChatIntent.TRANSLATE_ONLY
-            ? []
-            : candidates,
-        suggestedCards: parsed.suggestedCards,
+        candidates: shouldReturnSuggestions ? candidates : [],
+        suggestedCards: shouldReturnSuggestions ? suggestedCards : [],
       };
     } catch (error) {
       throw this.mapCodexError(error);
@@ -284,7 +315,12 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
       '你是 FlashMind 收藏包的英文學習助理。',
       '你的任務是依使用者意圖回覆，並在適合時提出可收藏的句子、搭配詞、片語、子句候選。message 請簡短，不要把 candidates 逐字重複列成清單。',
       '純聊天偏好延續規則：如果同一個 Codex thread 歷史中，使用者曾要求「純聊天、不要卡片、不要收藏候選、不要回傳任何卡片」，後續每一輪都必須維持 candidates 與 suggestedCards 為空陣列，只用 message 自然聊天或回答問題。這個偏好會持續到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」才解除。',
-      '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。頂層語塊候選必須盡量錨定至少一張既有單字卡；若沒有可錨定的既有單字卡，可以只回句子候選並在 message 提醒建議新增的單字。',
+      '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。頂層語塊候選必須盡量錨定至少一張既有單字卡；若沒有可錨定的既有單字卡，可以只回句子候選，並把值得新增的主要單字放進 suggestedCards，不要只在 message 文字提醒。',
+      'suggestedCards 規則：只有當本輪句子、語塊，或你為中文輸入產生的自然英文說法中，有「主要、值得學、且使用者單字卡中找不到」的英文單字時，才可放入 suggestedCards。不可為了湊數建議冠詞、介系詞、代名詞、be 動詞、助動詞等功能字，也不可建議已出現在單字卡樣本或相關單字卡中的字。',
+      '中文轉英文缺字規則：如果使用者問「某中文可以怎麼說 / 我想跟某人說某句話」，你必須先判斷自然英文說法會用到哪些關鍵單字；即使該英文單字沒有出現在使用者原始輸入中，只要它是表達核心且使用者卡片找不到，就應放入 suggestedCards。例如「不要醬」可產生 without sauce / no sauce，此時若 sauce 不在既有卡片，suggestedCards 應包含 front=sauce、zhMeaning=醬。',
+      '缺字候選一致性規則：如果 message、sentence candidate 或 relatedCandidates 中出現使用者卡片找不到的關鍵名詞、動詞或形容詞，suggestedCards 不可為空；請至少加入最核心的 1 到 3 個缺字。若使用者問「我在餐廳點餐想跟服務生說不要醬可以怎麼說」，理想輸出應包含 sentence: No sauce, please.、phrase: without sauce，並在 suggestedCards 加入 sauce。',
+      'sourceCardIds 品質規則：sourceCardIds 只連結真正支撐語意的已學內容字，不要連結 no、please、could、would、can、have、without、I、you、the 等功能字、禮貌詞、代名詞或助動詞。',
+      'suggestedCards 必須使用可直接建立快閃卡的資料：front 是單字或短片語；meanings 至少一筆，且每筆包含 zhMeaning、enExample、zhExample；reason 用一句中文說明為什麼此字值得新增；existingCardId 若不存在請填 null；added 一律填 false。',
       '分類定義：',
       '- sentence：完整英文句子，通常有主詞與主要動詞，可獨立表達完整意思。',
       '- collocation：自然搭配詞，是常一起出現的具體字詞組合，例如 make a reservation、fall behind schedule、heavy rain。必須是實際可說出口的文字，不可使用 ___、...、+ V-ing、括號、斜線或文法模板。',
@@ -302,6 +338,7 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
       '句子拆解範例：Although the deadline is tight, we can still finish the project. 的 relatedCandidates 至少應包含 tight deadline（collocation，緊迫期限）與 Although the deadline is tight（clause，雖然期限很緊）。',
       'relation type 規則：sentence -> collocation 用 sentence_has_collocation；sentence -> phrase 用 sentence_has_phrase；sentence -> clause 用 sentence_has_clause；phrase -> collocation 用 phrase_has_collocation；clause -> collocation 用 clause_has_collocation。',
       'translate_only 僅限使用者明確要求「只翻譯 / 單純翻譯 / translate only / 不要收藏候選」時使用，candidates 必須是空陣列。',
+      'translate_only、純聊天、口說練習情境或 roleplay 任務時，candidates 與 suggestedCards 必須都是空陣列。',
       '口說練習情境規則：如果使用者要求練習口說情境、roleplay、對話主題，或用「第一個、開始、換旅遊、再難一點、簡單一點」延續上一輪情境，message 只回情境任務或下一句角色扮演提示；candidates 與 suggestedCards 必須為空陣列。只有當使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容」時才產生候選。',
       '如果使用者只貼一句中文或英文，沒有明確要求只翻譯，裸句子不能判成 translate_only；必須用 analyze_sentence，至少提供一個 sentence 候選，並在 relatedCandidates 放可拆出的高品質語塊。',
       '輸出必須符合 JSON schema，不要輸出 schema 以外欄位。',
@@ -319,7 +356,7 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
 
   private buildIntentPolicy(input: CollectionAiChatInput) {
     if (this.isExplicitTranslateOnlyRequest(input)) {
-      return '本輪意圖判斷：使用者明確要求單純翻譯，請使用 translate_only，且 candidates 必須為空陣列。';
+      return '本輪意圖判斷：使用者明確要求單純翻譯，請使用 translate_only，且 candidates 與 suggestedCards 必須為空陣列。';
     }
 
     if (this.isPureChatPreferenceRequest(input)) {
@@ -467,14 +504,12 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
             (card) =>
               card &&
               typeof card.id === 'string' &&
-              typeof card.word === 'string',
+              typeof card.front === 'string' &&
+              Array.isArray(card.meanings) &&
+              typeof card.reason === 'string',
           )
-          .map((card) => ({
-            id: card.id,
-            word: card.word,
-            meaning:
-              typeof card.meaning === 'string' ? card.meaning : undefined,
-          })),
+          .map((card) => this.mapSuggestedCard(card))
+          .filter((card): card is CollectionAiCard => Boolean(card)),
       };
     } catch {
       throw new BadGatewayException({
@@ -537,6 +572,172 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
       Object.values(CollectionItemKindDto).includes(
         candidate.kind as CollectionItemKindDto,
       )
+    );
+  }
+
+  private mapSuggestedCard(
+    card: Partial<CollectionAiCard>,
+  ): CollectionAiCard | null {
+    const meanings = (card.meanings ?? [])
+      .filter(
+        (meaning) =>
+          meaning &&
+          typeof meaning.zhMeaning === 'string' &&
+          meaning.zhMeaning.trim().length > 0,
+      )
+      .map((meaning) => {
+        const mappedMeaning: CollectionAiCard['meanings'][number] = {
+          zhMeaning: meaning.zhMeaning.trim(),
+        };
+
+        if (typeof meaning.enExample === 'string' && meaning.enExample.trim()) {
+          mappedMeaning.enExample = meaning.enExample.trim();
+        }
+
+        if (typeof meaning.zhExample === 'string' && meaning.zhExample.trim()) {
+          mappedMeaning.zhExample = meaning.zhExample.trim();
+        }
+
+        return mappedMeaning;
+      });
+
+    if (
+      typeof card.id !== 'string' ||
+      typeof card.front !== 'string' ||
+      typeof card.reason !== 'string' ||
+      !card.front.trim() ||
+      !card.reason.trim() ||
+      meanings.length === 0
+    ) {
+      return null;
+    }
+
+    return {
+      id: card.id.trim() || this.createSuggestedCardFallbackId(card.front),
+      front: card.front.trim(),
+      meanings,
+      reason: card.reason.trim(),
+      existingCardId:
+        typeof card.existingCardId === 'string' && card.existingCardId.trim()
+          ? card.existingCardId.trim()
+          : null,
+      added: Boolean(card.added),
+    };
+  }
+
+  private createSuggestedCardFallbackId(front: string): string {
+    return `suggested-${this.tools
+      .normalizeText(front)
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')}`;
+  }
+
+  private filterSuggestedCards(
+    suggestedCards: CollectionAiCard[],
+    existingCards: Array<{ id: string; front: string }>,
+  ): CollectionAiCard[] {
+    const existingByFront = new Map(
+      existingCards.map((card) => [
+        this.tools.normalizeText(card.front),
+        card.id,
+      ]),
+    );
+
+    return suggestedCards
+      .map((card) => {
+        const existingCardId =
+          card.existingCardId ??
+          existingByFront.get(this.tools.normalizeText(card.front)) ??
+          null;
+
+        return { ...card, existingCardId };
+      })
+      .filter((card) => !card.existingCardId);
+  }
+
+  private removeLowValueSourceCardIds(
+    parsed: Omit<CollectionAiChatResult, 'providerThreadId'>,
+    existingCards: Array<{ id: string; front: string }>,
+  ): Omit<CollectionAiChatResult, 'providerThreadId'> {
+    const lowValueCardIds = new Set(
+      existingCards
+        .filter((card) => this.isLowValueSourceWord(card.front))
+        .map((card) => card.id),
+    );
+
+    if (lowValueCardIds.size === 0) {
+      return parsed;
+    }
+
+    return {
+      ...parsed,
+      candidates: parsed.candidates.map((candidate) => ({
+        ...candidate,
+        sourceCardIds: (candidate.sourceCardIds ?? []).filter(
+          (cardId) => !lowValueCardIds.has(cardId),
+        ),
+        relatedCandidates: (candidate.relatedCandidates ?? []).map(
+          (relatedCandidate) => ({
+            ...relatedCandidate,
+            sourceCardIds: (relatedCandidate.sourceCardIds ?? []).filter(
+              (cardId) => !lowValueCardIds.has(cardId),
+            ),
+          }),
+        ),
+      })),
+    };
+  }
+
+  private isLowValueSourceWord(front: string): boolean {
+    return new Set([
+      'a',
+      'an',
+      'am',
+      'are',
+      'be',
+      'been',
+      'being',
+      'can',
+      'could',
+      'did',
+      'do',
+      'does',
+      'had',
+      'has',
+      'have',
+      'he',
+      'her',
+      'him',
+      'i',
+      'is',
+      'it',
+      'may',
+      'might',
+      'no',
+      'not',
+      'of',
+      'please',
+      'she',
+      'that',
+      'the',
+      'they',
+      'this',
+      'to',
+      'was',
+      'we',
+      'were',
+      'will',
+      'with',
+      'without',
+      'would',
+      'you',
+    ]).has(this.tools.normalizeText(front));
+  }
+
+  private isSuppressedSuggestionIntent(input: CollectionAiChatInput) {
+    return (
+      this.isPureChatPreferenceRequest(input) ||
+      this.isSpeakingPracticeScenarioRequest(input)
     );
   }
 

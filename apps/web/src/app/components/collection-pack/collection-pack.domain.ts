@@ -59,11 +59,50 @@ export interface CollectionSuggestion {
   }>;
 }
 
+export interface CollectionSuggestedCardMeaning {
+  zhMeaning: string;
+  enExample: string;
+  zhExample: string;
+}
+
+export type CollectionSuggestedCardStatus = 'ready' | 'existing' | 'adding' | 'added' | 'error';
+
+export interface CollectionSuggestedCard {
+  id: string;
+  front: string;
+  meanings: CollectionSuggestedCardMeaning[];
+  reason: string;
+  existingCardId?: string | null;
+  added: boolean;
+  status: CollectionSuggestedCardStatus;
+  deckId?: string | null;
+  deckName?: string | null;
+}
+
+export interface CollectionSuggestedCardInput {
+  id: string;
+  front: string;
+  meanings: Array<{
+    zhMeaning: string;
+    enExample?: string | null;
+    zhExample?: string | null;
+  }>;
+  reason: string;
+  existingCardId?: string | null;
+  added?: boolean;
+}
+
+export interface CollectionDeckOption {
+  id: string;
+  name: string;
+}
+
 export interface CollectionChatGroup {
   id: string;
   userText: string;
   assistantText?: string;
   suggestions: CollectionSuggestion[];
+  suggestedCards: CollectionSuggestedCard[];
 }
 
 export interface HighlightToken {
@@ -85,6 +124,8 @@ export const COLLECTION_KIND_LABEL: Record<CollectionItemKind, string> = {
   phrase: '片語',
   clause: '子句',
 };
+
+export const COLLECTION_LAST_DECK_STORAGE_KEY = 'flashmind.collectionPack.lastDeckId';
 
 export const MOCK_COLLECTION_ITEMS: CollectionItem[] = [
   {
@@ -271,6 +312,7 @@ export const INITIAL_CHAT_GROUPS: CollectionChatGroup[] = [
         added: false,
       },
     ],
+    suggestedCards: [],
   },
 ];
 
@@ -343,6 +385,105 @@ export function createCollectionItemFromSuggestion(
   };
 }
 
+export function mapCollectionSuggestedCard(
+  card: CollectionSuggestedCardInput,
+): CollectionSuggestedCard | null {
+  const front = card.front.trim();
+  const reason = card.reason.trim();
+  const id = card.id.trim() || createSuggestedCardFallbackId(front);
+  const meanings = card.meanings
+    .map((meaning) => ({
+      zhMeaning: meaning.zhMeaning.trim(),
+      enExample: meaning.enExample?.trim() ?? '',
+      zhExample: meaning.zhExample?.trim() ?? '',
+    }))
+    .filter((meaning) => meaning.zhMeaning);
+
+  if (!front || !reason || meanings.length === 0) {
+    return null;
+  }
+
+  const added = Boolean(card.added);
+  const existingCardId = card.existingCardId ?? null;
+
+  return {
+    id,
+    front,
+    meanings,
+    reason,
+    existingCardId,
+    added,
+    status: getSuggestedCardStatus({ added, existingCardId }),
+    deckId: null,
+    deckName: null,
+  };
+}
+
+function createSuggestedCardFallbackId(front: string): string {
+  return `suggested-${front
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')}`;
+}
+
+export function getSuggestedCardStatus(input: {
+  added?: boolean;
+  existingCardId?: string | null;
+}): CollectionSuggestedCardStatus {
+  if (input.existingCardId) return 'existing';
+  if (input.added) return 'added';
+  return 'ready';
+}
+
+export function patchSuggestedCard(
+  cards: CollectionSuggestedCard[],
+  cardId: string,
+  patch: Partial<CollectionSuggestedCard>,
+): CollectionSuggestedCard[] {
+  return cards.map((card) => (card.id === cardId ? { ...card, ...patch } : card));
+}
+
+export function resolveStoredCollectionDeckId(
+  storedDeckId: string | null | undefined,
+  decks: CollectionDeckOption[],
+): string | null {
+  if (!storedDeckId) return null;
+  return decks.some((deck) => deck.id === storedDeckId) ? storedDeckId : null;
+}
+
+export function readStoredCollectionDeckId(
+  storage: Pick<Storage, 'getItem'> | undefined,
+): string | null {
+  try {
+    return storage?.getItem(COLLECTION_LAST_DECK_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredCollectionDeckId(
+  storage: Pick<Storage, 'setItem'> | undefined,
+  deckId: string,
+): void {
+  try {
+    storage?.setItem(COLLECTION_LAST_DECK_STORAGE_KEY, deckId);
+  } catch {
+    // localStorage may be unavailable in private contexts.
+  }
+}
+
+export function removeStoredCollectionDeckId(
+  storage: Pick<Storage, 'removeItem'> | undefined,
+): void {
+  try {
+    storage?.removeItem(COLLECTION_LAST_DECK_STORAGE_KEY);
+  } catch {
+    // localStorage may be unavailable in private contexts.
+  }
+}
+
 export function createDelayMeetingChatGroup(
   sequence: number,
   userText: string,
@@ -362,6 +503,7 @@ export function createDelayMeetingChatGroup(
         added: false,
       },
     ],
+    suggestedCards: [],
   };
 }
 

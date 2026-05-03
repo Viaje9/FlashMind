@@ -3,7 +3,13 @@ import {
   MOCK_COLLECTION_ITEMS,
   buildHighlightedSentence,
   filterCollectionItems,
+  mapCollectionSuggestedCard,
+  patchSuggestedCard,
+  readStoredCollectionDeckId,
+  removeStoredCollectionDeckId,
+  resolveStoredCollectionDeckId,
   type CollectionBreakdownItem,
+  writeStoredCollectionDeckId,
 } from './collection-pack.domain';
 
 describe('collection-pack domain helpers', () => {
@@ -63,5 +69,137 @@ describe('collection-pack domain helpers', () => {
     ]);
 
     expect(tokens).toEqual([{ text: 'This sentence has no matching chunk.' }]);
+  });
+
+  it('應將 API suggestedCards 轉成可新增單字候選 view model', () => {
+    const result = mapCollectionSuggestedCard({
+      id: ' suggest-restaurant ',
+      front: ' restaurant ',
+      meanings: [
+        {
+          zhMeaning: ' 餐廳 ',
+          enExample: ' I need to book a table at the restaurant. ',
+          zhExample: ' 我需要在那間餐廳訂位。 ',
+        },
+      ],
+      reason: ' 主要情境字，目前找不到對應卡片。 ',
+      existingCardId: null,
+      added: false,
+    });
+
+    expect(result).toEqual({
+      id: 'suggest-restaurant',
+      front: 'restaurant',
+      meanings: [
+        {
+          zhMeaning: '餐廳',
+          enExample: 'I need to book a table at the restaurant.',
+          zhExample: '我需要在那間餐廳訂位。',
+        },
+      ],
+      reason: '主要情境字，目前找不到對應卡片。',
+      existingCardId: null,
+      added: false,
+      status: 'ready',
+      deckId: null,
+      deckName: null,
+    });
+  });
+
+  it('單字候選 id 為空時應使用 front 產生 fallback id，避免 UI 吃掉候選', () => {
+    const result = mapCollectionSuggestedCard({
+      id: '',
+      front: ' sauce ',
+      meanings: [
+        {
+          zhMeaning: ' 醬；醬汁 ',
+          enExample: ' No sauce, please. ',
+          zhExample: ' 不要醬，謝謝。 ',
+        },
+      ],
+      reason: ' 點餐時的核心單字。 ',
+      existingCardId: null,
+      added: false,
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 'suggested-sauce',
+        front: 'sauce',
+        status: 'ready',
+      }),
+    );
+  });
+
+  it('單字候選應可區分已存在與已加入狀態', () => {
+    expect(
+      mapCollectionSuggestedCard({
+        id: 'existing',
+        front: 'price',
+        meanings: [{ zhMeaning: '價格' }],
+        reason: '已學過',
+        existingCardId: 'card-price',
+      })?.status,
+    ).toBe('existing');
+
+    expect(
+      mapCollectionSuggestedCard({
+        id: 'added',
+        front: 'discount',
+        meanings: [{ zhMeaning: '折扣' }],
+        reason: '剛加入',
+        added: true,
+      })?.status,
+    ).toBe('added');
+  });
+
+  it('單字候選 patch 應只更新指定卡片狀態', () => {
+    const cards = [
+      mapCollectionSuggestedCard({
+        id: 'restaurant',
+        front: 'restaurant',
+        meanings: [{ zhMeaning: '餐廳' }],
+        reason: '主要情境字',
+      })!,
+      mapCollectionSuggestedCard({
+        id: 'booked',
+        front: 'booked',
+        meanings: [{ zhMeaning: '被訂滿的' }],
+        reason: '常見搭配',
+      })!,
+    ];
+
+    const result = patchSuggestedCard(cards, 'booked', {
+      status: 'adding',
+    });
+
+    expect(result.map((card) => card.status)).toEqual(['ready', 'adding']);
+  });
+
+  it('牌組 localStorage helper 應預選有效 deck 並忽略無效 deck', () => {
+    const storage = new Map<string, string>();
+    const storageLike = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+    };
+
+    writeStoredCollectionDeckId(storageLike, 'deck-2');
+
+    expect(readStoredCollectionDeckId(storageLike)).toBe('deck-2');
+    expect(
+      resolveStoredCollectionDeckId(readStoredCollectionDeckId(storageLike), [
+        { id: 'deck-1', name: 'Daily' },
+        { id: 'deck-2', name: 'Travel' },
+      ]),
+    ).toBe('deck-2');
+    expect(
+      resolveStoredCollectionDeckId(readStoredCollectionDeckId(storageLike), [
+        { id: 'deck-1', name: 'Daily' },
+      ]),
+    ).toBeNull();
+
+    removeStoredCollectionDeckId(storageLike);
+    expect(readStoredCollectionDeckId(storageLike)).toBeNull();
   });
 });

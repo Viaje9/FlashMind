@@ -169,4 +169,200 @@ describe('CodexCollectionAiProvider', () => {
     expect(prompt).toContain('使用者要求純聊天或不要回傳卡片');
     expect(prompt).toContain('candidates 和 suggestedCards 必須為空陣列');
   });
+
+  it('prompt 應要求 suggestedCards 只放缺少的主要單字並提供快閃卡欄位', () => {
+    const prompt = buildPrompt('我需要在餐廳訂滿前先訂位，幫我整理可收藏表達');
+
+    expect(prompt).toContain('suggestedCards 規則');
+    expect(prompt).toContain('主要、值得學、且使用者單字卡中找不到');
+    expect(prompt).toContain('front 是單字或短片語');
+    expect(prompt).toContain('meanings 至少一筆');
+  });
+
+  it('prompt 應要求中文怎麼說情境把翻譯後的缺少關鍵字放入 suggestedCards', () => {
+    const prompt = buildPrompt(
+      '我在餐廳點餐我想跟服務生說「不要醬」可以怎麼說',
+    );
+
+    expect(prompt).toContain('中文轉英文缺字規則');
+    expect(prompt).toContain('即使該英文單字沒有出現在使用者原始輸入中');
+    expect(prompt).toContain('front=sauce');
+    expect(prompt).toContain('zhMeaning=醬');
+    expect(prompt).toContain('suggestedCards 不可為空');
+    expect(prompt).toContain('No sauce, please.');
+    expect(prompt).toContain('without sauce');
+    expect(prompt).toContain('請使用 suggest_candidates');
+  });
+
+  it('prompt 應禁止把功能字與禮貌詞當成 sourceCardIds', () => {
+    const prompt = buildPrompt(
+      '我在餐廳點餐我想跟服務生說「不要醬」可以怎麼說',
+    );
+
+    expect(prompt).toContain('sourceCardIds 品質規則');
+    expect(prompt).toContain(
+      '不要連結 no、please、could、would、can、have、without',
+    );
+  });
+
+  it('parseResult 應清洗 suggestedCards 並保留 front 與 meanings', () => {
+    const provider = createProvider();
+    const result = (provider as any).parseResult(
+      JSON.stringify({
+        intent: 'suggest_candidates',
+        message: '可以收藏這些表達，也建議補 restaurant。',
+        candidates: [],
+        suggestedCards: [
+          {
+            id: 'card-restaurant',
+            front: ' restaurant ',
+            meanings: [
+              {
+                zhMeaning: ' 餐廳 ',
+                enExample: ' I need to book a table at the restaurant. ',
+                zhExample: ' 我需要在那間餐廳訂位。 ',
+              },
+            ],
+            reason: ' 這是句子的主要情境字。 ',
+            existingCardId: null,
+            added: false,
+          },
+          {
+            id: 'invalid',
+            front: 'empty-meaning',
+            meanings: [],
+            reason: '沒有詞義',
+            existingCardId: null,
+            added: false,
+          },
+        ],
+      }),
+    );
+
+    expect(result.suggestedCards).toEqual([
+      {
+        id: 'card-restaurant',
+        front: 'restaurant',
+        meanings: [
+          {
+            zhMeaning: '餐廳',
+            enExample: 'I need to book a table at the restaurant.',
+            zhExample: '我需要在那間餐廳訂位。',
+          },
+        ],
+        reason: '這是句子的主要情境字。',
+        existingCardId: null,
+        added: false,
+      },
+    ]);
+  });
+
+  it('parseResult 應替空白 suggestedCards id 產生 fallback id', () => {
+    const provider = createProvider();
+    const result = (provider as any).parseResult(
+      JSON.stringify({
+        intent: 'suggest_candidates',
+        message: '可以補 sauce。',
+        candidates: [],
+        suggestedCards: [
+          {
+            id: '',
+            front: 'sauce',
+            meanings: [
+              {
+                zhMeaning: '醬；醬汁',
+                enExample: 'No sauce, please.',
+                zhExample: '不要醬，謝謝。',
+              },
+            ],
+            reason: '點餐時的核心單字。',
+            existingCardId: null,
+            added: false,
+          },
+        ],
+      }),
+    );
+
+    expect(result.suggestedCards[0]).toEqual(
+      expect.objectContaining({
+        id: 'suggested-sauce',
+        front: 'sauce',
+      }),
+    );
+  });
+
+  it('已存在於使用者單字卡的單字不得保留在 suggestedCards', () => {
+    const provider = createProvider();
+
+    const result = (provider as any).filterSuggestedCards(
+      [
+        {
+          id: 'suggest-price',
+          front: 'price',
+          meanings: [{ zhMeaning: '價格' }],
+          reason: '用來談價格。',
+          existingCardId: null,
+          added: false,
+        },
+        {
+          id: 'suggest-discount',
+          front: 'discount',
+          meanings: [{ zhMeaning: '折扣' }],
+          reason: '用來談優惠。',
+          existingCardId: null,
+          added: false,
+        },
+      ],
+      [{ id: 'card-price', front: 'price' }],
+    );
+
+    expect(result).toEqual([
+      {
+        id: 'suggest-discount',
+        front: 'discount',
+        meanings: [{ zhMeaning: '折扣' }],
+        reason: '用來談優惠。',
+        existingCardId: null,
+        added: false,
+      },
+    ]);
+  });
+
+  it('進入系統前應移除功能字與禮貌詞的 sourceCardIds', () => {
+    const provider = createProvider();
+
+    const result = (provider as any).removeLowValueSourceCardIds(
+      {
+        intent: 'suggest_candidates',
+        message: '可以這樣說。',
+        candidates: [
+          {
+            kind: 'sentence',
+            text: 'Could I have a receipt, please?',
+            meaning: '可以給我收據嗎？',
+            sourceCardIds: ['card-have', 'card-receipt'],
+            relatedCandidates: [
+              {
+                type: 'sentence_has_collocation',
+                kind: 'collocation',
+                text: 'have a receipt',
+                meaning: '拿收據',
+                sourceCardIds: ['card-have', 'card-receipt'],
+              },
+            ],
+          },
+        ],
+        suggestedCards: [],
+      },
+      [
+        { id: 'card-have', front: 'have' },
+        { id: 'card-receipt', front: 'receipt' },
+      ],
+    );
+
+    expect(result.candidates[0].sourceCardIds).toEqual(['card-receipt']);
+    expect(result.candidates[0].relatedCandidates[0].sourceCardIds).toEqual([
+      'card-receipt',
+    ]);
+  });
 });

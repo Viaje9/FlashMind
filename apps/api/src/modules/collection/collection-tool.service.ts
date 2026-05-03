@@ -182,6 +182,7 @@ export class CollectionToolService {
         query,
         ...this.extractEnglishCardTerms(query),
         ...this.extractCjkBigrams(query),
+        ...this.extractCjkUnigrams(query),
       ]),
     ].slice(0, 60);
   }
@@ -241,5 +242,16 @@ export class CollectionToolService {
     }
 
     return terms;
+  }
+
+  private extractCjkUnigrams(text: string): string[] {
+    const stopChars = new Set(
+      '我你妳他她它們的了嗎呢吧啊要不可以在跟和或是有說想幫請用把給先再這那個一二三很就都也到去來會能'.split(
+        '',
+      ),
+    );
+    const chars = text.match(/[\u3400-\u9fff]/g) ?? [];
+
+    return [...new Set(chars)].filter((char) => !stopChars.has(char));
   }
 }

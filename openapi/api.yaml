@@ -914,6 +914,47 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /collections/chat-sessions/{sessionId}/messages:
+    get:
+      operationId: listCollectionChatMessages
+      tags:
+        - Collections
+      summary: 取得收藏包聊天訊息
+      description: 取得收藏包聊天 session 內的歷史訊息與 assistant metadata。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: 聊天 session ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionChatMessageListResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取 session 或非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到聊天 session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
     post:
       operationId: createCollectionChatMessage
       tags:
@@ -2473,6 +2514,13 @@ components:
         - explain_usage
       description: 收藏包聊天 AI 判斷的使用者意圖
 
+    CollectionChatRole:
+      type: string
+      enum:
+        - user
+        - assistant
+      description: 收藏包聊天訊息角色
+
     CollectionSourceCard:
       type: object
       required:
@@ -2712,19 +2760,34 @@ components:
     CollectionSuggestedCard:
       type: object
       required:
-        - text
+        - id
+        - front
+        - meanings
         - reason
       properties:
-        text:
+        id:
+          type: string
+          description: 候選 ID，可由 AI 或後端產生
+          example: suggested-card-postpone
+        front:
           type: string
           example: postpone
-        meaning:
-          type: string
-          nullable: true
-          example: 延期；延後
+        meanings:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CreateCardMeaningRequest"
         reason:
           type: string
           example: 這個字常用來表達會議或計畫延期。
+        existingCardId:
+          type: string
+          nullable: true
+          description: 若已存在於使用者卡片中，對應的卡片 ID
+        added:
+          type: boolean
+          default: false
+          description: 前端是否已在本次互動建立卡片
 
     CollectionChatSession:
       type: object
@@ -2798,6 +2861,48 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/CollectionChatMessageResult"
+
+    CollectionChatMessageItem:
+      type: object
+      required:
+        - id
+        - role
+        - content
+        - candidates
+        - suggestedCards
+        - createdAt
+      properties:
+        id:
+          type: string
+        role:
+          $ref: "#/components/schemas/CollectionChatRole"
+        content:
+          type: string
+        intent:
+          allOf:
+            - $ref: "#/components/schemas/CollectionChatIntent"
+          nullable: true
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSuggestion"
+        suggestedCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionSuggestedCard"
+        createdAt:
+          type: string
+          format: date-time
+
+    CollectionChatMessageListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionChatMessageItem"
 
     # ============================================================
     # AI

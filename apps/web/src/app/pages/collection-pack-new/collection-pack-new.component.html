@@ -44,6 +44,18 @@
         </p>
       }
 
+      @if (deckPickerNotice()) {
+        <div
+          class="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm font-bold text-primary"
+          data-testid="collection-deck-empty-notice"
+        >
+          <p>{{ deckPickerNotice() }}</p>
+          <a class="mt-2 inline-flex text-xs font-black underline" routerLink="/decks/new">
+            建立牌組
+          </a>
+        </div>
+      }
+
       @for (group of store.chatGroups(); track group.id) {
         <div class="flex justify-end">
           <div
@@ -65,11 +77,24 @@
 
         @if (group.suggestions.length > 0) {
           <div class="space-y-3 scroll-mb-44">
+            <p class="px-1 text-xs font-black text-secondary-text">可收藏表達</p>
             @for (suggestion of group.suggestions; track suggestion.id) {
               <app-collection-suggestion-card
                 [suggestion]="suggestion"
                 (suggestionToggle)="onToggleSuggestion(group.id, $event)"
               ></app-collection-suggestion-card>
+            }
+          </div>
+        }
+
+        @if (group.suggestedCards.length > 0) {
+          <div class="space-y-3 scroll-mb-44">
+            <p class="px-1 text-xs font-black text-secondary-text">建議新增單字</p>
+            @for (suggestedCard of group.suggestedCards; track suggestedCard.id) {
+              <app-collection-suggested-card
+                [suggestedCard]="suggestedCard"
+                (suggestedCardAdd)="onAddSuggestedCard(group.id, $event)"
+              ></app-collection-suggested-card>
             }
           </div>
         }
@@ -142,4 +167,151 @@
       </fm-button>
     </div>
   </form>
+
+  @if (deckPickerContext()) {
+    <div
+      class="fixed inset-0 z-40 flex items-end justify-center bg-black/55 px-4 pb-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="選擇牌組"
+      data-testid="collection-deck-picker"
+    >
+      <section
+        class="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-2xl shadow-black/40"
+      >
+        <h2 class="text-base font-black text-white">加入到哪個牌組？</h2>
+        <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+          這次選擇會記住，下次新增單字會自動預選同一個牌組。
+        </p>
+
+        <div class="mt-4 space-y-2">
+          @for (deck of store.deckOptions(); track deck.id) {
+            <button
+              type="button"
+              class="flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition"
+              [class.border-primary]="selectedDeckId() === deck.id"
+              [class.bg-primary/10]="selectedDeckId() === deck.id"
+              [class.border-slate-700]="selectedDeckId() !== deck.id"
+              [class.bg-card-dark]="selectedDeckId() !== deck.id"
+              (click)="onSelectDeck(deck.id)"
+            >
+              <span class="text-sm font-bold text-white">{{ deck.name }}</span>
+              @if (selectedDeckId() === deck.id) {
+                <span class="material-symbols-outlined text-[20px] text-primary">check</span>
+              }
+            </button>
+          }
+        </div>
+
+        <div class="mt-5 flex justify-end gap-2">
+          <fm-button variant="ghost" size="sm" type="button" (click)="onCancelDeckPicker()">
+            取消
+          </fm-button>
+          <fm-button size="sm" type="button" (click)="onConfirmDeckPicker()">下一步</fm-button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (flashcardContext()) {
+    <div
+      class="fixed inset-0 z-40 flex items-end justify-center bg-black/55 px-4 pb-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="新增快閃卡"
+      data-testid="collection-flashcard-dialog"
+    >
+      <section
+        class="grid max-h-[calc(100dvh-2rem)] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-slate-700 bg-background-dark shadow-2xl shadow-black/40"
+      >
+        <header class="border-b border-slate-800 p-4">
+          <h2 class="text-base font-black text-white">新增快閃卡</h2>
+          <p class="mt-1 text-sm font-medium text-slate-300">
+            加入到「{{ flashcardContext()?.deck?.name }}」
+          </p>
+        </header>
+
+        <div class="min-h-0 space-y-5 overflow-y-auto p-4">
+          @if (flashcardError()) {
+            <p
+              class="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-bold text-red-100"
+            >
+              {{ flashcardError() }}
+            </p>
+          }
+
+          <section class="space-y-2">
+            <label class="text-xs font-black text-secondary-text" for="collection-flashcard-front">
+              正面
+            </label>
+            <textarea
+              id="collection-flashcard-front"
+              class="min-h-16 w-full resize-none rounded-xl border border-slate-700 bg-card-dark px-3 py-3 text-sm font-bold leading-relaxed text-white outline-none transition focus:border-primary"
+              [value]="flashcardFront()"
+              (input)="flashcardFront.set($any($event.target).value)"
+              data-testid="collection-flashcard-front"
+            ></textarea>
+          </section>
+
+          <section class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-black text-secondary-text">背面</h3>
+            </div>
+
+            <button
+              type="button"
+              class="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 py-3 font-medium text-purple-300 transition-all hover:bg-purple-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+              data-testid="collection-flashcard-ai-generate"
+              [disabled]="!canFlashcardAiGenerate() || flashcardAiGenerating()"
+              (click)="onFlashcardAiGenerate()"
+            >
+              @if (flashcardAiGenerating()) {
+                <span class="material-symbols-outlined text-[20px] animate-spin">
+                  progress_activity
+                </span>
+                <span class="relative z-10 text-sm font-bold">AI 生成中...</span>
+              } @else {
+                <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+                <span class="relative z-10 text-sm font-bold">AI 生成詞義與例句</span>
+              }
+            </button>
+
+            @for (meaning of flashcardMeanings(); track $index; let i = $index) {
+              <fm-meaning-editor-card
+                [meaning]="meaning"
+                [tagLabel]="meaning.zhMeaning || '詞義 ' + (i + 1)"
+                [showDelete]="canDeleteFlashcardMeanings()"
+                [isPlayingAudio]="isFlashcardSentenceAudioPlaying(meaning.enExample)"
+                (meaningChange)="onFlashcardMeaningChange(i, $event)"
+                (deleteClick)="onDeleteFlashcardMeaning(i)"
+                (playAudioClick)="onPlayFlashcardSentenceAudio(meaning.enExample)"
+                [testId]="'collection-flashcard-meaning-' + i"
+              ></fm-meaning-editor-card>
+            }
+
+            <fm-add-item-button
+              label="新增詞義"
+              testId="collection-flashcard-add-meaning"
+              (click)="onAddFlashcardMeaning()"
+            ></fm-add-item-button>
+          </section>
+        </div>
+
+        <footer class="flex justify-end gap-2 border-t border-slate-800 p-4">
+          <fm-button variant="ghost" size="sm" type="button" (click)="onCancelFlashcard()">
+            取消
+          </fm-button>
+          <fm-button
+            size="sm"
+            type="button"
+            [disabled]="store.chatLoading()"
+            testId="collection-flashcard-save"
+            (click)="onSaveFlashcard()"
+          >
+            新增
+          </fm-button>
+        </footer>
+      </section>
+    </div>
+  }
 </div>

@@ -7,9 +7,22 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { CreateCardMeaningRequest } from "./createCardMeaningRequest";
 
 export interface CollectionSuggestedCard {
-  text: string;
-  meaning?: string | null;
+  /**
+   * 候選 ID，可由 AI 或後端產生
+   */
+  id: string;
+  front: string;
+  meanings: Array<CreateCardMeaningRequest>;
   reason: string;
+  /**
+   * 若已存在於使用者卡片中，對應的卡片 ID
+   */
+  existingCardId?: string | null;
+  /**
+   * 前端是否已在本次互動建立卡片
+   */
+  added?: boolean;
 }

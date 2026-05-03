@@ -230,6 +230,37 @@ export class CollectionService {
     };
   }
 
+  async listChatMessages(userId: string, sessionId: string) {
+    const session = await this.prisma.collectionChatSession.findFirst({
+      where: { id: sessionId, userId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!session) {
+      throw this.notFound('找不到聊天 session');
+    }
+
+    return {
+      data: session.messages.map((message) => {
+        const metadata = this.parseChatMessageMetadata(message.metadata);
+
+        return {
+          id: message.id,
+          role: message.role.toLowerCase(),
+          content: message.content,
+          intent: metadata.intent,
+          candidates: metadata.candidates,
+          suggestedCards: metadata.suggestedCards,
+          createdAt: message.createdAt.toISOString(),
+        };
+      }),
+    };
+  }
+
   async createChatMessage(
     userId: string,
     sessionId: string,
@@ -295,6 +326,28 @@ export class CollectionService {
     };
   }
 
+  private parseChatMessageMetadata(metadata: Prisma.JsonValue | null) {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return {
+        intent: null,
+        candidates: [],
+        suggestedCards: [],
+      };
+    }
+
+    const record = metadata as Record<string, unknown>;
+
+    return {
+      intent: typeof record['intent'] === 'string' ? record['intent'] : null,
+      candidates: Array.isArray(record['candidates'])
+        ? record['candidates']
+        : [],
+      suggestedCards: Array.isArray(record['suggestedCards'])
+        ? record['suggestedCards']
+        : [],
+    };
+  }
+
   private async mapChatSuggestions(
     userId: string,
     sessionId: string,
@@ -356,7 +409,7 @@ export class CollectionService {
               text: relatedCandidate.text,
               meaning: relatedCandidate.meaning,
               sourceCardIds: relatedSourceCardIds.filter((cardId) =>
-                cardById.has(cardId),
+                this.isUsableSourceCardId(cardId, cardById),
               ),
             };
           },
@@ -371,8 +424,17 @@ export class CollectionService {
             : [],
         );
         const sourceCards = candidateSourceCardIds
-          .map((cardId) => cardById.get(cardId))
-          .filter((card): card is NonNullable<typeof card> => Boolean(card))
+          .flatMap((cardId) => {
+            const card = cardById.get(cardId);
+            if (
+              !card ||
+              this.isLowValueSourceWord(this.tools.normalizeText(card.front))
+            ) {
+              return [];
+            }
+
+            return [card];
+          })
           .map((card) => ({
             id: card.id,
             text: card.front,
@@ -413,6 +475,7 @@ export class CollectionService {
       .filter((card) => {
         const normalizedFront = this.tools.normalizeText(card.front);
         if (!normalizedFront) return false;
+        if (this.isLowValueSourceWord(normalizedFront)) return false;
         if (normalizedFront.includes(' ')) {
           return normalizedText.includes(normalizedFront);
         }
@@ -422,6 +485,63 @@ export class CollectionService {
         );
       })
       .map((card) => card.id);
+  }
+
+  private isLowValueSourceWord(normalizedFront: string): boolean {
+    return new Set([
+      'a',
+      'an',
+      'am',
+      'are',
+      'be',
+      'been',
+      'being',
+      'can',
+      'could',
+      'did',
+      'do',
+      'does',
+      'had',
+      'has',
+      'have',
+      'he',
+      'her',
+      'him',
+      'i',
+      'is',
+      'it',
+      'may',
+      'might',
+      'no',
+      'not',
+      'of',
+      'please',
+      'she',
+      'that',
+      'the',
+      'they',
+      'this',
+      'to',
+      'was',
+      'we',
+      'were',
+      'will',
+      'with',
+      'without',
+      'would',
+      'you',
+    ]).has(normalizedFront);
+  }
+
+  private isUsableSourceCardId(
+    cardId: string,
+    cardById: Map<string, { id: string; front: string }>,
+  ): boolean {
+    const card = cardById.get(cardId);
+
+    return Boolean(
+      card && !this.isLowValueSourceWord(this.tools.normalizeText(card.front)),
+    );
   }
 
   private escapeRegExp(text: string): string {

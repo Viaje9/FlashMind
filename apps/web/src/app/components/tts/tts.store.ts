@@ -15,7 +15,7 @@ export class TtsStore {
   private readonly ttsService = inject(TTSService);
   private readonly audioPlayer = inject(SpeakingAudioPlayerService);
   private readonly audioCache = new Map<string, Blob>();
-  private currentPlaybackKey: string | null = null;
+  private readonly currentPlaybackKey = signal<string | null>(null);
 
   private readonly state = signal<TtsStoreState>({
     playingText: null,
@@ -29,7 +29,7 @@ export class TtsStore {
 
   constructor() {
     effect(() => {
-      const activeKey = this.currentPlaybackKey;
+      const activeKey = this.currentPlaybackKey();
       if (!activeKey) {
         return;
       }
@@ -40,7 +40,7 @@ export class TtsStore {
         return;
       }
 
-      this.currentPlaybackKey = null;
+      this.currentPlaybackKey.set(null);
       if (this.state().playingText) {
         this.state.update((s) => ({ ...s, playingText: null }));
       }
@@ -61,13 +61,13 @@ export class TtsStore {
     const cacheKey = createAudioCacheKey(trimmedText);
     this.audioPlayer.clearError();
 
-    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.playingKey() === cacheKey) {
+    if (this.currentPlaybackKey() === cacheKey && this.audioPlayer.playingKey() === cacheKey) {
       this.audioPlayer.pause();
       this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
       return;
     }
 
-    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.pausedKey() === cacheKey) {
+    if (this.currentPlaybackKey() === cacheKey && this.audioPlayer.pausedKey() === cacheKey) {
       this.errorStateClear();
       await this.audioPlayer.resume();
       this.state.update((s) => ({ ...s, playingText: trimmedText, loadingText: null }));
@@ -89,7 +89,7 @@ export class TtsStore {
         loadingText: null,
       }));
       await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
-      this.currentPlaybackKey = cacheKey;
+      this.currentPlaybackKey.set(cacheKey);
       this.state.update((s) => ({
         ...s,
         playingText: trimmedText,
@@ -111,13 +111,13 @@ export class TtsStore {
     const cacheKey = createWordAudioCacheKey(trimmedText);
     this.audioPlayer.clearError();
 
-    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.playingKey() === cacheKey) {
+    if (this.currentPlaybackKey() === cacheKey && this.audioPlayer.playingKey() === cacheKey) {
       this.audioPlayer.pause();
       this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
       return;
     }
 
-    if (this.currentPlaybackKey === cacheKey && this.audioPlayer.pausedKey() === cacheKey) {
+    if (this.currentPlaybackKey() === cacheKey && this.audioPlayer.pausedKey() === cacheKey) {
       this.errorStateClear();
       await this.audioPlayer.resume();
       this.state.update((s) => ({ ...s, playingText: trimmedText, loadingText: null }));
@@ -139,7 +139,7 @@ export class TtsStore {
         loadingText: null,
       }));
       await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
-      this.currentPlaybackKey = cacheKey;
+      this.currentPlaybackKey.set(cacheKey);
       this.state.update((s) => ({
         ...s,
         playingText: trimmedText,
@@ -156,14 +156,15 @@ export class TtsStore {
   }
 
   stop(): void {
-    if (this.currentPlaybackKey) {
+    const activeKey = this.currentPlaybackKey();
+    if (activeKey) {
       const playingKey = this.audioPlayer.playingKey();
       const pausedKey = this.audioPlayer.pausedKey();
-      if (playingKey === this.currentPlaybackKey || pausedKey === this.currentPlaybackKey) {
+      if (playingKey === activeKey || pausedKey === activeKey) {
         this.audioPlayer.stop();
       }
     }
-    this.currentPlaybackKey = null;
+    this.currentPlaybackKey.set(null);
     this.state.update((s) => ({ ...s, playingText: null, loadingText: null }));
   }
 

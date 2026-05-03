@@ -62,6 +62,11 @@ describe('CollectionService', () => {
       },
       card: {
         findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+      },
+      cardMeaning: {
+        create: jest.fn(),
+        createMany: jest.fn(),
       },
       collectionChatSession: {
         create: jest.fn(),
@@ -201,6 +206,134 @@ describe('CollectionService', () => {
     );
     expect(result.data.intent).toBe(CollectionChatIntent.TRANSLATE_ONLY);
     expect(result.data.candidates).toEqual([]);
+  });
+
+  it('重新取得聊天訊息時會回傳 assistant metadata 中的 suggestedCards', async () => {
+    const { service, prisma } = createService();
+    prisma.collectionChatSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      messages: [
+        {
+          id: 'message-user',
+          role: CollectionChatRole.USER,
+          content: '我需要在餐廳訂滿之前先訂位',
+          metadata: null,
+          createdAt: new Date('2026-05-02T00:00:00.000Z'),
+        },
+        {
+          id: 'message-assistant',
+          role: CollectionChatRole.ASSISTANT,
+          content: '可以收藏整句，也建議補 restaurant。',
+          metadata: {
+            intent: CollectionChatIntent.SUGGEST_CANDIDATES,
+            candidates: [],
+            suggestedCards: [
+              {
+                id: 'suggest-restaurant',
+                front: 'restaurant',
+                meanings: [{ zhMeaning: '餐廳' }],
+                reason: '這是句子的主要情境字。',
+                existingCardId: null,
+                added: false,
+              },
+            ],
+          },
+          createdAt: new Date('2026-05-02T00:00:01.000Z'),
+        },
+      ],
+    });
+
+    const result = await service.listChatMessages('user-1', 'session-1');
+
+    expect(prisma.collectionChatSession.findFirst).toHaveBeenCalledWith({
+      where: { id: 'session-1', userId: 'user-1' },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    expect(result.data).toEqual([
+      {
+        id: 'message-user',
+        role: 'user',
+        content: '我需要在餐廳訂滿之前先訂位',
+        intent: null,
+        candidates: [],
+        suggestedCards: [],
+        createdAt: '2026-05-02T00:00:00.000Z',
+      },
+      {
+        id: 'message-assistant',
+        role: 'assistant',
+        content: '可以收藏整句，也建議補 restaurant。',
+        intent: CollectionChatIntent.SUGGEST_CANDIDATES,
+        candidates: [],
+        suggestedCards: [
+          {
+            id: 'suggest-restaurant',
+            front: 'restaurant',
+            meanings: [{ zhMeaning: '餐廳' }],
+            reason: '這是句子的主要情境字。',
+            existingCardId: null,
+            added: false,
+          },
+        ],
+        createdAt: '2026-05-02T00:00:01.000Z',
+      },
+    ]);
+  });
+
+  it('聊天 AI 回覆中的 suggestedCards 會保存於 assistant metadata 並原樣回傳', async () => {
+    const { service, prisma, aiProvider } = createService();
+    const suggestedCards = [
+      {
+        id: 'suggest-restaurant',
+        front: 'restaurant',
+        meanings: [
+          {
+            zhMeaning: '餐廳',
+            enExample: 'I need to make a reservation at the restaurant.',
+            zhExample: '我需要在那間餐廳訂位。',
+          },
+        ],
+        reason: '這是句子的主要情境字，目前找不到對應單字卡。',
+        existingCardId: null,
+        added: false,
+      },
+    ];
+    prisma.collectionChatSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      providerThreadId: 'thread-1',
+    });
+    aiProvider.runChat.mockResolvedValue({
+      providerThreadId: 'thread-1',
+      intent: CollectionChatIntent.SUGGEST_CANDIDATES,
+      message: '可以收藏整句，也建議補 restaurant。',
+      candidates: [],
+      suggestedCards,
+    });
+
+    const result = await service.createChatMessage('user-1', 'session-1', {
+      message: '我需要在餐廳訂滿之前先訂位',
+    });
+
+    expect(prisma.collectionChatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sessionId: 'session-1',
+        role: CollectionChatRole.ASSISTANT,
+        content: '可以收藏整句，也建議補 restaurant。',
+        metadata: expect.objectContaining({
+          suggestedCards,
+        }),
+      }),
+    });
+    expect(result.data.suggestedCards).toEqual(suggestedCards);
+    expect(prisma.card.create).not.toHaveBeenCalled();
+    expect(prisma.cardMeaning.create).not.toHaveBeenCalled();
+    expect(prisma.cardMeaning.createMany).not.toHaveBeenCalled();
   });
 
   it('聊天候選會帶回來源卡片與可保存的關聯拆解，並保留句子底下的新語塊', async () => {
@@ -375,5 +508,103 @@ describe('CollectionService', () => {
         ],
       }),
     );
+  });
+
+  it('聊天候選不應把功能字、禮貌詞或介系詞當成來源單字卡', async () => {
+    const { service, prisma, aiProvider, tools } = createService();
+    prisma.collectionChatSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      providerThreadId: 'thread-1',
+    });
+    tools.findUserCardsByCandidateTexts.mockResolvedValue([
+      {
+        id: 'card-no',
+        front: 'no',
+        meanings: [{ zhMeaning: '不要' }],
+      },
+      {
+        id: 'card-please',
+        front: 'please',
+        meanings: [{ zhMeaning: '請' }],
+      },
+      {
+        id: 'card-without',
+        front: 'without',
+        meanings: [{ zhMeaning: '沒有' }],
+      },
+    ]);
+    prisma.card.findMany.mockResolvedValue([
+      {
+        id: 'card-no',
+        front: 'no',
+        meanings: [{ zhMeaning: '不要' }],
+      },
+      {
+        id: 'card-please',
+        front: 'please',
+        meanings: [{ zhMeaning: '請' }],
+      },
+      {
+        id: 'card-without',
+        front: 'without',
+        meanings: [{ zhMeaning: '沒有' }],
+      },
+    ]);
+    aiProvider.runChat.mockResolvedValue({
+      providerThreadId: 'thread-1',
+      intent: CollectionChatIntent.SUGGEST_CANDIDATES,
+      message: '可以說 No sauce, please.',
+      candidates: [
+        {
+          kind: CollectionItemKindDto.SENTENCE,
+          text: 'No sauce, please.',
+          meaning: '不要醬，謝謝。',
+          sourceCardIds: ['card-no', 'card-please'],
+          relatedCandidates: [
+            {
+              type: CollectionRelationTypeDto.SENTENCE_HAS_PHRASE,
+              kind: CollectionItemKindDto.PHRASE,
+              text: 'without sauce',
+              meaning: '不要醬；不加醬',
+              sourceCardIds: ['card-without'],
+            },
+          ],
+        },
+      ],
+      suggestedCards: [
+        {
+          id: 'suggest-sauce',
+          front: 'sauce',
+          meanings: [{ zhMeaning: '醬' }],
+          reason: '點餐時表達不要醬的核心名詞。',
+          existingCardId: null,
+          added: false,
+        },
+      ],
+    });
+
+    const result = await service.createChatMessage('user-1', 'session-1', {
+      message: '我在餐廳點餐我想跟服務生說「不要醬」可以怎麼說',
+    });
+
+    expect(result.data.candidates[0]).toEqual(
+      expect.objectContaining({
+        text: 'No sauce, please.',
+        sourceCards: [],
+        relatedCandidates: [
+          expect.objectContaining({
+            text: 'without sauce',
+            sourceCardIds: [],
+          }),
+        ],
+      }),
+    );
+    expect(result.data.suggestedCards).toEqual([
+      expect.objectContaining({
+        front: 'sauce',
+        meanings: [{ zhMeaning: '醬' }],
+      }),
+    ]);
   });
 });

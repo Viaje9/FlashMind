@@ -12,8 +12,17 @@ export enum CollectionChatIntent {
 
 export interface CollectionAiCard {
   id: string;
-  word: string;
-  meaning?: string;
+  front: string;
+  meanings: CollectionAiCardMeaning[];
+  reason: string;
+  existingCardId?: string | null;
+  added?: boolean;
+}
+
+export interface CollectionAiCardMeaning {
+  zhMeaning: string;
+  enExample?: string;
+  zhExample?: string;
 }
 
 export interface CollectionAiCandidate {
