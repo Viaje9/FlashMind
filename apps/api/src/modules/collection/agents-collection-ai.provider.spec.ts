@@ -10,6 +10,7 @@ describe('AgentsCollectionAiProvider', () => {
       searchCollectionItems: jest.fn(),
       normalizeText: (text: string) => text.trim().toLowerCase(),
       findCollectionItemsByText: jest.fn(),
+      findUserCardsByCandidateTexts: jest.fn(),
     };
 
     return new AgentsCollectionAiProvider(
@@ -27,6 +28,7 @@ describe('AgentsCollectionAiProvider', () => {
       searchCollectionItems: jest.fn(),
       normalizeText: (text: string) => text.trim().toLowerCase(),
       findCollectionItemsByText: jest.fn(),
+      findUserCardsByCandidateTexts: jest.fn(),
     };
 
     return new AgentsCollectionAiProvider(
@@ -113,6 +115,58 @@ describe('AgentsCollectionAiProvider', () => {
         },
       }),
     );
+  });
+
+  it('使用 userId 建立 agent 時應掛上收藏包查詢 tools', () => {
+    const provider = createProvider();
+    const config = (provider as any).createAgentConfig('user-1', 'run-1');
+
+    expect(config.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      'getUserVocabularySummary',
+      'searchUserCards',
+      'searchCollectionItems',
+    ]);
+  });
+
+  it('單字卡搜尋 tool 應透過 CollectionToolService 查詢並回傳精簡 JSON', async () => {
+    const tools = {
+      getUserVocabularySummary: jest.fn(),
+      searchUserCards: jest.fn().mockResolvedValue([
+        {
+          id: 'card-sauce',
+          front: 'sauce',
+          meanings: [{ zhMeaning: '醬汁' }],
+        },
+      ]),
+      searchCollectionItems: jest.fn(),
+      normalizeText: (text: string) => text.trim().toLowerCase(),
+      findCollectionItemsByText: jest.fn(),
+      findUserCardsByCandidateTexts: jest.fn(),
+    };
+    const provider = new AgentsCollectionAiProvider(
+      tools as any,
+      {
+        get: jest.fn(),
+      } as unknown as ConfigService,
+    );
+    const config = (provider as any).createAgentConfig('user-1', 'run-1');
+    const searchTool = config.tools.find(
+      (tool: { name: string }) => tool.name === 'searchUserCards',
+    );
+
+    const output = await searchTool.invoke(
+      {} as any,
+      JSON.stringify({ query: 'sauce', limit: 20 }),
+    );
+
+    expect(tools.searchUserCards).toHaveBeenCalledWith('user-1', 'sauce', 20);
+    expect(JSON.parse(output)).toEqual([
+      {
+        id: 'card-sauce',
+        word: 'sauce',
+        meaning: '醬汁',
+      },
+    ]);
   });
 
   it('prompt 應明確要求把有主詞與動詞的 because/although 片段拆成子句', () => {

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定義收藏包後端 API、資料模型、聊天 session、OpenAI Agents SDK agent 與收藏候選保存流程。收藏包後端負責保存句子、搭配詞、片語、子句及其語意關聯，並透過受控 tools 讓 AI 使用使用者既有單字卡與收藏資料。
+定義收藏包後端 API、資料模型、聊天 session、OpenAI Agents SDK agent 與收藏候選保存流程。收藏包後端負責保存句子、搭配詞、片語、子句及其語意關聯，並透過受控 function tools 讓 AI 使用使用者既有單字卡與收藏資料。
 
 ## Requirements
 
@@ -154,7 +154,7 @@
 
 ### Requirement: OpenAI Agents SDK agent 透過 tools 查詢使用者資料
 
-系統 SHALL 讓 OpenAI Agents SDK agent 透過受控後端 tools 查詢使用者單字卡與收藏包資料，而不是直接存取資料庫。
+系統 SHALL 讓 OpenAI Agents SDK agent 透過受控後端 function tools 查詢使用者單字卡與收藏包資料，而不是直接存取資料庫。
 
 #### Scenario: 查詢使用者單字摘要
 
@@ -197,11 +197,11 @@
 
 ### Requirement: OpenAI API key 錯誤可被產品化處理
 
-系統 SHALL 將 OpenAI Agents SDK 本機 OAuth 或執行錯誤映射為 API 可理解的錯誤格式。
+系統 SHALL 將 OpenAI Agents SDK API key 或執行錯誤映射為 API 可理解的錯誤格式。
 
 #### Scenario: OpenAI API key 尚未設定
 
-- **WHEN** OpenAI Agents SDK 因未登入或 OAuth 失效而無法執行
+- **WHEN** OpenAI Agents SDK 因 API key 未設定或失效而無法執行
 - **THEN** 系統 SHALL 回傳錯誤碼表示 OpenAI API key 需要設定
 - **AND** 錯誤訊息 SHALL 指引使用者或開發者執行 `設定 OPENAI_API_KEY`
 

@@ -5,7 +5,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Agent, run, type JsonSchemaDefinition } from '@openai/agents';
+import { Agent, run, tool, type JsonSchemaDefinition } from '@openai/agents';
+import { randomUUID } from 'node:crypto';
+import { mkdir, appendFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { z } from 'zod';
 
 import {
   CollectionAiCandidate,
@@ -21,6 +25,11 @@ import { CollectionItemKindDto, CollectionRelationTypeDto } from './dto';
 const DEFAULT_MODEL = 'gpt-5.5';
 const DEFAULT_MODEL_REASONING_EFFORT = 'low';
 const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_DEBUG_LOG_PATH = join(
+  process.cwd(),
+  'logs',
+  'collection-chat-debug.log',
+);
 const MODEL_REASONING_EFFORTS = [
   'minimal',
   'low',
@@ -142,10 +151,11 @@ const COLLECTION_AGENT_OUTPUT_SCHEMA: JsonSchemaDefinition = {
 
 @Injectable()
 export class AgentsCollectionAiProvider extends CollectionAiProvider {
-  private agent: Agent<unknown, JsonSchemaDefinition> | null = null;
   private readonly model: string;
   private readonly modelReasoningEffort: ModelReasoningEffort;
   private readonly timeoutMs: number;
+  private readonly debugLogEnabled: boolean;
+  private readonly debugLogPath: string;
 
   constructor(
     private readonly tools: CollectionToolService,
@@ -160,75 +170,119 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
     this.timeoutMs =
       Number(configService.get<string>('COLLECTION_AGENTS_TIMEOUT_MS')) ||
       DEFAULT_TIMEOUT_MS;
+    this.debugLogEnabled =
+      process.env.NODE_ENV !== 'test' &&
+      configService.get<string>('COLLECTION_CHAT_DEBUG_LOG_ENABLED') !==
+        'false';
+    this.debugLogPath =
+      configService.get<string>('COLLECTION_CHAT_DEBUG_LOG_PATH') ??
+      DEFAULT_DEBUG_LOG_PATH;
   }
 
   async runChat(input: CollectionAiChatInput): Promise<CollectionAiChatResult> {
     this.assertOpenAiApiKeyReady();
 
-    const [vocabularySummary, searchedCards, existingCollections] =
-      await Promise.all([
-        this.tools.getUserVocabularySummary(input.userId, 24),
-        this.tools.searchUserCards(input.userId, input.message, 20),
-        this.tools.searchCollectionItems(input.userId, input.message, 20),
-      ]);
+    const runId = randomUUID();
+    const prompt = this.buildPrompt(input);
     const abortController = new AbortController();
     const timeout = setTimeout(() => abortController.abort(), this.timeoutMs);
 
     try {
-      const result = await run(
-        this.getAgent(),
-        this.buildPrompt(input, {
-          vocabularySummary,
-          searchedCards,
-          existingCollections,
-        }),
-        {
-          previousResponseId: input.providerThreadId ?? undefined,
-          signal: abortController.signal,
-        },
-      );
+      await this.writeDebugLog({
+        event: 'run_start',
+        runId,
+        userId: input.userId,
+        sessionId: input.sessionId,
+        providerThreadId: input.providerThreadId ?? null,
+        intentHint: input.intentHint ?? null,
+        model: this.model,
+        modelReasoningEffort: this.modelReasoningEffort,
+        prompt,
+        userMessage: input.message,
+      });
+
+      const result = await run(this.createAgent(input.userId, runId), prompt, {
+        previousResponseId: input.providerThreadId ?? undefined,
+        signal: abortController.signal,
+      });
       const parsed = this.parseResult(result.finalOutput);
-      const cleanParsed = this.removeLowValueSourceCardIds(parsed, [
-        ...vocabularySummary.sampleCards,
-        ...searchedCards,
-      ]);
+
+      await this.writeDebugLog({
+        event: 'agent_final_output',
+        runId,
+        userId: input.userId,
+        sessionId: input.sessionId,
+        lastResponseId: result.lastResponseId ?? null,
+        finalOutput: result.finalOutput,
+        parsed,
+      });
+
+      const relatedCards = await this.findCardsForParsedResult(
+        input.userId,
+        input.message,
+        parsed,
+      );
+      const cleanParsed = this.removeLowValueSourceCardIds(
+        parsed,
+        relatedCards,
+      );
       const candidates = await this.markExistingCandidates(
         input.userId,
         cleanParsed,
       );
       const suggestedCards = this.filterSuggestedCards(
         cleanParsed.suggestedCards,
-        [...vocabularySummary.sampleCards, ...searchedCards],
+        relatedCards,
       );
       const shouldReturnSuggestions =
         parsed.intent !== CollectionChatIntent.TRANSLATE_ONLY &&
         !this.isSuppressedSuggestionIntent(input);
-
-      return {
+      const chatResult = {
         providerThreadId: result.lastResponseId ?? input.providerThreadId,
         intent: parsed.intent,
         message: parsed.message,
         candidates: shouldReturnSuggestions ? candidates : [],
         suggestedCards: shouldReturnSuggestions ? suggestedCards : [],
       };
+
+      await this.writeDebugLog({
+        event: 'run_complete',
+        runId,
+        userId: input.userId,
+        sessionId: input.sessionId,
+        relatedCards: this.mapCardsForAgent(relatedCards),
+        cleanParsed,
+        result: chatResult,
+      });
+
+      return chatResult;
     } catch (error) {
+      await this.writeDebugLog({
+        event: 'run_error',
+        runId,
+        userId: input.userId,
+        sessionId: input.sessionId,
+        error: this.serializeError(error),
+      });
+
       throw this.mapAgentsError(error);
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  private createAgentConfig() {
+  private createAgentConfig(userId?: string, runId?: string) {
     return {
       name: 'FlashMind Collection Pack Assistant',
       instructions:
-        '你是 FlashMind 收藏包的英文學習助理。請依使用者提供的上下文輸出符合 JSON schema 的結果。',
+        '你是 FlashMind 收藏包的英文學習助理。請使用可用工具查詢使用者單字卡與既有收藏，再輸出符合 JSON schema 的結果。',
       model: this.model,
       modelSettings: {
         reasoning: {
           effort: this.modelReasoningEffort,
         },
       },
+      tools: userId && runId ? this.createCollectionTools(userId, runId) : [],
       outputType: COLLECTION_AGENT_OUTPUT_SCHEMA,
     };
   }
@@ -246,54 +300,176 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
     return DEFAULT_MODEL_REASONING_EFFORT;
   }
 
-  private getAgent(): Agent<unknown, JsonSchemaDefinition> {
-    if (this.agent) {
-      return this.agent;
-    }
-
-    this.agent = new Agent(this.createAgentConfig());
-
-    return this.agent;
+  private createAgent(
+    userId: string,
+    runId: string,
+  ): Agent<unknown, JsonSchemaDefinition> {
+    return new Agent(this.createAgentConfig(userId, runId));
   }
 
-  private buildPrompt(
-    input: CollectionAiChatInput,
-    context: {
-      vocabularySummary: Awaited<
-        ReturnType<CollectionToolService['getUserVocabularySummary']>
-      >;
-      searchedCards: Awaited<
-        ReturnType<CollectionToolService['searchUserCards']>
-      >;
-      existingCollections: Awaited<
-        ReturnType<CollectionToolService['searchCollectionItems']>
-      >;
-    },
-  ) {
-    const vocabularyCards = context.vocabularySummary.sampleCards.map(
-      (card) => ({
-        id: card.id,
-        word: card.front,
-        meaning: card.meanings[0]?.zhMeaning ?? '',
+  private createCollectionTools(userId: string, runId: string) {
+    return [
+      tool({
+        name: 'getUserVocabularySummary',
+        description:
+          '取得使用者目前單字卡總數與近期單字卡樣本。需要理解使用者已學內容或避免建議已學單字時使用。',
+        parameters: z.object({
+          limit: z.number().int().min(1).max(80),
+        }),
+        execute: async ({ limit }) => {
+          await this.writeToolDebugLog(
+            runId,
+            userId,
+            'getUserVocabularySummary',
+            { limit },
+          );
+
+          const summary = await this.tools.getUserVocabularySummary(
+            userId,
+            limit,
+          );
+          const output = {
+            totalCards: summary.totalCards,
+            sampleCards: this.mapCardsForAgent(summary.sampleCards),
+          };
+
+          await this.writeToolDebugLog(
+            runId,
+            userId,
+            'getUserVocabularySummary',
+            { limit },
+            output,
+          );
+
+          return JSON.stringify(output);
+        },
+        errorFunction: async (_context, error) => {
+          await this.writeDebugLog({
+            event: 'tool_error',
+            runId,
+            userId,
+            toolName: 'getUserVocabularySummary',
+            error: this.serializeError(error),
+          });
+
+          return '無法取得使用者單字卡摘要';
+        },
       }),
-    );
-    const searchedCards = context.searchedCards.map((card) => ({
+      tool({
+        name: 'searchUserCards',
+        description:
+          '依使用者輸入或候選英文單字搜尋使用者既有單字卡。產生 sourceCardIds 或 suggestedCards 前必須使用。',
+        parameters: z.object({
+          query: z.string(),
+          limit: z.number().int().min(1).max(50),
+        }),
+        execute: async ({ query, limit }) => {
+          await this.writeToolDebugLog(runId, userId, 'searchUserCards', {
+            query,
+            limit,
+          });
+
+          const cards = await this.tools.searchUserCards(userId, query, limit);
+          const output = this.mapCardsForAgent(cards);
+
+          await this.writeToolDebugLog(
+            runId,
+            userId,
+            'searchUserCards',
+            { query, limit },
+            output,
+          );
+
+          return JSON.stringify(output);
+        },
+        errorFunction: async (_context, error) => {
+          await this.writeDebugLog({
+            event: 'tool_error',
+            runId,
+            userId,
+            toolName: 'searchUserCards',
+            error: this.serializeError(error),
+          });
+
+          return '無法搜尋使用者單字卡';
+        },
+      }),
+      tool({
+        name: 'searchCollectionItems',
+        description:
+          '依使用者輸入搜尋已存在的收藏句子、搭配詞、片語或子句。判斷是否已收藏或回覆 find_existing 意圖時使用。',
+        parameters: z.object({
+          query: z.string(),
+          limit: z.number().int().min(1).max(50),
+        }),
+        execute: async ({ query, limit }) => {
+          await this.writeToolDebugLog(runId, userId, 'searchCollectionItems', {
+            query,
+            limit,
+          });
+
+          const items = await this.tools.searchCollectionItems(
+            userId,
+            query,
+            limit,
+          );
+          const output = this.mapCollectionsForAgent(items);
+
+          await this.writeToolDebugLog(
+            runId,
+            userId,
+            'searchCollectionItems',
+            { query, limit },
+            output,
+          );
+
+          return JSON.stringify(output);
+        },
+        errorFunction: async (_context, error) => {
+          await this.writeDebugLog({
+            event: 'tool_error',
+            runId,
+            userId,
+            toolName: 'searchCollectionItems',
+            error: this.serializeError(error),
+          });
+
+          return '無法搜尋既有收藏';
+        },
+      }),
+    ];
+  }
+
+  private mapCardsForAgent(
+    cards: Awaited<ReturnType<CollectionToolService['searchUserCards']>>,
+  ) {
+    return cards.map((card) => ({
       id: card.id,
       word: card.front,
       meaning: card.meanings[0]?.zhMeaning ?? '',
     }));
-    const existingCollections = context.existingCollections.map((item) => ({
+  }
+
+  private mapCollectionsForAgent(
+    items: Awaited<ReturnType<CollectionToolService['searchCollectionItems']>>,
+  ) {
+    return items.map((item) => ({
       id: item.id,
       kind: item.kind.toLowerCase(),
       text: item.text,
       meaning: item.zhMeaning ?? '',
       sourceWords: item.cardLinks.map((link) => link.card.front),
     }));
+  }
+
+  private buildPrompt(input: CollectionAiChatInput) {
     const intentPolicy = this.buildIntentPolicy(input);
 
     return [
       '你是 FlashMind 收藏包的英文學習助理。',
       '你的任務是依使用者意圖回覆，並在適合時提出可收藏的句子、搭配詞、片語、子句候選。message 請簡短，不要把 candidates 逐字重複列成清單。',
+      '工具使用規則：你可以呼叫 getUserVocabularySummary、searchUserCards、searchCollectionItems 查詢使用者資料；不要假設你已知道使用者有哪些單字卡或收藏。',
+      '產生收藏候選前，請先呼叫 getUserVocabularySummary({ limit: 24 }) 與 searchUserCards({ query: 使用者輸入或候選英文關鍵字, limit: 20 })。如果使用者詢問已收藏內容，請呼叫 searchCollectionItems({ query: 使用者輸入, limit: 20 })。',
       '純聊天偏好延續規則：如果同一個 Agents SDK conversation 歷史中，使用者曾要求「純聊天、不要卡片、不要收藏候選、不要回傳任何卡片」，後續每一輪都必須維持 candidates 與 suggestedCards 為空陣列，只用 message 自然聊天或回答問題。這個偏好會持續到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」才解除。',
       '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。頂層語塊候選必須盡量錨定至少一張既有單字卡；若沒有可錨定的既有單字卡，可以只回句子候選，並把值得新增的主要單字放進 suggestedCards，不要只在 message 文字提醒。',
       'suggestedCards 規則：只有當本輪句子、語塊，或你為中文輸入產生的自然英文說法中，有「主要、值得學、且使用者單字卡中找不到」的英文單字時，才可放入 suggestedCards。不可為了湊數建議冠詞、介系詞、代名詞、be 動詞、助動詞等功能字，也不可建議已出現在單字卡樣本或相關單字卡中的字。',
@@ -323,11 +499,6 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
       '如果使用者只貼一句中文或英文，沒有明確要求只翻譯，裸句子不能判成 translate_only；必須用 analyze_sentence，至少提供一個 sentence 候選，並在 relatedCandidates 放可拆出的高品質語塊。',
       '輸出必須符合 JSON schema，不要輸出 schema 以外欄位。',
       intentPolicy,
-      '',
-      `使用者單字卡總數：${context.vocabularySummary.totalCards}`,
-      `單字卡樣本：${JSON.stringify(vocabularyCards)}`,
-      `與本次輸入相關的單字卡：${JSON.stringify(searchedCards)}`,
-      `既有收藏搜尋結果：${JSON.stringify(existingCollections)}`,
       '',
       `intentHint：${input.intentHint ?? ''}`,
       `使用者輸入：${input.message}`,
@@ -538,6 +709,55 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
         `${candidate.kind.toUpperCase()}:${this.tools.normalizeText(candidate.text)}`,
       ),
     }));
+  }
+
+  private async findCardsForParsedResult(
+    userId: string,
+    userMessage: string,
+    parsed: Omit<CollectionAiChatResult, 'providerThreadId'>,
+  ) {
+    const lookupTexts = this.collectCardLookupTexts(userMessage, parsed);
+
+    if (lookupTexts.length === 0) {
+      return [];
+    }
+
+    return this.tools.findUserCardsByCandidateTexts(userId, lookupTexts, 120);
+  }
+
+  private collectCardLookupTexts(
+    userMessage: string,
+    parsed: Omit<CollectionAiChatResult, 'providerThreadId'>,
+  ): string[] {
+    return [
+      ...new Set(
+        [
+          userMessage,
+          ...parsed.candidates.flatMap((candidate) => [
+            candidate.text,
+            candidate.meaning,
+            candidate.sourceWord ?? '',
+            ...(candidate.relatedCandidates ?? []).flatMap(
+              (relatedCandidate) => [
+                relatedCandidate.text,
+                relatedCandidate.meaning,
+              ],
+            ),
+          ]),
+          ...parsed.suggestedCards.flatMap((card) => [
+            card.front,
+            card.reason,
+            ...card.meanings.flatMap((meaning) => [
+              meaning.zhMeaning,
+              meaning.enExample ?? '',
+              meaning.zhExample ?? '',
+            ]),
+          ]),
+        ]
+          .map((text) => text.trim())
+          .filter((text) => text.length > 0),
+      ),
+    ];
   }
 
   private isCandidate(value: unknown): value is CollectionAiCandidate {
@@ -828,6 +1048,61 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
         message: 'Agents SDK 執行失敗',
       },
     });
+  }
+
+  private async writeToolDebugLog(
+    runId: string,
+    userId: string,
+    toolName: string,
+    input: unknown,
+    output?: unknown,
+  ) {
+    await this.writeDebugLog({
+      event: output === undefined ? 'tool_call' : 'tool_result',
+      runId,
+      userId,
+      toolName,
+      input,
+      output,
+    });
+  }
+
+  private async writeDebugLog(entry: Record<string, unknown>) {
+    if (!this.debugLogEnabled) {
+      return;
+    }
+
+    try {
+      await mkdir(dirname(this.debugLogPath), { recursive: true });
+      await appendFile(
+        this.debugLogPath,
+        `${JSON.stringify({
+          timestamp: new Date().toISOString(),
+          ...entry,
+        })}\n`,
+        'utf8',
+      );
+    } catch (error) {
+      console.error('[AgentsCollectionAiProvider] Failed to write debug log', {
+        message: this.truncateErrorMessage(
+          error instanceof Error ? error.message : String(error),
+        ),
+      });
+    }
+  }
+
+  private serializeError(error: unknown) {
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        message: this.truncateErrorMessage(error.message),
+        stack: error.stack ? this.truncateErrorMessage(error.stack) : undefined,
+      };
+    }
+
+    return {
+      message: this.truncateErrorMessage(String(error)),
+    };
   }
 
   private truncateErrorMessage(message: string) {
