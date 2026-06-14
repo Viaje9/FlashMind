@@ -5,9 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { Agent, run, type JsonSchemaDefinition } from '@openai/agents';
 
 import {
   CollectionAiCandidate,
@@ -33,134 +31,118 @@ const MODEL_REASONING_EFFORTS = [
 
 type ModelReasoningEffort = (typeof MODEL_REASONING_EFFORTS)[number];
 
-type CodexThreadOptions = ReturnType<
-  CodexCollectionAiProvider['createThreadOptions']
->;
-
-interface CodexThread {
-  readonly id: string | null;
-  run(
-    input: string,
-    turnOptions: { outputSchema: unknown; signal: AbortSignal },
-  ): Promise<{ finalResponse: string }>;
-}
-
-interface CodexClient {
-  startThread(options: CodexThreadOptions): CodexThread;
-  resumeThread(id: string, options: CodexThreadOptions): CodexThread;
-}
-
-interface CodexSdkModule {
-  Codex: new () => CodexClient;
-}
-
-const COLLECTION_AGENT_OUTPUT_SCHEMA = {
-  type: 'object',
-  properties: {
-    intent: {
-      type: 'string',
-      enum: Object.values(CollectionChatIntent),
-    },
-    message: { type: 'string' },
-    candidates: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          kind: {
-            type: 'string',
-            enum: Object.values(CollectionItemKindDto),
-          },
-          text: { type: 'string' },
-          meaning: { type: 'string' },
-          sourceWord: { type: ['string', 'null'] },
-          sourceCardIds: {
-            type: 'array',
-            items: { type: 'string' },
-          },
-          relatedCandidates: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                type: {
-                  type: 'string',
-                  enum: Object.values(CollectionRelationTypeDto),
+const COLLECTION_AGENT_OUTPUT_SCHEMA: JsonSchemaDefinition = {
+  type: 'json_schema',
+  name: 'collection_agent_output',
+  strict: true,
+  schema: {
+    type: 'object',
+    properties: {
+      intent: {
+        type: 'string',
+        enum: Object.values(CollectionChatIntent),
+      },
+      message: { type: 'string' },
+      candidates: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            kind: {
+              type: 'string',
+              enum: Object.values(CollectionItemKindDto),
+            },
+            text: { type: 'string' },
+            meaning: { type: 'string' },
+            sourceWord: { type: ['string', 'null'] },
+            sourceCardIds: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+            relatedCandidates: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: {
+                    type: 'string',
+                    enum: Object.values(CollectionRelationTypeDto),
+                  },
+                  kind: {
+                    type: 'string',
+                    enum: [
+                      CollectionItemKindDto.COLLOCATION,
+                      CollectionItemKindDto.PHRASE,
+                      CollectionItemKindDto.CLAUSE,
+                    ],
+                  },
+                  text: { type: 'string' },
+                  meaning: { type: 'string' },
+                  sourceCardIds: {
+                    type: 'array',
+                    items: { type: 'string' },
+                  },
                 },
-                kind: {
-                  type: 'string',
-                  enum: [
-                    CollectionItemKindDto.COLLOCATION,
-                    CollectionItemKindDto.PHRASE,
-                    CollectionItemKindDto.CLAUSE,
-                  ],
-                },
-                text: { type: 'string' },
-                meaning: { type: 'string' },
-                sourceCardIds: {
-                  type: 'array',
-                  items: { type: 'string' },
-                },
+                required: ['type', 'kind', 'text', 'meaning', 'sourceCardIds'],
+                additionalProperties: false,
               },
-              required: ['type', 'kind', 'text', 'meaning', 'sourceCardIds'],
-              additionalProperties: false,
             },
           },
+          required: [
+            'kind',
+            'text',
+            'meaning',
+            'sourceWord',
+            'sourceCardIds',
+            'relatedCandidates',
+          ],
+          additionalProperties: false,
         },
-        required: [
-          'kind',
-          'text',
-          'meaning',
-          'sourceWord',
-          'sourceCardIds',
-          'relatedCandidates',
-        ],
-        additionalProperties: false,
       },
-    },
-    suggestedCards: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          front: { type: 'string' },
-          meanings: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                zhMeaning: { type: 'string' },
-                enExample: { type: ['string', 'null'] },
-                zhExample: { type: ['string', 'null'] },
+      suggestedCards: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            front: { type: 'string' },
+            meanings: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  zhMeaning: { type: 'string' },
+                  enExample: { type: ['string', 'null'] },
+                  zhExample: { type: ['string', 'null'] },
+                },
+                required: ['zhMeaning', 'enExample', 'zhExample'],
+                additionalProperties: false,
               },
-              required: ['zhMeaning', 'enExample', 'zhExample'],
-              additionalProperties: false,
             },
+            reason: { type: 'string' },
+            existingCardId: { type: ['string', 'null'] },
+            added: { type: 'boolean' },
           },
-          reason: { type: 'string' },
-          existingCardId: { type: ['string', 'null'] },
-          added: { type: 'boolean' },
+          required: [
+            'id',
+            'front',
+            'meanings',
+            'reason',
+            'existingCardId',
+            'added',
+          ],
+          additionalProperties: false,
         },
-        required: [
-          'id',
-          'front',
-          'meanings',
-          'reason',
-          'existingCardId',
-          'added',
-        ],
-        additionalProperties: false,
       },
     },
+    required: ['intent', 'message', 'candidates', 'suggestedCards'],
+    additionalProperties: false,
   },
-  required: ['intent', 'message', 'candidates', 'suggestedCards'],
-  additionalProperties: false,
 } as const;
 
 @Injectable()
-export class CodexCollectionAiProvider extends CollectionAiProvider {
-  private codex: CodexClient | null = null;
+export class AgentsCollectionAiProvider extends CollectionAiProvider {
+  private agent: Agent<unknown, JsonSchemaDefinition> | null = null;
   private readonly model: string;
   private readonly modelReasoningEffort: ModelReasoningEffort;
   private readonly timeoutMs: number;
@@ -171,17 +153,17 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
   ) {
     super();
     this.model =
-      configService.get<string>('COLLECTION_CODEX_MODEL') ?? DEFAULT_MODEL;
+      configService.get<string>('COLLECTION_AGENTS_MODEL') ?? DEFAULT_MODEL;
     this.modelReasoningEffort = this.parseModelReasoningEffort(
-      configService.get<string>('COLLECTION_CODEX_REASONING_EFFORT'),
+      configService.get<string>('COLLECTION_AGENTS_REASONING_EFFORT'),
     );
     this.timeoutMs =
-      Number(configService.get<string>('COLLECTION_CODEX_TIMEOUT_MS')) ||
+      Number(configService.get<string>('COLLECTION_AGENTS_TIMEOUT_MS')) ||
       DEFAULT_TIMEOUT_MS;
   }
 
   async runChat(input: CollectionAiChatInput): Promise<CollectionAiChatResult> {
-    this.assertCodexOauthReady();
+    this.assertOpenAiApiKeyReady();
 
     const [vocabularySummary, searchedCards, existingCollections] =
       await Promise.all([
@@ -189,26 +171,23 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
         this.tools.searchUserCards(input.userId, input.message, 20),
         this.tools.searchCollectionItems(input.userId, input.message, 20),
       ]);
-    const codex = await this.getCodex();
-    const thread = input.providerThreadId
-      ? codex.resumeThread(input.providerThreadId, this.createThreadOptions())
-      : codex.startThread(this.createThreadOptions());
     const abortController = new AbortController();
     const timeout = setTimeout(() => abortController.abort(), this.timeoutMs);
 
     try {
-      const turn = await thread.run(
+      const result = await run(
+        this.getAgent(),
         this.buildPrompt(input, {
           vocabularySummary,
           searchedCards,
           existingCollections,
         }),
         {
-          outputSchema: COLLECTION_AGENT_OUTPUT_SCHEMA,
+          previousResponseId: input.providerThreadId ?? undefined,
           signal: abortController.signal,
         },
       );
-      const parsed = this.parseResult(turn.finalResponse);
+      const parsed = this.parseResult(result.finalOutput);
       const cleanParsed = this.removeLowValueSourceCardIds(parsed, [
         ...vocabularySummary.sampleCards,
         ...searchedCards,
@@ -226,28 +205,31 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
         !this.isSuppressedSuggestionIntent(input);
 
       return {
-        providerThreadId: thread.id ?? input.providerThreadId,
+        providerThreadId: result.lastResponseId ?? input.providerThreadId,
         intent: parsed.intent,
         message: parsed.message,
         candidates: shouldReturnSuggestions ? candidates : [],
         suggestedCards: shouldReturnSuggestions ? suggestedCards : [],
       };
     } catch (error) {
-      throw this.mapCodexError(error);
+      throw this.mapAgentsError(error);
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  private createThreadOptions() {
+  private createAgentConfig() {
     return {
+      name: 'FlashMind Collection Pack Assistant',
+      instructions:
+        '你是 FlashMind 收藏包的英文學習助理。請依使用者提供的上下文輸出符合 JSON schema 的結果。',
       model: this.model,
-      modelReasoningEffort: this.modelReasoningEffort,
-      sandboxMode: 'read-only' as const,
-      approvalPolicy: 'never' as const,
-      networkAccessEnabled: false,
-      skipGitRepoCheck: true,
-      workingDirectory: process.cwd(),
+      modelSettings: {
+        reasoning: {
+          effort: this.modelReasoningEffort,
+        },
+      },
+      outputType: COLLECTION_AGENT_OUTPUT_SCHEMA,
     };
   }
 
@@ -264,16 +246,14 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     return DEFAULT_MODEL_REASONING_EFFORT;
   }
 
-  private async getCodex(): Promise<CodexClient> {
-    if (this.codex) {
-      return this.codex;
+  private getAgent(): Agent<unknown, JsonSchemaDefinition> {
+    if (this.agent) {
+      return this.agent;
     }
 
-    // @openai/codex-sdk is ESM-only, so keep this as a runtime dynamic import.
-    const { Codex } = (await import('@openai/codex-sdk')) as CodexSdkModule;
-    this.codex = new Codex();
+    this.agent = new Agent(this.createAgentConfig());
 
-    return this.codex;
+    return this.agent;
   }
 
   private buildPrompt(
@@ -314,7 +294,7 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     return [
       '你是 FlashMind 收藏包的英文學習助理。',
       '你的任務是依使用者意圖回覆，並在適合時提出可收藏的句子、搭配詞、片語、子句候選。message 請簡短，不要把 candidates 逐字重複列成清單。',
-      '純聊天偏好延續規則：如果同一個 Codex thread 歷史中，使用者曾要求「純聊天、不要卡片、不要收藏候選、不要回傳任何卡片」，後續每一輪都必須維持 candidates 與 suggestedCards 為空陣列，只用 message 自然聊天或回答問題。這個偏好會持續到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」才解除。',
+      '純聊天偏好延續規則：如果同一個 Agents SDK conversation 歷史中，使用者曾要求「純聊天、不要卡片、不要收藏候選、不要回傳任何卡片」，後續每一輪都必須維持 candidates 與 suggestedCards 為空陣列，只用 message 自然聊天或回答問題。這個偏好會持續到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」才解除。',
       '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。頂層語塊候選必須盡量錨定至少一張既有單字卡；若沒有可錨定的既有單字卡，可以只回句子候選，並把值得新增的主要單字放進 suggestedCards，不要只在 message 文字提醒。',
       'suggestedCards 規則：只有當本輪句子、語塊，或你為中文輸入產生的自然英文說法中，有「主要、值得學、且使用者單字卡中找不到」的英文單字時，才可放入 suggestedCards。不可為了湊數建議冠詞、介系詞、代名詞、be 動詞、助動詞等功能字，也不可建議已出現在單字卡樣本或相關單字卡中的字。',
       '中文轉英文缺字規則：如果使用者問「某中文可以怎麼說 / 我想跟某人說某句話」，你必須先判斷自然英文說法會用到哪些關鍵單字；即使該英文單字沒有出現在使用者原始輸入中，只要它是表達核心且使用者卡片找不到，就應放入 suggestedCards。例如「不要醬」可產生 without sauce / no sauce，此時若 sauce 不在既有卡片，suggestedCards 應包含 front=sauce、zhMeaning=醬。',
@@ -467,12 +447,13 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
   }
 
   private parseResult(
-    finalResponse: string,
+    finalOutput: unknown,
   ): Omit<CollectionAiChatResult, 'providerThreadId'> {
     try {
-      const parsed = JSON.parse(
-        finalResponse,
-      ) as Partial<CollectionAiChatResult>;
+      const parsed =
+        typeof finalOutput === 'string'
+          ? (JSON.parse(finalOutput) as Partial<CollectionAiChatResult>)
+          : (finalOutput as Partial<CollectionAiChatResult>);
 
       if (
         !this.isChatIntent(parsed.intent) ||
@@ -480,7 +461,7 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
         !Array.isArray(parsed.candidates) ||
         !Array.isArray(parsed.suggestedCards)
       ) {
-        throw new Error('Invalid Codex response shape');
+        throw new Error('Invalid Agents SDK response shape');
       }
 
       return {
@@ -514,8 +495,8 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     } catch {
       throw new BadGatewayException({
         error: {
-          code: 'CODEX_INVALID_RESPONSE',
-          message: 'Codex 回覆格式無法解析',
+          code: 'AGENTS_INVALID_RESPONSE',
+          message: 'Agents SDK 回覆格式無法解析',
         },
       });
     }
@@ -773,20 +754,20 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     );
   }
 
-  private assertCodexOauthReady() {
-    if (existsSync(join(homedir(), '.codex', 'auth.json'))) {
+  private assertOpenAiApiKeyReady() {
+    if (process.env.OPENAI_API_KEY) {
       return;
     }
 
     throw new ServiceUnavailableException({
       error: {
-        code: 'CODEX_LOGIN_REQUIRED',
-        message: 'Codex 尚未登入，請先在本機執行 codex login',
+        code: 'OPENAI_API_KEY_REQUIRED',
+        message: 'OpenAI API key 尚未設定，請先設定 OPENAI_API_KEY',
       },
     });
   }
 
-  private mapCodexError(error: unknown) {
+  private mapAgentsError(error: unknown) {
     if (error instanceof ServiceUnavailableException) {
       return error;
     }
@@ -797,49 +778,37 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
 
     const message = error instanceof Error ? error.message : String(error);
 
-    console.error('[CodexCollectionAiProvider] Codex execution failed', {
+    console.error('[AgentsCollectionAiProvider] Agents SDK execution failed', {
       message: this.truncateErrorMessage(message),
     });
 
     if (/aborted|abort|timeout/i.test(message)) {
       return new GatewayTimeoutException({
         error: {
-          code: 'CODEX_TIMEOUT',
-          message: 'Codex 執行逾時，請稍後再試',
+          code: 'AGENTS_TIMEOUT',
+          message: 'Agents SDK 執行逾時，請稍後再試',
         },
       });
     }
 
-    if (/auth|login|oauth|unauthorized|not logged in/i.test(message)) {
+    if (/auth|api key|unauthorized|permission|401/i.test(message)) {
       return new ServiceUnavailableException({
         error: {
-          code: 'CODEX_LOGIN_REQUIRED',
-          message: 'Codex OAuth 狀態不可用，請重新執行 codex login',
+          code: 'OPENAI_API_KEY_REQUIRED',
+          message: 'OpenAI API key 不可用，請確認 OPENAI_API_KEY 設定',
         },
       });
     }
 
     if (
-      /invalid_json_schema|Invalid schema for response_format/i.test(message)
-    ) {
-      return new BadGatewayException({
-        error: {
-          code: 'CODEX_INVALID_SCHEMA',
-          message: 'Codex output schema 設定不符合 structured output 規範',
-        },
-      });
-    }
-
-    if (
-      /cannot access session files|permission denied|readonly database|operation not permitted|failed to create session|state db/i.test(
+      /invalid_json_schema|Invalid schema for response_format|schema/i.test(
         message,
       )
     ) {
-      return new ServiceUnavailableException({
+      return new BadGatewayException({
         error: {
-          code: 'CODEX_SESSION_ACCESS_DENIED',
-          message:
-            'Codex 無法存取本機 session 檔案，請確認 API 程序有權限讀寫 ~/.codex，或從一般終端機重新啟動後端',
+          code: 'AGENTS_INVALID_SCHEMA',
+          message: 'Agents SDK output schema 設定不符合 structured output 規範',
         },
       });
     }
@@ -847,16 +816,16 @@ export class CodexCollectionAiProvider extends CollectionAiProvider {
     if (/could not resolve host|network|error sending request/i.test(message)) {
       return new BadGatewayException({
         error: {
-          code: 'CODEX_NETWORK_ERROR',
-          message: 'Codex 連線失敗，請確認目前網路可連到 Codex 服務',
+          code: 'AGENTS_NETWORK_ERROR',
+          message: 'Agents SDK 連線失敗，請確認目前網路可連到 OpenAI 服務',
         },
       });
     }
 
     return new BadGatewayException({
       error: {
-        code: 'CODEX_EXECUTION_FAILED',
-        message: 'Codex 執行失敗',
+        code: 'AGENTS_EXECUTION_FAILED',
+        message: 'Agents SDK 執行失敗',
       },
     });
   }

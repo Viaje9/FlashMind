@@ -239,7 +239,7 @@ model CollectionItemCard {
 model CollectionChatSession {
   id               String   @id @default(cuid())
   userId           String
-  provider         String   @default("CODEX")
+  provider         String   @default("OPENAI_AGENTS")
   providerThreadId String?
   title            String?
   createdAt        DateTime @default(now())

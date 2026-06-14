@@ -1,0 +1,2 @@
+ALTER TABLE "CollectionChatSession"
+ALTER COLUMN "provider" SET DEFAULT 'OPENAI_AGENTS';

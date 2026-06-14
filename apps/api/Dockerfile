@@ -34,9 +34,6 @@ FROM node:22-alpine AS runner
 # 安裝 pnpm
 RUN corepack enable && corepack prepare pnpm@10.26.2 --activate
 
-# 安裝 Codex CLI，讓正式環境可執行 codex login 並供 Codex SDK 使用本機 OAuth 狀態
-RUN npm install -g @openai/codex@0.128.0
-
 WORKDIR /app
 
 # 設定環境變數

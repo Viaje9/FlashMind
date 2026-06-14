@@ -13,7 +13,7 @@
 #### Scenario: 句子包含未建立的主要單字
 
 - **WHEN** 使用者輸入一句中英文內容並要求 AI 整理可收藏表達
-- **AND** Codex agent 判斷句子中有重要英文單字不存在於使用者既有卡片
+- **AND** OpenAI Agents SDK agent 判斷句子中有重要英文單字不存在於使用者既有卡片
 - **THEN** 回應 SHALL 包含單字卡候選
 - **AND** 候選 SHALL 包含正面文字、中文解釋、英文例句與中文例句翻譯
 
@@ -26,7 +26,7 @@
 #### Scenario: 單字不是主要學習重點
 
 - **WHEN** 句子中存在功能字、冠詞、介系詞或對理解表達幫助有限的單字
-- **THEN** Codex agent 不得為了湊數產生單字卡候選
+- **THEN** OpenAI Agents SDK agent 不得為了湊數產生單字卡候選
 - **AND** 回應 SHALL 只保留對句子或語塊理解有實質幫助的建議單字
 
 ### Requirement: 單字候選須由使用者確認後才建立
@@ -35,7 +35,7 @@
 
 #### Scenario: AI 回應包含單字候選
 
-- **WHEN** Codex agent 回傳單字卡候選
+- **WHEN** OpenAI Agents SDK agent 回傳單字卡候選
 - **THEN** 系統 SHALL 保存該候選於聊天回應 metadata 或回傳資料
 - **AND** 系統不得在此階段建立 Card 或 CardMeaning 資料
 

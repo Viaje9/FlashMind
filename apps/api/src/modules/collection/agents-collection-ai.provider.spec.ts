@@ -1,8 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 
-import { CodexCollectionAiProvider } from './codex-collection-ai.provider';
+import { AgentsCollectionAiProvider } from './agents-collection-ai.provider';
 
-describe('CodexCollectionAiProvider', () => {
+describe('AgentsCollectionAiProvider', () => {
   function createProvider() {
     const tools = {
       getUserVocabularySummary: jest.fn(),
@@ -12,7 +12,7 @@ describe('CodexCollectionAiProvider', () => {
       findCollectionItemsByText: jest.fn(),
     };
 
-    return new CodexCollectionAiProvider(
+    return new AgentsCollectionAiProvider(
       tools as any,
       {
         get: jest.fn(),
@@ -29,7 +29,7 @@ describe('CodexCollectionAiProvider', () => {
       findCollectionItemsByText: jest.fn(),
     };
 
-    return new CodexCollectionAiProvider(
+    return new AgentsCollectionAiProvider(
       tools as any,
       {
         get: jest.fn((key: string) => config[key]),
@@ -85,24 +85,32 @@ describe('CodexCollectionAiProvider', () => {
   it('預設應使用 gpt-5.5 與 low reasoning effort', () => {
     const provider = createProvider();
 
-    expect((provider as any).createThreadOptions()).toEqual(
+    expect((provider as any).createAgentConfig()).toEqual(
       expect.objectContaining({
         model: 'gpt-5.5',
-        modelReasoningEffort: 'low',
+        modelSettings: {
+          reasoning: {
+            effort: 'low',
+          },
+        },
       }),
     );
   });
 
   it('可用環境設定覆蓋模型與 reasoning effort', () => {
     const provider = createProviderWithConfig({
-      COLLECTION_CODEX_MODEL: 'gpt-5.4-mini',
-      COLLECTION_CODEX_REASONING_EFFORT: 'minimal',
+      COLLECTION_AGENTS_MODEL: 'gpt-5.4-mini',
+      COLLECTION_AGENTS_REASONING_EFFORT: 'minimal',
     });
 
-    expect((provider as any).createThreadOptions()).toEqual(
+    expect((provider as any).createAgentConfig()).toEqual(
       expect.objectContaining({
         model: 'gpt-5.4-mini',
-        modelReasoningEffort: 'minimal',
+        modelSettings: {
+          reasoning: {
+            effort: 'minimal',
+          },
+        },
       }),
     );
   });

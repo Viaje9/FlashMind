@@ -215,7 +215,7 @@ export class CollectionService {
     const session = await this.prisma.collectionChatSession.create({
       data: {
         userId,
-        provider: 'CODEX',
+        provider: 'OPENAI_AGENTS',
       },
     });
 

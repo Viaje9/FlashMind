@@ -1,9 +1,9 @@
 {
   "name": "web",
-  "version": "0.1.65",
+  "version": "0.1.66",
   "scripts": {
     "ng": "ng",
-    "start": "node scripts/generate-dev-cert.mjs && ng serve",
+    "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

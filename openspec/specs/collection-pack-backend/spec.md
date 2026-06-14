@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定義收藏包後端 API、資料模型、聊天 session、Codex SDK agent 與收藏候選保存流程。收藏包後端負責保存句子、搭配詞、片語、子句及其語意關聯，並透過受控 tools 讓 AI 使用使用者既有單字卡與收藏資料。
+定義收藏包後端 API、資料模型、聊天 session、OpenAI Agents SDK agent 與收藏候選保存流程。收藏包後端負責保存句子、搭配詞、片語、子句及其語意關聯，並透過受控 tools 讓 AI 使用使用者既有單字卡與收藏資料。
 
 ## Requirements
 
@@ -96,7 +96,7 @@
 
 ### Requirement: 收藏包聊天保存多輪 session 與訊息
 
-系統 SHALL 保存收藏包聊天 session、使用者訊息、AI 回覆與 Codex provider thread id，以支援多輪對話與 thread resume。
+系統 SHALL 保存收藏包聊天 session、使用者訊息、AI 回覆與 OpenAI Agents provider thread id，以支援多輪對話與 thread resume。
 
 #### Scenario: 建立聊天 session
 
@@ -108,18 +108,18 @@
 
 - **WHEN** 使用者在收藏包聊天 session 送出訊息
 - **THEN** 系統 SHALL 保存使用者訊息
-- **AND** 系統 SHALL 透過 Codex provider 產生 AI 回覆
+- **AND** 系統 SHALL 透過 OpenAI Agents provider 產生 AI 回覆
 - **AND** 系統 SHALL 保存 AI 回覆與結構化 metadata
 
-#### Scenario: Resume Codex thread
+#### Scenario: Resume Agents SDK conversation
 
 - **WHEN** 聊天 session 已有 provider thread id
 - **THEN** 系統 SHALL 使用既有 provider thread 繼續對話
 - **AND** 系統不得為同一 session 每次重建新的 provider thread
 
-### Requirement: Codex agent 可依意圖回覆或產生收藏候選
+### Requirement: OpenAI Agents SDK agent 可依意圖回覆或產生收藏候選
 
-系統 SHALL 使用 Codex SDK agent 判斷使用者意圖，並依意圖回傳翻譯、修正、解釋、搜尋結果或可收藏候選。
+系統 SHALL 使用 OpenAI Agents SDK agent 判斷使用者意圖，並依意圖回傳翻譯、修正、解釋、搜尋結果或可收藏候選。
 
 #### Scenario: 明確翻譯不回收藏候選
 
@@ -136,13 +136,13 @@
 #### Scenario: 搜尋既有收藏
 
 - **WHEN** 使用者要求尋找已收藏的句子或語塊
-- **THEN** Codex agent SHALL 使用收藏搜尋 tool
+- **THEN** OpenAI Agents SDK agent SHALL 使用收藏搜尋 tool
 - **AND** 系統 SHALL 回傳符合條件的既有收藏項目
 
 #### Scenario: 用已學單字產生候選
 
 - **WHEN** 使用者要求練習、收藏、拆語塊或用已學單字延伸
-- **THEN** Codex agent SHALL 可使用單字卡查詢 tool 與收藏搜尋 tool
+- **THEN** OpenAI Agents SDK agent SHALL 可使用單字卡查詢 tool 與收藏搜尋 tool
 - **AND** 系統 SHALL 回傳可收藏的句子或語塊候選
 
 #### Scenario: 裸句子 fallback
@@ -152,23 +152,23 @@
 - **AND** 系統 SHALL 回傳自然英文或中文理解結果
 - **AND** 系統 SHALL 回傳可收藏的句子或語塊候選
 
-### Requirement: Codex agent 透過 tools 查詢使用者資料
+### Requirement: OpenAI Agents SDK agent 透過 tools 查詢使用者資料
 
-系統 SHALL 讓 Codex agent 透過受控後端 tools 查詢使用者單字卡與收藏包資料，而不是直接存取資料庫。
+系統 SHALL 讓 OpenAI Agents SDK agent 透過受控後端 tools 查詢使用者單字卡與收藏包資料，而不是直接存取資料庫。
 
 #### Scenario: 查詢使用者單字摘要
 
-- **WHEN** Codex agent 需要使用者已學單字上下文
+- **WHEN** OpenAI Agents SDK agent 需要使用者已學單字上下文
 - **THEN** 系統 SHALL 透過 tool 回傳該使用者可存取的單字卡摘要
 
 #### Scenario: 搜尋使用者單字卡
 
-- **WHEN** Codex agent 需要確認特定文字是否存在於使用者單字卡
+- **WHEN** OpenAI Agents SDK agent 需要確認特定文字是否存在於使用者單字卡
 - **THEN** 系統 SHALL 透過 tool 搜尋 `Card.front` 與 `CardMeaning.zhMeaning`
 
 #### Scenario: 搜尋既有收藏避免重複
 
-- **WHEN** Codex agent 產生收藏建議前需要比對既有收藏
+- **WHEN** OpenAI Agents SDK agent 產生收藏建議前需要比對既有收藏
 - **THEN** 系統 SHALL 透過 tool 搜尋使用者收藏項目
 - **AND** 系統 SHALL 在回應中標示候選是否已存在
 
@@ -195,19 +195,19 @@
 - **THEN** 系統 SHALL 忽略該卡片連結或回傳驗證錯誤
 - **AND** 系統不得建立跨使用者資料關聯
 
-### Requirement: Codex OAuth 錯誤可被產品化處理
+### Requirement: OpenAI API key 錯誤可被產品化處理
 
-系統 SHALL 將 Codex SDK 本機 OAuth 或執行錯誤映射為 API 可理解的錯誤格式。
+系統 SHALL 將 OpenAI Agents SDK 本機 OAuth 或執行錯誤映射為 API 可理解的錯誤格式。
 
-#### Scenario: Codex 尚未登入
+#### Scenario: OpenAI API key 尚未設定
 
-- **WHEN** Codex SDK 因未登入或 OAuth 失效而無法執行
-- **THEN** 系統 SHALL 回傳錯誤碼表示 Codex 需要登入
-- **AND** 錯誤訊息 SHALL 指引使用者或開發者執行 `codex login`
+- **WHEN** OpenAI Agents SDK 因未登入或 OAuth 失效而無法執行
+- **THEN** 系統 SHALL 回傳錯誤碼表示 OpenAI API key 需要設定
+- **AND** 錯誤訊息 SHALL 指引使用者或開發者執行 `設定 OPENAI_API_KEY`
 
-#### Scenario: Codex 執行逾時或失敗
+#### Scenario: OpenAI Agents SDK 執行逾時或失敗
 
-- **WHEN** Codex SDK 呼叫逾時或回傳不可恢復錯誤
+- **WHEN** OpenAI Agents SDK 呼叫逾時或回傳不可恢復錯誤
 - **THEN** 系統 SHALL 回傳既有 error wrapper 格式
 - **AND** 系統不得洩漏未清洗的底層錯誤內容給前端
 
@@ -217,7 +217,7 @@
 
 #### Scenario: 回傳建議單字卡
 
-- **WHEN** Codex agent 判斷使用者輸入需要補充尚未建立的主要單字
+- **WHEN** OpenAI Agents SDK agent 判斷使用者輸入需要補充尚未建立的主要單字
 - **THEN** `CollectionChatMessageResult.suggestedCards` SHALL 包含該單字候選
 - **AND** 每筆候選 SHALL 包含 `front`
 - **AND** 每筆候選 SHALL 包含至少一筆 `meanings`
@@ -236,21 +236,21 @@
 - **AND** 後端 SHALL NOT 建立 CardMeaning
 - **AND** 後端 SHALL NOT 修改任何牌組卡片數量
 
-### Requirement: Codex agent 不得建議已存在的單字卡
+### Requirement: OpenAI Agents SDK agent 不得建議已存在的單字卡
 
-Codex agent SHALL 使用後端提供的單字卡搜尋結果判斷單字是否已存在，避免回傳重複的新增單字候選。
+OpenAI Agents SDK agent SHALL 使用後端提供的單字卡搜尋結果判斷單字是否已存在，避免回傳重複的新增單字候選。
 
 #### Scenario: 找到既有單字卡
 
 - **WHEN** `searchUserCards` 或相關單字卡摘要中已存在候選單字
-- **THEN** Codex agent SHALL NOT 將該單字放入 `suggestedCards`
+- **THEN** OpenAI Agents SDK agent SHALL NOT 將該單字放入 `suggestedCards`
 - **AND** 若該單字與句子或語塊候選相關，系統 SHALL 使用既有卡片 id 作為 `sourceCardIds`
 
 #### Scenario: 找不到既有單字卡
 
 - **WHEN** 主要單字無法對應到使用者可存取的卡片
 - **AND** 該單字有助於使用者理解或收藏本次句子/語塊
-- **THEN** Codex agent MAY 將該單字放入 `suggestedCards`
+- **THEN** OpenAI Agents SDK agent MAY 將該單字放入 `suggestedCards`
 - **AND** 候選不得包含捏造的既有 card id
 
 #### Scenario: 單純翻譯不回傳單字候選
