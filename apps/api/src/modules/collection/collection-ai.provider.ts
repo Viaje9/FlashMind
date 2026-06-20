@@ -49,6 +49,7 @@ export interface CollectionAiChatInput {
   providerThreadId?: string | null;
   message: string;
   intentHint?: string;
+  onMessageDelta?: (delta: string) => void | Promise<void>;
 }
 
 export interface CollectionAiChatResult {

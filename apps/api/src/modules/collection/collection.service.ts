@@ -326,6 +326,73 @@ export class CollectionService {
     };
   }
 
+  async createChatMessageStream(
+    userId: string,
+    sessionId: string,
+    dto: CreateCollectionChatMessageDto,
+    onMessageDelta: (delta: string) => void | Promise<void>,
+  ) {
+    const session = await this.prisma.collectionChatSession.findFirst({
+      where: { id: sessionId, userId },
+    });
+
+    if (!session) {
+      throw this.notFound('找不到聊天 session');
+    }
+
+    await this.prisma.collectionChatMessage.create({
+      data: {
+        sessionId,
+        role: CollectionChatRole.USER,
+        content: dto.message,
+      },
+    });
+
+    const result = await this.aiProvider.runChat({
+      userId,
+      sessionId,
+      providerThreadId: session.providerThreadId,
+      message: dto.message,
+      intentHint: dto.intentHint,
+      onMessageDelta,
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.collectionChatSession.update({
+        where: { id: sessionId },
+        data: {
+          providerThreadId: result.providerThreadId ?? session.providerThreadId,
+          updatedAt: new Date(),
+        },
+      }),
+      this.prisma.collectionChatMessage.create({
+        data: {
+          sessionId,
+          role: CollectionChatRole.ASSISTANT,
+          content: result.message,
+          metadata: result as unknown as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+
+    const suggestions = await this.mapChatSuggestions(
+      userId,
+      sessionId,
+      result.candidates,
+    );
+
+    return {
+      data: {
+        sessionId,
+        userMessage: dto.message,
+        assistantMessage: result.message,
+        intent: result.intent,
+        candidates: suggestions,
+        suggestedCards: result.suggestedCards,
+      },
+    };
+  }
+
   private parseChatMessageMetadata(metadata: Prisma.JsonValue | null) {
     if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
       return {

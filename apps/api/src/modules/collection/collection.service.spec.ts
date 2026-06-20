@@ -336,6 +336,55 @@ describe('CollectionService', () => {
     expect(prisma.cardMeaning.createMany).not.toHaveBeenCalled();
   });
 
+  it('串流聊天會傳遞 assistant delta callback 並保存完整回覆', async () => {
+    const { service, prisma, aiProvider } = createService();
+    const onMessageDelta = jest.fn();
+    prisma.collectionChatSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      providerThreadId: 'thread-1',
+    });
+    aiProvider.runChat.mockImplementation(async (input) => {
+      await input.onMessageDelta('可以說 ');
+      await input.onMessageDelta("I'm full.");
+
+      return {
+        providerThreadId: 'thread-2',
+        intent: CollectionChatIntent.SUGGEST_CANDIDATES,
+        message: "可以說 I'm full. 建議新增核心單字 full。",
+        candidates: [],
+        suggestedCards: [],
+      };
+    });
+
+    const result = await service.createChatMessageStream(
+      'user-1',
+      'session-1',
+      {
+        message: '我吃飽了',
+      },
+      onMessageDelta,
+    );
+
+    expect(onMessageDelta).toHaveBeenCalledWith('可以說 ');
+    expect(onMessageDelta).toHaveBeenCalledWith("I'm full.");
+    expect(aiProvider.runChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onMessageDelta,
+      }),
+    );
+    expect(prisma.collectionChatSession.update).toHaveBeenCalledWith({
+      where: { id: 'session-1' },
+      data: {
+        providerThreadId: 'thread-2',
+        updatedAt: expect.any(Date),
+      },
+    });
+    expect(result.data.assistantMessage).toBe(
+      "可以說 I'm full. 建議新增核心單字 full。",
+    );
+  });
+
   it('聊天候選會帶回來源卡片與可保存的關聯拆解，並保留句子底下的新語塊', async () => {
     const { service, prisma, aiProvider } = createService();
     prisma.collectionChatSession.findFirst.mockResolvedValue({

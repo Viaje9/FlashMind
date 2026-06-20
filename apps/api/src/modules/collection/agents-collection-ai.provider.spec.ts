@@ -228,6 +228,16 @@ describe('AgentsCollectionAiProvider', () => {
     expect(prompt).toContain('meanings 至少一筆');
   });
 
+  it('prompt 應禁止 assistant message 使用內部資料語言', () => {
+    const prompt = buildPrompt('我吃飽了');
+
+    expect(prompt).toContain('message 禁止使用內部資料語言');
+    expect(prompt).toContain('可連結');
+    expect(prompt).toContain('這句需要一個新核心字');
+    expect(prompt).toContain('可以說 I’m full.');
+    expect(prompt).toContain('建議新增核心單字 full');
+  });
+
   it('prompt 應要求中文怎麼說情境把翻譯後的缺少關鍵字放入 suggestedCards', () => {
     const prompt = buildPrompt(
       '我在餐廳點餐我想跟服務生說「不要醬」可以怎麼說',

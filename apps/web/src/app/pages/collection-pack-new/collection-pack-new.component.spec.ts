@@ -2,8 +2,8 @@ import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AIService, CardsService, CollectionsService, DecksService } from '@flashmind/api-client';
-import { Subject, of } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { of } from 'rxjs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionPackStore } from '../../components/collection-pack/collection-pack.store';
 import { TtsStore } from '../../components/tts/tts.store';
 import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
@@ -31,8 +31,84 @@ describe('CollectionPackNewComponent', () => {
     isPlaying: ReturnType<typeof vi.fn>;
     play: ReturnType<typeof vi.fn>;
   };
+  const chatStreamResult = {
+    data: {
+      sessionId: 'session-1',
+      userMessage: '我想延期會議',
+      assistantMessage: '可以這樣說，也可以收藏這個搭配詞。',
+      intent: 'analyze_sentence',
+      candidates: [
+        {
+          id: 'suggestion-delay-meeting',
+          kind: 'sentence',
+          text: 'I need to postpone the meeting.',
+          meaning: '我需要延期會議。',
+          sourceWord: null,
+          existing: false,
+          added: false,
+          sourceCards: [],
+          collectionItemId: null,
+          relatedCandidates: [
+            {
+              kind: 'collocation',
+              text: 'postpone the meeting',
+              meaning: '延期會議',
+              type: 'sentence_has_collocation',
+              sourceCardIds: [],
+            },
+            {
+              kind: 'clause',
+              text: 'because the client changed the schedule',
+              meaning: '因為客戶改了時程',
+              type: 'sentence_has_clause',
+              sourceCardIds: [],
+            },
+          ],
+        },
+      ],
+      suggestedCards: [
+        {
+          id: 'suggest-restaurant',
+          front: 'restaurant',
+          meanings: [
+            {
+              zhMeaning: '餐廳',
+              enExample: 'I need to book a table at the restaurant.',
+              zhExample: '我需要在那間餐廳訂位。',
+            },
+          ],
+          reason: '這是句子的主要情境字，目前找不到對應單字卡。',
+          existingCardId: null,
+          added: false,
+        },
+      ],
+    },
+  };
+
+  function createSseResponse(events: Array<{ event: string; data: unknown }>): Response {
+    const body = events
+      .map((event) => `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`)
+      .join('');
+
+    return new Response(body, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    });
+  }
+
+  function mockChatStream(
+    events: Array<{ event: string; data: unknown }> = [
+      { event: 'assistant_delta', data: { delta: '可以這樣說，' } },
+      { event: 'assistant_delta', data: { delta: '也可以收藏這個搭配詞。' } },
+      { event: 'result', data: chatStreamResult },
+      { event: 'done', data: {} },
+    ],
+  ): void {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createSseResponse(events)));
+  }
 
   beforeEach(() => {
+    mockChatStream();
     collectionsApiMock = {
       createCollectionChatSession: vi.fn().mockReturnValue(
         of({
@@ -208,6 +284,10 @@ describe('CollectionPackNewComponent', () => {
     component = TestBed.runInInjectionContext(() => new CollectionPackNewComponent());
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('送出文字後應追加 API 對話與建議', async () => {
     component.inputControl.setValue('我想延期會議');
 
@@ -228,14 +308,51 @@ describe('CollectionPackNewComponent', () => {
     expect(
       collectionsApiMock.createCollectionChatSession.mock.calls[0]?.[2].context.get(SKIP_LOADING),
     ).toBe(true);
-    expect(
-      collectionsApiMock.createCollectionChatMessage.mock.calls[0]?.[4].context.get(SKIP_LOADING),
-    ).toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/collections/chat-sessions/session-1/messages/stream',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    );
   });
 
   it('送出後應先顯示使用者訊息再等待 AI 回覆', async () => {
-    const chatResponse = new Subject<unknown>();
-    collectionsApiMock.createCollectionChatMessage.mockReturnValue(chatResponse.asObservable());
+    let releaseStream: (() => void) | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                new TextEncoder().encode(
+                  'event: assistant_delta\ndata: {"delta":"可以從 delay"}\n\n',
+                ),
+              );
+              releaseStream = () => {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    `event: result\ndata: ${JSON.stringify({
+                      data: {
+                        sessionId: 'session-1',
+                        userMessage: '我想說明專案延期',
+                        assistantMessage: '可以從 delay the project 開始練習。',
+                        intent: 'analyze_sentence',
+                        candidates: [],
+                        suggestedCards: [],
+                      },
+                    })}\n\n`,
+                  ),
+                );
+                controller.close();
+              };
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+        ),
+      ),
+    );
     component.inputControl.setValue('我想說明專案延期');
 
     const submitPromise = component.onSubmit();
@@ -252,22 +369,12 @@ describe('CollectionPackNewComponent', () => {
     ]);
 
     for (let index = 0; index < 5; index += 1) {
-      if (collectionsApiMock.createCollectionChatMessage.mock.calls.length > 0) break;
+      if (store.chatGroups()[0]?.assistantText) break;
       await Promise.resolve();
     }
-    expect(collectionsApiMock.createCollectionChatMessage).toHaveBeenCalled();
+    expect(store.chatGroups()[0].assistantText).toBe('可以從 delay');
 
-    chatResponse.next({
-      data: {
-        sessionId: 'session-1',
-        userMessage: '我想說明專案延期',
-        assistantMessage: '可以從 delay the project 開始練習。',
-        intent: 'analyze_sentence',
-        candidates: [],
-        suggestedCards: [],
-      },
-    });
-    chatResponse.complete();
+    releaseStream?.();
     await submitPromise;
 
     expect(store.chatGroups()[0].assistantText).toBe('可以從 delay the project 開始練習。');

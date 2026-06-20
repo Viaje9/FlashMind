@@ -40,6 +40,88 @@ const MODEL_REASONING_EFFORTS = [
 
 type ModelReasoningEffort = (typeof MODEL_REASONING_EFFORTS)[number];
 
+class JsonStringFieldDeltaExtractor {
+  private readonly prefix: string;
+  private buffer = '';
+  private inValue = false;
+  private escaping = false;
+
+  constructor(fieldName: string) {
+    this.prefix = `"${fieldName}":`;
+  }
+
+  push(delta: string): string[] {
+    this.buffer += delta;
+    const output: string[] = [];
+
+    while (this.buffer.length > 0) {
+      if (!this.inValue) {
+        const prefixIndex = this.buffer.indexOf(this.prefix);
+        if (prefixIndex === -1) {
+          this.buffer = this.buffer.slice(
+            Math.max(0, this.buffer.length - this.prefix.length),
+          );
+          break;
+        }
+
+        const valueStart = this.buffer.indexOf(
+          '"',
+          prefixIndex + this.prefix.length,
+        );
+        if (valueStart === -1) {
+          this.buffer = this.buffer.slice(prefixIndex);
+          break;
+        }
+
+        this.buffer = this.buffer.slice(valueStart + 1);
+        this.inValue = true;
+      }
+
+      let chunk = '';
+      let consumed = 0;
+
+      for (; consumed < this.buffer.length; consumed += 1) {
+        const char = this.buffer[consumed];
+
+        if (this.escaping) {
+          chunk += this.decodeEscapedChar(char);
+          this.escaping = false;
+          continue;
+        }
+
+        if (char === '\\') {
+          this.escaping = true;
+          continue;
+        }
+
+        if (char === '"') {
+          this.buffer = this.buffer.slice(consumed + 1);
+          this.inValue = false;
+          if (chunk) output.push(chunk);
+          return output;
+        }
+
+        chunk += char;
+      }
+
+      this.buffer = '';
+      if (chunk) output.push(chunk);
+      break;
+    }
+
+    return output;
+  }
+
+  private decodeEscapedChar(char: string): string {
+    if (char === 'n') return '\n';
+    if (char === 'r') return '\r';
+    if (char === 't') return '\t';
+    if (char === '"') return '"';
+    if (char === '\\') return '\\';
+    return char;
+  }
+}
+
 const COLLECTION_AGENT_OUTPUT_SCHEMA: JsonSchemaDefinition = {
   type: 'json_schema',
   name: 'collection_agent_output',
@@ -201,6 +283,15 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
         userMessage: input.message,
       });
 
+      if (input.onMessageDelta) {
+        return await this.runChatStreamed(
+          input,
+          prompt,
+          runId,
+          abortController,
+        );
+      }
+
       const result = await run(this.createAgent(input.userId, runId), prompt, {
         previousResponseId: input.providerThreadId ?? undefined,
         signal: abortController.signal,
@@ -268,6 +359,85 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private async runChatStreamed(
+    input: CollectionAiChatInput,
+    prompt: string,
+    runId: string,
+    abortController: AbortController,
+  ): Promise<CollectionAiChatResult> {
+    const stream = await run(this.createAgent(input.userId, runId), prompt, {
+      previousResponseId: input.providerThreadId ?? undefined,
+      signal: abortController.signal,
+      stream: true,
+    });
+    const messageExtractor = new JsonStringFieldDeltaExtractor('message');
+
+    for await (const event of stream) {
+      if (
+        event.type !== 'raw_model_stream_event' ||
+        event.data.type !== 'output_text_delta'
+      ) {
+        continue;
+      }
+
+      for (const delta of messageExtractor.push(event.data.delta)) {
+        await input.onMessageDelta?.(delta);
+      }
+    }
+
+    await stream.completed;
+
+    const parsed = this.parseResult(stream.finalOutput);
+
+    await this.writeDebugLog({
+      event: 'agent_final_output',
+      runId,
+      userId: input.userId,
+      sessionId: input.sessionId,
+      lastResponseId: stream.lastResponseId ?? null,
+      finalOutput: stream.finalOutput,
+      parsed,
+    });
+
+    const relatedCards = await this.findCardsForParsedResult(
+      input.userId,
+      input.message,
+      parsed,
+    );
+    const cleanParsed = this.removeLowValueSourceCardIds(parsed, relatedCards);
+    const candidates = await this.markExistingCandidates(
+      input.userId,
+      cleanParsed,
+    );
+    const suggestedCards = this.filterSuggestedCards(
+      cleanParsed.suggestedCards,
+      relatedCards,
+    );
+    const chatResult = {
+      providerThreadId: stream.lastResponseId ?? input.providerThreadId,
+      intent: parsed.intent,
+      message: parsed.message,
+      candidates:
+        parsed.intent !== CollectionChatIntent.TRANSLATE_ONLY ? candidates : [],
+      suggestedCards:
+        parsed.intent !== CollectionChatIntent.TRANSLATE_ONLY
+          ? suggestedCards
+          : [],
+    };
+
+    await this.writeDebugLog({
+      event: 'run_complete',
+      runId,
+      userId: input.userId,
+      sessionId: input.sessionId,
+      relatedCards: this.mapCardsForAgent(relatedCards),
+      cleanParsed,
+      result: chatResult,
+    });
+
+    return chatResult;
   }
 
   private createAgentConfig(userId?: string, runId?: string) {
@@ -467,7 +637,9 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
     return [
       '你是 FlashMind「用我的單字庫造句」助理。',
       '核心任務：使用者會輸入一個中文句子；你要先查使用者目前單字卡，優先用他已經學過的英文單字組成自然英文句子，並建議缺少但值得新增的核心單字。',
-      'message 請簡短說明你用了哪些已學單字、哪些字建議新增；不要把 candidates 逐字重複列成清單。',
+      'message 請用自然、人話的方式回覆：先給最推薦英文句，再簡短說明用了哪些已學單字、建議新增哪些核心單字；不要把 candidates 逐字重複列成清單。',
+      'message 禁止使用內部資料語言，例如「可連結」、「候選」、「sourceCardIds」、「candidates」、「suggestedCards」、「單字庫沒有可連結的已學單字」。如果沒有已學單字可用，請說「這句需要一個新核心字」。',
+      'message 範例：使用者輸入「我吃飽了」且 full 不在單字庫時，請回「可以說 I’m full. 這句很自然，建議新增核心單字 full。」',
       '工具使用規則：你可以呼叫 getUserVocabularySummary、searchUserCards、searchCollectionItems 查詢使用者資料；不要假設你已知道使用者有哪些單字卡或收藏。',
       '產生句子前，請先呼叫 getUserVocabularySummary({ limit: 24 }) 與 searchUserCards({ query: 使用者輸入或你準備使用的英文關鍵字, limit: 20 })。',
       '造句規則：優先選用使用者單字卡中已存在的內容字；英文句子必須自然，不要為了硬塞單字產生奇怪英文。若自然句子需要使用單字庫沒有的核心名詞、動詞或形容詞，請使用它，並放入 suggestedCards。',

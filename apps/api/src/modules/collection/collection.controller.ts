@@ -9,8 +9,10 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
@@ -74,5 +76,40 @@ export class CollectionController {
       sessionId,
       dto,
     );
+  }
+
+  @Post('chat-sessions/:sessionId/messages/stream')
+  async createChatMessageStream(
+    @Req() req: AuthenticatedRequest,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: CreateCollectionChatMessageDto,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const result = await this.collectionService.createChatMessageStream(
+        req.user.id,
+        sessionId,
+        dto,
+        (delta) => sendEvent('assistant_delta', { delta }),
+      );
+
+      sendEvent('result', result);
+      sendEvent('done', {});
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'AI 回覆失敗';
+      sendEvent('error', { message });
+    } finally {
+      res.end();
+    }
   }
 }

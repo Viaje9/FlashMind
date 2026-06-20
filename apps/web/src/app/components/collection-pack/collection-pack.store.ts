@@ -3,6 +3,7 @@ import { HttpContext } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
   CardsService,
+  Configuration,
   DecksService,
   CollectionsService,
   type CollectionItem as ApiCollectionItem,
@@ -31,6 +32,7 @@ export class CollectionPackStore {
   private readonly collectionsApi = inject(CollectionsService);
   private readonly cardsApi = inject(CardsService);
   private readonly decksApi = inject(DecksService);
+  private readonly apiConfiguration = inject(Configuration);
   private readonly skipLoadingContext = new HttpContext().set(SKIP_LOADING, true);
   private readonly chatSessionId = signal<string | null>(null);
 
@@ -84,16 +86,14 @@ export class CollectionPackStore {
 
     try {
       const sessionId = await this.ensureChatSession();
-      const response = await firstValueFrom(
-        this.collectionsApi.createCollectionChatMessage(
-          sessionId,
-          {
-            message: normalized,
-          },
-          'body',
-          false,
-          { context: this.skipLoadingContext },
-        ),
+      const response = await this.createCollectionChatMessageStream(
+        sessionId,
+        normalized,
+        (delta) => {
+          this.patchChatGroup(groupId, {
+            assistantText: `${this.findChatGroup(groupId)?.assistantText ?? ''}${delta}`,
+          });
+        },
       );
       this.patchChatGroup(groupId, {
         userText: response.data.userMessage,
@@ -111,6 +111,90 @@ export class CollectionPackStore {
     } finally {
       this.chatLoading.set(false);
     }
+  }
+
+  private async createCollectionChatMessageStream(
+    sessionId: string,
+    message: string,
+    onAssistantDelta: (delta: string) => void,
+  ): Promise<{
+    data: {
+      userMessage: string;
+      assistantMessage: string;
+      candidates: ApiCollectionSuggestion[];
+      suggestedCards: ApiCollectionSuggestedCard[];
+    };
+  }> {
+    const response = await fetch(
+      `${this.apiBasePath()}/collections/chat-sessions/${encodeURIComponent(sessionId)}/messages/stream`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          Accept: 'text/event-stream',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      },
+    );
+
+    if (!response.ok || !response.body) {
+      throw new Error('Collection chat stream failed');
+    }
+
+    return this.readCollectionChatMessageStream(response.body, onAssistantDelta);
+  }
+
+  private async readCollectionChatMessageStream(
+    body: ReadableStream<Uint8Array>,
+    onAssistantDelta: (delta: string) => void,
+  ): Promise<{
+    data: {
+      userMessage: string;
+      assistantMessage: string;
+      candidates: ApiCollectionSuggestion[];
+      suggestedCards: ApiCollectionSuggestedCard[];
+    };
+  }> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result: {
+      data: {
+        userMessage: string;
+        assistantMessage: string;
+        candidates: ApiCollectionSuggestion[];
+        suggestedCards: ApiCollectionSuggestedCard[];
+      };
+    } | null = null;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+
+      for (const eventText of events) {
+        const event = this.parseSseEvent(eventText);
+        if (!event) continue;
+
+        if (event.event === 'assistant_delta') {
+          onAssistantDelta(String(event.data['delta'] ?? ''));
+        } else if (event.event === 'result') {
+          result = event.data as unknown as NonNullable<typeof result>;
+        } else if (event.event === 'error') {
+          throw new Error(String(event.data['message'] ?? 'Collection chat stream failed'));
+        }
+      }
+
+      if (done) break;
+    }
+
+    if (!result) {
+      throw new Error('Collection chat stream ended without result');
+    }
+
+    return result;
   }
 
   async addSuggestion(groupId: string, suggestionId: string): Promise<void> {
@@ -247,6 +331,10 @@ export class CollectionPackStore {
       ?.suggestions.find((suggestion) => suggestion.id === suggestionId);
   }
 
+  private findChatGroup(groupId: string): CollectionChatGroup | undefined {
+    return this.chatGroups().find((group) => group.id === groupId);
+  }
+
   private findSuggestedCard(
     groupId: string,
     suggestedCardId: string,
@@ -296,6 +384,32 @@ export class CollectionPackStore {
             },
       ),
     );
+  }
+
+  private parseSseEvent(
+    eventText: string,
+  ): { event: string; data: Record<string, unknown> } | null {
+    const event = eventText
+      .split('\n')
+      .find((line) => line.startsWith('event:'))
+      ?.slice('event:'.length)
+      .trim();
+    const data = eventText
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice('data:'.length).trim())
+      .join('\n');
+
+    if (!event || !data) return null;
+
+    return {
+      event,
+      data: JSON.parse(data) as Record<string, unknown>,
+    };
+  }
+
+  private apiBasePath(): string {
+    return this.apiConfiguration.basePath ?? '/api';
   }
 
   private toApiKind(filter: CollectionFilter): ApiCollectionItemKind | undefined {
