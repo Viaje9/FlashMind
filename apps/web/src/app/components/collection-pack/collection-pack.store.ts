@@ -8,7 +8,6 @@ import {
   CollectionsService,
   type CollectionItem as ApiCollectionItem,
   type CollectionItemKind as ApiCollectionItemKind,
-  type CollectionSaveRelatedCandidate,
   type CollectionSuggestion as ApiCollectionSuggestion,
   type CollectionSuggestedCard as ApiCollectionSuggestedCard,
   type CreateCollectionItemRequest,
@@ -453,44 +452,10 @@ export class CollectionPackStore {
   private mapSuggestions(suggestions: ApiCollectionSuggestion[]): CollectionSuggestion[] {
     const visibleSuggestions: CollectionSuggestion[] = [];
     const seen = new Set<string>();
-    const sourceCardById = new Map(
-      suggestions.flatMap((suggestion) =>
-        (suggestion.sourceCards ?? []).map(
-          (card) =>
-            [
-              card.id,
-              {
-                id: card.id,
-                word: card.text,
-                meaning: card.meaning,
-              },
-            ] as const,
-        ),
-      ),
-    );
 
     for (const suggestion of suggestions) {
       const mappedSuggestion = this.mapSuggestion(suggestion);
       this.pushUniqueSuggestion(visibleSuggestions, seen, mappedSuggestion);
-
-      for (const [index, relatedCandidate] of (suggestion.relatedCandidates ?? []).entries()) {
-        const sourceCards = (relatedCandidate.sourceCardIds ?? [])
-          .map((cardId) => sourceCardById.get(cardId))
-          .filter((card): card is NonNullable<typeof card> => Boolean(card));
-        this.pushUniqueSuggestion(visibleSuggestions, seen, {
-          id: `${suggestion.id}-related-${index}`,
-          kind: relatedCandidate.kind as Exclude<CollectionItemKind, 'sentence'>,
-          text: relatedCandidate.text,
-          meaning: relatedCandidate.meaning ?? '',
-          sourceWord: sourceCards[0]?.word,
-          sourceCards,
-          sourceCardIds: relatedCandidate.sourceCardIds,
-          existing: false,
-          added: false,
-          collectionItemId: null,
-          relatedCandidates: [],
-        });
-      }
     }
 
     return visibleSuggestions;
@@ -530,13 +495,7 @@ export class CollectionPackStore {
       existing: suggestion.existing,
       added: suggestion.added,
       collectionItemId: suggestion.collectionItemId ?? null,
-      relatedCandidates: suggestion.relatedCandidates?.map((candidate) => ({
-        kind: candidate.kind as Exclude<CollectionItemKind, 'sentence'>,
-        text: candidate.text,
-        meaning: candidate.meaning ?? undefined,
-        relationType: candidate.type,
-        sourceCardIds: candidate.sourceCardIds,
-      })),
+      relatedCandidates: [],
     };
   }
 
@@ -547,16 +506,7 @@ export class CollectionPackStore {
       meaning: suggestion.meaning,
       sourceCardIds:
         suggestion.sourceCards?.map((card) => card.id) ?? suggestion.sourceCardIds ?? [],
-      relatedCandidates:
-        suggestion.relatedCandidates?.map(
-          (candidate): CollectionSaveRelatedCandidate => ({
-            kind: candidate.kind,
-            text: candidate.text,
-            meaning: candidate.meaning,
-            type: candidate.relationType,
-            sourceCardIds: candidate.sourceCardIds,
-          }),
-        ) ?? [],
+      relatedCandidates: [],
     };
   }
 }

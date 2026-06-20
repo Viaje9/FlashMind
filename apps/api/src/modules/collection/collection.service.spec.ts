@@ -385,7 +385,7 @@ describe('CollectionService', () => {
     );
   });
 
-  it('聊天候選會帶回來源卡片與可保存的關聯拆解，並保留句子底下的新語塊', async () => {
+  it('聊天候選只回句子並忽略關聯語塊候選', async () => {
     const { service, prisma, aiProvider } = createService();
     prisma.collectionChatSession.findFirst.mockResolvedValue({
       id: 'session-1',
@@ -402,7 +402,7 @@ describe('CollectionService', () => {
     aiProvider.runChat.mockResolvedValue({
       providerThreadId: 'thread-1',
       intent: CollectionChatIntent.ANALYZE_SENTENCE,
-      message: '可以收藏整句，並拆出和 schedule 有關的語塊。',
+      message: '可以收藏整句，建議新增 fall behind schedule。',
       candidates: [
         {
           kind: CollectionItemKindDto.SENTENCE,
@@ -451,22 +451,7 @@ describe('CollectionService', () => {
             meaning: '時程',
           },
         ],
-        relatedCandidates: [
-          {
-            type: CollectionRelationTypeDto.SENTENCE_HAS_COLLOCATION,
-            kind: CollectionItemKindDto.COLLOCATION,
-            text: 'fall behind schedule',
-            meaning: '進度落後',
-            sourceCardIds: ['card-schedule'],
-          },
-          {
-            type: CollectionRelationTypeDto.SENTENCE_HAS_PHRASE,
-            kind: CollectionItemKindDto.PHRASE,
-            text: 'after falling behind schedule',
-            meaning: '在進度落後之後',
-            sourceCardIds: ['card-schedule'],
-          },
-        ],
+        relatedCandidates: [],
       }),
     );
   });
@@ -489,7 +474,7 @@ describe('CollectionService', () => {
     aiProvider.runChat.mockResolvedValue({
       providerThreadId: 'thread-1',
       intent: CollectionChatIntent.ANALYZE_SENTENCE,
-      message: '可以收藏整句，也能拆出 compare prices。',
+      message: '可以收藏整句，也建議新增 compare prices。',
       candidates: [
         {
           kind: CollectionItemKindDto.SENTENCE,
@@ -522,10 +507,8 @@ describe('CollectionService', () => {
 
     expect(tools.findUserCardsByCandidateTexts).toHaveBeenCalledWith('user-1', [
       'I want to compare prices and find a good deal before I buy.',
-      'compare prices',
-      'compare prices',
     ]);
-    expect(result.data.candidates).toHaveLength(2);
+    expect(result.data.candidates).toHaveLength(1);
     expect(result.data.candidates[0]).toEqual(
       expect.objectContaining({
         kind: CollectionItemKindDto.SENTENCE,
@@ -536,25 +519,7 @@ describe('CollectionService', () => {
             meaning: '價格',
           },
         ],
-        relatedCandidates: [
-          expect.objectContaining({
-            text: 'compare prices',
-            sourceCardIds: ['card-price'],
-          }),
-        ],
-      }),
-    );
-    expect(result.data.candidates[1]).toEqual(
-      expect.objectContaining({
-        kind: CollectionItemKindDto.COLLOCATION,
-        text: 'compare prices',
-        sourceCards: [
-          {
-            id: 'card-price',
-            text: 'price',
-            meaning: '價格',
-          },
-        ],
+        relatedCandidates: [],
       }),
     );
   });
@@ -641,12 +606,7 @@ describe('CollectionService', () => {
       expect.objectContaining({
         text: 'No sauce, please.',
         sourceCards: [],
-        relatedCandidates: [
-          expect.objectContaining({
-            text: 'without sauce',
-            sourceCardIds: [],
-          }),
-        ],
+        relatedCandidates: [],
       }),
     );
     expect(result.data.suggestedCards).toEqual([

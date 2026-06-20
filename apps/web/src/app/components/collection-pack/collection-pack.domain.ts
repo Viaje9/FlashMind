@@ -113,9 +113,6 @@ export interface HighlightToken {
 export const COLLECTION_FILTERS: Array<{ value: CollectionFilter; label: string }> = [
   { value: 'all', label: '全部' },
   { value: 'sentence', label: '句子' },
-  { value: 'collocation', label: '搭配詞' },
-  { value: 'phrase', label: '片語' },
-  { value: 'clause', label: '子句' },
 ];
 
 export const COLLECTION_KIND_LABEL: Record<CollectionItemKind, string> = {
@@ -491,19 +488,34 @@ export function createDelayMeetingChatGroup(
   return {
     id: `delay-meeting-${sequence}`,
     userText,
-    assistantText: '可以，這裡有幾個更自然的說法。你可以收藏整句，也可以只收藏常用語塊。',
+    assistantText: '可以收藏這句，也建議新增 postpone the meeting。',
     suggestions: [
       {
         id: `suggestion-postpone-meeting-${sequence}`,
-        kind: 'collocation',
-        text: 'postpone the meeting',
-        meaning: '延期會議',
+        kind: 'sentence',
+        text: 'I need to postpone the meeting.',
+        meaning: '我需要延期會議。',
         sourceWord: 'meeting',
         existing: false,
         added: false,
       },
     ],
-    suggestedCards: [],
+    suggestedCards: [
+      {
+        id: `suggest-postpone-meeting-${sequence}`,
+        front: 'postpone the meeting',
+        meanings: [
+          {
+            zhMeaning: '延期會議',
+            enExample: 'I need to postpone the meeting.',
+            zhExample: '我需要延期會議。',
+          },
+        ],
+        reason: '這是表達延期會議的核心短語。',
+        added: false,
+        status: 'ready',
+      },
+    ],
   };
 }
 

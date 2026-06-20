@@ -171,18 +171,17 @@ describe('AgentsCollectionAiProvider', () => {
     ]);
   });
 
-  it('prompt 應明確要求把有主詞與動詞的 because/although 片段拆成子句', () => {
+  it('prompt 應要求聊天候選只回句子，短語改放建議新增單字', () => {
     const prompt = buildPrompt('雖然期限很緊，但我們還是可以完成專案');
 
     expect(prompt).toContain(
-      '如果 sentence 內有 because、although、if、when、before、after、so 引導，且該片段有自己的主詞與限定動詞，必須優先拆成 clause',
+      'candidates 規則：只回 sentence。不要回 collocation、phrase、clause',
     );
     expect(prompt).toContain(
-      'because the vendor delayed the delivery（clause，因為供應商延誤交付）',
+      '每個 sentence candidate 的 relatedCandidates 必須是空陣列',
     );
-    expect(prompt).toContain(
-      'Although the deadline is tight（clause，雖然期限很緊）',
-    );
+    expect(prompt).toContain('短語建議規則');
+    expect(prompt).toContain('請放入 suggestedCards');
   });
 
   it.each([

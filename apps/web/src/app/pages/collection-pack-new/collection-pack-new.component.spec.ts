@@ -35,7 +35,7 @@ describe('CollectionPackNewComponent', () => {
     data: {
       sessionId: 'session-1',
       userMessage: '我想延期會議',
-      assistantMessage: '可以這樣說，也可以收藏這個搭配詞。',
+      assistantMessage: '可以這樣說，也建議新增 postpone the meeting。',
       intent: 'analyze_sentence',
       candidates: [
         {
@@ -48,36 +48,21 @@ describe('CollectionPackNewComponent', () => {
           added: false,
           sourceCards: [],
           collectionItemId: null,
-          relatedCandidates: [
-            {
-              kind: 'collocation',
-              text: 'postpone the meeting',
-              meaning: '延期會議',
-              type: 'sentence_has_collocation',
-              sourceCardIds: [],
-            },
-            {
-              kind: 'clause',
-              text: 'because the client changed the schedule',
-              meaning: '因為客戶改了時程',
-              type: 'sentence_has_clause',
-              sourceCardIds: [],
-            },
-          ],
+          relatedCandidates: [],
         },
       ],
       suggestedCards: [
         {
-          id: 'suggest-restaurant',
-          front: 'restaurant',
+          id: 'suggest-postpone-meeting',
+          front: 'postpone the meeting',
           meanings: [
             {
-              zhMeaning: '餐廳',
-              enExample: 'I need to book a table at the restaurant.',
-              zhExample: '我需要在那間餐廳訂位。',
+              zhMeaning: '延期會議',
+              enExample: 'I need to postpone the meeting.',
+              zhExample: '我需要延期會議。',
             },
           ],
-          reason: '這是句子的主要情境字，目前找不到對應單字卡。',
+          reason: '這是表達延期會議的核心短語。',
           existingCardId: null,
           added: false,
         },
@@ -99,7 +84,7 @@ describe('CollectionPackNewComponent', () => {
   function mockChatStream(
     events: Array<{ event: string; data: unknown }> = [
       { event: 'assistant_delta', data: { delta: '可以這樣說，' } },
-      { event: 'assistant_delta', data: { delta: '也可以收藏這個搭配詞。' } },
+      { event: 'assistant_delta', data: { delta: '也建議新增 postpone the meeting。' } },
       { event: 'result', data: chatStreamResult },
       { event: 'done', data: {} },
     ],
@@ -126,7 +111,7 @@ describe('CollectionPackNewComponent', () => {
           data: {
             sessionId: 'session-1',
             userMessage: '我想延期會議',
-            assistantMessage: '可以這樣說，也可以收藏這個搭配詞。',
+            assistantMessage: '可以這樣說，也建議新增 postpone the meeting。',
             intent: 'analyze_sentence',
             candidates: [
               {
@@ -139,36 +124,21 @@ describe('CollectionPackNewComponent', () => {
                 added: false,
                 sourceCards: [],
                 collectionItemId: null,
-                relatedCandidates: [
-                  {
-                    kind: 'collocation',
-                    text: 'postpone the meeting',
-                    meaning: '延期會議',
-                    type: 'sentence_has_collocation',
-                    sourceCardIds: [],
-                  },
-                  {
-                    kind: 'clause',
-                    text: 'because the client changed the schedule',
-                    meaning: '因為客戶改了時程',
-                    type: 'sentence_has_clause',
-                    sourceCardIds: [],
-                  },
-                ],
+                relatedCandidates: [],
               },
             ],
             suggestedCards: [
               {
-                id: 'suggest-restaurant',
-                front: 'restaurant',
+                id: 'suggest-postpone-meeting',
+                front: 'postpone the meeting',
                 meanings: [
                   {
-                    zhMeaning: '餐廳',
-                    enExample: 'I need to book a table at the restaurant.',
-                    zhExample: '我需要在那間餐廳訂位。',
+                    zhMeaning: '延期會議',
+                    enExample: 'I need to postpone the meeting.',
+                    zhExample: '我需要延期會議。',
                   },
                 ],
-                reason: '這是句子的主要情境字，目前找不到對應單字卡。',
+                reason: '這是表達延期會議的核心短語。',
                 existingCardId: null,
                 added: false,
               },
@@ -180,9 +150,9 @@ describe('CollectionPackNewComponent', () => {
         of({
           data: {
             id: 'collection-postpone-meeting',
-            kind: 'collocation',
-            text: 'postpone the meeting',
-            meaning: '延期會議',
+            kind: 'sentence',
+            text: 'I need to postpone the meeting.',
+            meaning: '我需要延期會議。',
             sourceWords: ['meeting'],
             breakdownItems: [],
             relatedChunks: [],
@@ -198,8 +168,8 @@ describe('CollectionPackNewComponent', () => {
       createCard: vi.fn().mockReturnValue(
         of({
           data: {
-            id: 'card-restaurant',
-            front: 'restaurant',
+            id: 'card-postpone-meeting',
+            front: 'postpone the meeting',
             meanings: [],
             createdAt: '2026-05-02T00:00:00.000Z',
             updatedAt: '2026-05-02T00:00:00.000Z',
@@ -234,9 +204,9 @@ describe('CollectionPackNewComponent', () => {
           data: {
             meanings: [
               {
-                zhMeaning: '餐廳；飯店',
-                enExample: 'This restaurant gets busy on weekends.',
-                zhExample: '這間餐廳週末會很忙。',
+                zhMeaning: '延期會議',
+                enExample: 'I need to postpone the meeting.',
+                zhExample: '我需要延期會議。',
               },
             ],
           },
@@ -299,11 +269,7 @@ describe('CollectionPackNewComponent', () => {
         .chatGroups()
         .at(-1)
         ?.suggestions.map((item) => item.text),
-    ).toEqual([
-      'I need to postpone the meeting.',
-      'postpone the meeting',
-      'because the client changed the schedule',
-    ]);
+    ).toEqual(['I need to postpone the meeting.']);
     expect(component.inputControl.value).toBe('');
     expect(
       collectionsApiMock.createCollectionChatSession.mock.calls[0]?.[2].context.get(SKIP_LOADING),
@@ -420,38 +386,39 @@ describe('CollectionPackNewComponent', () => {
     const group = store.chatGroups()[0];
     const suggestedCard = group.suggestedCards[0];
 
-    expect(suggestedCard.front).toBe('restaurant');
+    expect(suggestedCard.front).toBe('postpone the meeting');
 
     await component.onAddSuggestedCard(group.id, suggestedCard);
 
     expect(decksApiMock.listDecks).toHaveBeenCalled();
-    expect(component.deckPickerContext()?.suggestedCard.id).toBe('suggest-restaurant');
+    expect(component.deckPickerContext()?.suggestedCard.id).toBe('suggest-postpone-meeting');
     expect(component.selectedDeckId()).toBe('deck-travel');
 
     component.onConfirmDeckPicker();
 
     expect(component.flashcardContext()?.deck.name).toBe('Travel English');
-    expect(component.flashcardFront()).toBe('restaurant');
+    expect(component.flashcardFront()).toBe('postpone the meeting');
     expect(component.flashcardMeanings()[0]).toEqual({
-      zhMeaning: '餐廳',
-      enExample: 'I need to book a table at the restaurant.',
-      zhExample: '我需要在那間餐廳訂位。',
+      zhMeaning: '延期會議',
+      enExample: 'I need to postpone the meeting.',
+      zhExample: '我需要延期會議。',
     });
 
     await component.onSaveFlashcard();
 
     expect(cardsApiMock.createCard).toHaveBeenCalledWith('deck-travel', {
-      front: 'restaurant',
+      front: 'postpone the meeting',
       meanings: [
         {
-          zhMeaning: '餐廳',
-          enExample: 'I need to book a table at the restaurant.',
-          zhExample: '我需要在那間餐廳訂位。',
+          zhMeaning: '延期會議',
+          enExample: 'I need to postpone the meeting.',
+          zhExample: '我需要延期會議。',
         },
       ],
     });
     expect(
-      store.chatGroups()[0].suggestedCards.find((card) => card.id === 'suggest-restaurant')?.status,
+      store.chatGroups()[0].suggestedCards.find((card) => card.id === 'suggest-postpone-meeting')
+        ?.status,
     ).toBe('added');
     expect(component.flashcardContext()).toBeNull();
   });
@@ -469,7 +436,7 @@ describe('CollectionPackNewComponent', () => {
 
     component.onPlayFlashcardSentenceAudio(example);
 
-    expect(ttsStoreMock.play).toHaveBeenCalledWith('I need to book a table at the restaurant.');
+    expect(ttsStoreMock.play).toHaveBeenCalledWith('I need to postpone the meeting.');
   });
 
   it('新增快閃卡表單應可用 AI 生成詞義與例句', async () => {
@@ -485,12 +452,12 @@ describe('CollectionPackNewComponent', () => {
 
     await component.onFlashcardAiGenerate();
 
-    expect(aiApiMock.generateCardContent).toHaveBeenCalledWith({ text: 'restaurant' });
+    expect(aiApiMock.generateCardContent).toHaveBeenCalledWith({ text: 'postpone the meeting' });
     expect(component.flashcardMeanings()).toEqual([
       {
-        zhMeaning: '餐廳；飯店',
-        enExample: 'This restaurant gets busy on weekends.',
-        zhExample: '這間餐廳週末會很忙。',
+        zhMeaning: '延期會議',
+        enExample: 'I need to postpone the meeting.',
+        zhExample: '我需要延期會議。',
       },
     ]);
   });

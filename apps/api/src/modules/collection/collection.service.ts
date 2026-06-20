@@ -420,12 +420,12 @@ export class CollectionService {
     sessionId: string,
     candidates: CollectionAiCandidate[],
   ) {
-    const candidateTexts = candidates.flatMap((candidate) => [
-      candidate.text,
-      ...(candidate.relatedCandidates ?? []).map(
-        (relatedCandidate) => relatedCandidate.text,
-      ),
-    ]);
+    const sentenceCandidates = candidates.filter(
+      (candidate) => candidate.kind === CollectionItemKindDto.SENTENCE,
+    );
+    const candidateTexts = sentenceCandidates.map(
+      (candidate) => candidate.text,
+    );
     const matchedCards = await this.tools.findUserCardsByCandidateTexts(
       userId,
       candidateTexts,
@@ -433,12 +433,9 @@ export class CollectionService {
     const matchedCardIds = matchedCards.map((card) => card.id);
     const sourceCardIds = [
       ...new Set(
-        candidates.flatMap((candidate) => [
-          ...(candidate.sourceCardIds ?? []),
-          ...(candidate.relatedCandidates ?? []).flatMap(
-            (relatedCandidate) => relatedCandidate.sourceCardIds ?? [],
-          ),
-        ]),
+        sentenceCandidates.flatMap(
+          (candidate) => candidate.sourceCardIds ?? [],
+        ),
       ),
     ];
     const cardsToFetch = [...new Set([...sourceCardIds, ...matchedCardIds])];
@@ -461,34 +458,11 @@ export class CollectionService {
     );
     const availableCards = [...cardById.values()];
 
-    return candidates
+    return sentenceCandidates
       .map((candidate, index) => {
-        const relatedCandidates = (candidate.relatedCandidates ?? []).map(
-          (relatedCandidate) => {
-            const relatedSourceCardIds = this.mergeCardIds(
-              relatedCandidate.sourceCardIds ?? [],
-              this.findMatchedCardIds(relatedCandidate.text, availableCards),
-            );
-
-            return {
-              type: relatedCandidate.type,
-              kind: relatedCandidate.kind,
-              text: relatedCandidate.text,
-              meaning: relatedCandidate.meaning,
-              sourceCardIds: relatedSourceCardIds.filter((cardId) =>
-                this.isUsableSourceCardId(cardId, cardById),
-              ),
-            };
-          },
-        );
         const candidateSourceCardIds = this.mergeCardIds(
           candidate.sourceCardIds ?? [],
           this.findMatchedCardIds(candidate.text, availableCards),
-          candidate.kind === CollectionItemKindDto.SENTENCE
-            ? relatedCandidates.flatMap(
-                (relatedCandidate) => relatedCandidate.sourceCardIds,
-              )
-            : [],
         );
         const sourceCards = candidateSourceCardIds
           .flatMap((cardId) => {
@@ -518,14 +492,10 @@ export class CollectionService {
           existing: candidate.alreadySaved ?? false,
           added: false,
           collectionItemId: null,
-          relatedCandidates,
+          relatedCandidates: [],
         };
       })
-      .filter(
-        (candidate) =>
-          candidate.kind === CollectionItemKindDto.SENTENCE ||
-          candidate.sourceCards.length > 0,
-      );
+      .filter((candidate) => candidate.kind === CollectionItemKindDto.SENTENCE);
   }
 
   private mergeCardIds(...groups: string[][]): string[] {
