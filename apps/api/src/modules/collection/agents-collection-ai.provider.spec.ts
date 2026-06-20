@@ -75,12 +75,14 @@ describe('AgentsCollectionAiProvider', () => {
     ) as string;
   }
 
-  it('裸句子沒有明確翻譯意圖時，prompt 應要求分析句子並產生收藏候選', () => {
+  it('裸中文句子沒有明確翻譯意圖時，prompt 應要求用單字庫造句', () => {
     const prompt = buildPrompt('我晚餐想吃雞肉飯');
 
     expect(prompt).toContain(
-      '本輪意圖判斷：使用者只貼一句中文或英文，沒有其他明確意圖，請使用 analyze_sentence',
+      '本輪意圖判斷：請使用 suggest_candidates，把使用者輸入視為要用既有單字庫造英文句子的中文意圖',
     );
+    expect(prompt).toContain('核心任務：使用者會輸入一個中文句子');
+    expect(prompt).toContain('優先用他已經學過的英文單字組成自然英文句子');
     expect(prompt).toContain('裸句子不能判成 translate_only');
   });
 
@@ -185,15 +187,7 @@ describe('AgentsCollectionAiProvider', () => {
 
   it.each([
     ['只翻譯：我想延期會議，不要收藏候選', 'translate_only'],
-    ['請修正：I very like this plan.', 'correct_sentence'],
-    [
-      'Can you make this natural: We delayed the meeting to tomorrow.',
-      'correct_sentence',
-    ],
-    ['fall behind schedule 怎麼用？', 'explain_usage'],
     ['我有沒有收藏 fall behind schedule？', 'find_existing'],
-    ['如果我要說「我想延期會議」可以怎麼說？', 'suggest_candidates'],
-    ['我想說「我們會準時完成」', 'suggest_candidates'],
   ])('會根據明確意圖產生對應 policy：%s', (message, expectedIntent) => {
     const prompt = buildPrompt(message);
 
@@ -201,42 +195,35 @@ describe('AgentsCollectionAiProvider', () => {
   });
 
   it.each([
+    '請修正：I very like this plan.',
+    'fall behind schedule 怎麼用？',
     '可以幫我想個練習口說的情境嗎',
     '給我三個 roleplay 任務',
     '選第一個',
     '再難一點',
     '換旅遊',
-  ])('口說情境或 roleplay 延續指令不應產生收藏候選：%s', (message) => {
+    '接下來不要回傳任何卡片，純聊天就好',
+  ])('非翻譯/搜尋意圖也會收斂成用單字庫造句：%s', (message) => {
     const prompt = buildPrompt(message);
 
-    expect(prompt).toContain('使用者想取得口說練習情境或延續 roleplay 任務');
-    expect(prompt).toContain('candidates 和 suggestedCards 必須為空陣列');
+    expect(prompt).toContain('請使用 suggest_candidates');
+    expect(prompt).toContain('用既有單字庫造英文句子的中文意圖');
   });
 
   it('口說情境中明確要求怎麼說時仍應產生可收藏候選', () => {
     const prompt = buildPrompt('在剛剛的口說情境裡，我想說「我需要延後會議」');
 
-    expect(prompt).toContain('使用者想取得可收藏表達');
     expect(prompt).toContain('請使用 suggest_candidates');
-  });
-
-  it.each([
-    '接下來不要回傳任何卡片，純聊天就好',
-    '先不要給我收藏候選，只聊天',
-    'chat only, no cards',
-  ])('純聊天偏好指令應要求後續不產生收藏候選：%s', (message) => {
-    const prompt = buildPrompt(message);
-
-    expect(prompt).toContain('純聊天偏好延續規則');
-    expect(prompt).toContain('使用者要求純聊天或不要回傳卡片');
-    expect(prompt).toContain('candidates 和 suggestedCards 必須為空陣列');
+    expect(prompt).toContain('優先用他已經學過的英文單字');
   });
 
   it('prompt 應要求 suggestedCards 只放缺少的主要單字並提供快閃卡欄位', () => {
     const prompt = buildPrompt('我需要在餐廳訂滿前先訂位，幫我整理可收藏表達');
 
     expect(prompt).toContain('suggestedCards 規則');
-    expect(prompt).toContain('主要、值得學、且使用者單字卡中找不到');
+    expect(prompt).toContain(
+      '完成這句自然英文真的需要、值得學、且使用者單字卡中找不到',
+    );
     expect(prompt).toContain('front 是單字或短片語');
     expect(prompt).toContain('meanings 至少一筆');
   });
@@ -246,13 +233,12 @@ describe('AgentsCollectionAiProvider', () => {
       '我在餐廳點餐我想跟服務生說「不要醬」可以怎麼說',
     );
 
-    expect(prompt).toContain('中文轉英文缺字規則');
-    expect(prompt).toContain('即使該英文單字沒有出現在使用者原始輸入中');
+    expect(prompt).toContain('中文造句缺字規則');
+    expect(prompt).toContain('即使缺少的英文單字沒有出現在使用者中文原文');
     expect(prompt).toContain('front=sauce');
     expect(prompt).toContain('zhMeaning=醬');
     expect(prompt).toContain('suggestedCards 不可為空');
     expect(prompt).toContain('No sauce, please.');
-    expect(prompt).toContain('without sauce');
     expect(prompt).toContain('請使用 suggest_candidates');
   });
 

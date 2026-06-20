@@ -235,8 +235,7 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
         relatedCards,
       );
       const shouldReturnSuggestions =
-        parsed.intent !== CollectionChatIntent.TRANSLATE_ONLY &&
-        !this.isSuppressedSuggestionIntent(input);
+        parsed.intent !== CollectionChatIntent.TRANSLATE_ONLY;
       const chatResult = {
         providerThreadId: result.lastResponseId ?? input.providerThreadId,
         intent: parsed.intent,
@@ -466,15 +465,16 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
     const intentPolicy = this.buildIntentPolicy(input);
 
     return [
-      '你是 FlashMind 收藏包的英文學習助理。',
-      '你的任務是依使用者意圖回覆，並在適合時提出可收藏的句子、搭配詞、片語、子句候選。message 請簡短，不要把 candidates 逐字重複列成清單。',
+      '你是 FlashMind「用我的單字庫造句」助理。',
+      '核心任務：使用者會輸入一個中文句子；你要先查使用者目前單字卡，優先用他已經學過的英文單字組成自然英文句子，並建議缺少但值得新增的核心單字。',
+      'message 請簡短說明你用了哪些已學單字、哪些字建議新增；不要把 candidates 逐字重複列成清單。',
       '工具使用規則：你可以呼叫 getUserVocabularySummary、searchUserCards、searchCollectionItems 查詢使用者資料；不要假設你已知道使用者有哪些單字卡或收藏。',
-      '產生收藏候選前，請先呼叫 getUserVocabularySummary({ limit: 24 }) 與 searchUserCards({ query: 使用者輸入或候選英文關鍵字, limit: 20 })。如果使用者詢問已收藏內容，請呼叫 searchCollectionItems({ query: 使用者輸入, limit: 20 })。',
-      '純聊天偏好延續規則：如果同一個 Agents SDK conversation 歷史中，使用者曾要求「純聊天、不要卡片、不要收藏候選、不要回傳任何卡片」，後續每一輪都必須維持 candidates 與 suggestedCards 為空陣列，只用 message 自然聊天或回答問題。這個偏好會持續到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」才解除。',
-      '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。頂層語塊候選必須盡量錨定至少一張既有單字卡；若沒有可錨定的既有單字卡，可以只回句子候選，並把值得新增的主要單字放進 suggestedCards，不要只在 message 文字提醒。',
-      'suggestedCards 規則：只有當本輪句子、語塊，或你為中文輸入產生的自然英文說法中，有「主要、值得學、且使用者單字卡中找不到」的英文單字時，才可放入 suggestedCards。不可為了湊數建議冠詞、介系詞、代名詞、be 動詞、助動詞等功能字，也不可建議已出現在單字卡樣本或相關單字卡中的字。',
-      '中文轉英文缺字規則：如果使用者問「某中文可以怎麼說 / 我想跟某人說某句話」，你必須先判斷自然英文說法會用到哪些關鍵單字；即使該英文單字沒有出現在使用者原始輸入中，只要它是表達核心且使用者卡片找不到，就應放入 suggestedCards。例如「不要醬」可產生 without sauce / no sauce，此時若 sauce 不在既有卡片，suggestedCards 應包含 front=sauce、zhMeaning=醬。',
-      '缺字候選一致性規則：如果 message、sentence candidate 或 relatedCandidates 中出現使用者卡片找不到的關鍵名詞、動詞或形容詞，suggestedCards 不可為空；請至少加入最核心的 1 到 3 個缺字。若使用者問「我在餐廳點餐想跟服務生說不要醬可以怎麼說」，理想輸出應包含 sentence: No sauce, please.、phrase: without sauce，並在 suggestedCards 加入 sauce。',
+      '產生句子前，請先呼叫 getUserVocabularySummary({ limit: 24 }) 與 searchUserCards({ query: 使用者輸入或你準備使用的英文關鍵字, limit: 20 })。',
+      '造句規則：優先選用使用者單字卡中已存在的內容字；英文句子必須自然，不要為了硬塞單字產生奇怪英文。若自然句子需要使用單字庫沒有的核心名詞、動詞或形容詞，請使用它，並放入 suggestedCards。',
+      '只可根據後端提供的使用者單字卡 id 產生 sourceCardIds；不可捏造 card id。sentence candidate 的 sourceCardIds 放入本句實際使用到的已學內容字卡片 id。',
+      'suggestedCards 規則：只放「完成這句自然英文真的需要、值得學、且使用者單字卡中找不到」的核心單字或短片語。不可為了湊數建議冠詞、介系詞、代名詞、be 動詞、助動詞等功能字，也不可建議已出現在單字卡樣本或相關單字卡中的字。',
+      '中文造句缺字規則：即使缺少的英文單字沒有出現在使用者中文原文，只要它是自然英文句子的核心字且使用者卡片找不到，就應放入 suggestedCards。例如「不要醬」可產生 No sauce, please.；若 sauce 不在既有卡片，suggestedCards 應包含 front=sauce、zhMeaning=醬。',
+      '缺字候選一致性規則：如果 message、sentence candidate 或 relatedCandidates 中出現使用者卡片找不到的核心名詞、動詞或形容詞，suggestedCards 不可為空；請加入最核心的 1 到 3 個缺字。',
       'sourceCardIds 品質規則：sourceCardIds 只連結真正支撐語意的已學內容字，不要連結 no、please、could、would、can、have、without、I、you、the 等功能字、禮貌詞、代名詞或助動詞。',
       'suggestedCards 必須使用可直接建立快閃卡的資料：front 是單字或短片語；meanings 至少一筆，且每筆包含 zhMeaning、enExample、zhExample；reason 用一句中文說明為什麼此字值得新增；existingCardId 若不存在請填 null；added 一律填 false。',
       '分類定義：',
@@ -493,10 +493,8 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
       '句子拆解範例：We’re falling behind schedule because the vendor delayed the delivery. 的 relatedCandidates 至少應包含 fall behind schedule（collocation，進度落後）與 because the vendor delayed the delivery（clause，因為供應商延誤交付）。',
       '句子拆解範例：Although the deadline is tight, we can still finish the project. 的 relatedCandidates 至少應包含 tight deadline（collocation，緊迫期限）與 Although the deadline is tight（clause，雖然期限很緊）。',
       'relation type 規則：sentence -> collocation 用 sentence_has_collocation；sentence -> phrase 用 sentence_has_phrase；sentence -> clause 用 sentence_has_clause；phrase -> collocation 用 phrase_has_collocation；clause -> collocation 用 clause_has_collocation。',
-      'translate_only 僅限使用者明確要求「只翻譯 / 單純翻譯 / translate only / 不要收藏候選」時使用，candidates 必須是空陣列。',
-      'translate_only、純聊天、口說練習情境或 roleplay 任務時，candidates 與 suggestedCards 必須都是空陣列。',
-      '口說練習情境規則：如果使用者要求練習口說情境、roleplay、對話主題，或用「第一個、開始、換旅遊、再難一點、簡單一點」延續上一輪情境，message 只回情境任務或下一句角色扮演提示；candidates 與 suggestedCards 必須為空陣列。只有當使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容」時才產生候選。',
-      '如果使用者只貼一句中文或英文，沒有明確要求只翻譯，裸句子不能判成 translate_only；必須用 analyze_sentence，至少提供一個 sentence 候選，並在 relatedCandidates 放可拆出的高品質語塊。',
+      '本功能不做一般聊天、roleplay 或泛用用法解釋；遇到這類輸入，也請把它改寫成一個可練習的中文意圖並提供英文句子候選。',
+      '如果使用者只貼一句中文或英文，沒有明確要求只翻譯，裸句子不能判成 translate_only；必須用 suggest_candidates，至少提供一個 sentence 候選。',
       '輸出必須符合 JSON schema，不要輸出 schema 以外欄位。',
       intentPolicy,
       '',
@@ -510,28 +508,6 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
       return '本輪意圖判斷：使用者明確要求單純翻譯，請使用 translate_only，且 candidates 與 suggestedCards 必須為空陣列。';
     }
 
-    if (this.isPureChatPreferenceRequest(input)) {
-      return '本輪意圖判斷：使用者要求純聊天或不要回傳卡片，請使用 explain_usage，且 candidates 和 suggestedCards 必須為空陣列。請在 message 確認接下來會維持純聊天，直到使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容、給我可用句子」。';
-    }
-
-    if (
-      this.matchesIntent(
-        input,
-        /修正|改正|糾正|更自然|這句對嗎|文法|correct|fix|grammar|make this natural|sound natural/i,
-      )
-    ) {
-      return '本輪意圖判斷：使用者要求修正文句，請使用 correct_sentence。若修正後的句子適合收藏，可提供 sentence 候選與 relatedCandidates；不要判成 translate_only。';
-    }
-
-    if (
-      this.matchesIntent(
-        input,
-        /用法|怎麼用|差別|意思|解釋|usage|what does|explain/i,
-      )
-    ) {
-      return '本輪意圖判斷：使用者要求解釋用法，請使用 explain_usage。若回答中有適合收藏的實際語塊，可提供候選；不要判成 translate_only。';
-    }
-
     if (
       this.matchesIntent(
         input,
@@ -541,32 +517,7 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
       return '本輪意圖判斷：使用者想搜尋既有收藏，請使用 find_existing，優先根據既有收藏搜尋結果回覆；不要為了湊數硬產新候選。';
     }
 
-    if (this.isSpeakingPracticeScenarioRequest(input)) {
-      return '本輪意圖判斷：使用者想取得口說練習情境或延續 roleplay 任務，請使用 suggest_candidates，但 candidates 和 suggestedCards 必須為空陣列。message 請提供 2 到 4 個口說情境、任務說明或下一句角色扮演提示；若是「第一個 / 開始 / 再難一點 / 換旅遊」等延續指令，請根據同一個 session 上下文延續。除非使用者明確要求「怎麼說、我想說、拆語塊、收藏、整理可收藏內容」，否則不要產生收藏候選。';
-    }
-
-    if (
-      this.matchesIntent(
-        input,
-        /收藏|語塊|搭配詞|片語|子句|怎麼說|如何說|幫我說|我想說|可以怎麼表達|suggest|candidate/i,
-      )
-    ) {
-      return '本輪意圖判斷：使用者想取得可收藏表達，請使用 suggest_candidates，並提供可收藏候選；不要判成 translate_only。';
-    }
-
-    return '本輪意圖判斷：使用者只貼一句中文或英文，沒有其他明確意圖，請使用 analyze_sentence。裸句子不能判成 translate_only，請產生可收藏候選。';
-  }
-
-  private isPureChatPreferenceRequest(input: CollectionAiChatInput) {
-    const analyzeSentenceIntent: string = CollectionChatIntent.ANALYZE_SENTENCE;
-
-    if (input.intentHint && input.intentHint !== analyzeSentenceIntent) {
-      return false;
-    }
-
-    return /純聊天|單純聊天|只聊天|不要卡片|不用卡片|不要回傳.*卡片|不要.*收藏候選|不用.*收藏候選|不要.*candidates|no cards|no candidates|chat only|just chat/i.test(
-      input.message,
-    );
+    return '本輪意圖判斷：請使用 suggest_candidates，把使用者輸入視為要用既有單字庫造英文句子的中文意圖；至少提供一個 sentence 候選，並列出需要新增的核心單字。';
   }
 
   private isExplicitTranslateOnlyRequest(input: CollectionAiChatInput) {
@@ -576,34 +527,6 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
 
     return /只要?翻譯|單純翻譯|純翻譯|translate only|translation only|翻譯.*(不要|不用).*收藏|翻譯.*(不要|不用).*候選|(不要|不用).*收藏.*翻譯|(不要|不用).*候選.*翻譯/i.test(
       input.message,
-    );
-  }
-
-  private isSpeakingPracticeScenarioRequest(input: CollectionAiChatInput) {
-    const analyzeSentenceIntent: string = CollectionChatIntent.ANALYZE_SENTENCE;
-
-    if (input.intentHint && input.intentHint !== analyzeSentenceIntent) {
-      return false;
-    }
-
-    const message = input.message.trim();
-    if (this.hasCandidateRequest(message)) {
-      return false;
-    }
-
-    return (
-      /口說|口語|開口|speaking|roleplay|role-play|角色扮演|情境|場景|任務|聊天主題|對話主題|conversation topic|practice scenario|scenario|練習.*對話|對話.*練習|練習.*英文|練習.*說英文/i.test(
-        message,
-      ) ||
-      /^(好|好啊|可以|開始|開始吧|選第一個|第一個|第二個|第三個|換一個|再一個|再難一點|簡單一點|換旅遊|不要職場|換成旅遊|換成工作|加入.*情境|讓我.*道歉)[。！!？?\s]*$/i.test(
-        message,
-      )
-    );
-  }
-
-  private hasCandidateRequest(message: string) {
-    return /收藏|語塊|搭配詞|片語|子句|怎麼說|如何說|幫我說|我想說|可以怎麼表達|拆|拆解|整理.*收藏|翻譯|修正|改正|糾正|更自然|這句對嗎|文法|translate|correct|fix|grammar|candidate/i.test(
-      message,
     );
   }
 
@@ -933,13 +856,6 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
       'would',
       'you',
     ]).has(this.tools.normalizeText(front));
-  }
-
-  private isSuppressedSuggestionIntent(input: CollectionAiChatInput) {
-    return (
-      this.isPureChatPreferenceRequest(input) ||
-      this.isSpeakingPracticeScenarioRequest(input)
-    );
   }
 
   private isChatIntent(value: unknown): value is CollectionChatIntent {
