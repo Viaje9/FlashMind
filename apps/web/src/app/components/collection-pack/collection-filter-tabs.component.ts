@@ -5,7 +5,7 @@ import { COLLECTION_FILTERS, type CollectionFilter } from './collection-pack.dom
   selector: 'app-collection-filter-tabs',
   template: `
     <div
-      class="grid grid-cols-5 gap-1 rounded-2xl border border-slate-700 bg-background-dark/80 p-1"
+      class="grid grid-cols-5 gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 dark:border-slate-700 dark:bg-background-dark/80"
       role="tablist"
       aria-label="收藏類型"
     >
@@ -32,8 +32,9 @@ export class CollectionFilterTabsComponent {
 
   buttonClass(filter: CollectionFilter): string {
     const base = 'min-h-10 rounded-xl px-2 text-xs font-bold transition';
-    const active = 'bg-primary text-background-dark shadow-lg shadow-primary/20';
-    const inactive = 'text-secondary-text hover:bg-white/5';
+    const active = 'bg-primary text-white shadow-lg shadow-primary/20';
+    const inactive =
+      'text-slate-500 hover:bg-slate-100 dark:text-secondary-text dark:hover:bg-white/5';
 
     return [base, this.activeFilter() === filter ? active : inactive].join(' ');
   }

@@ -21,13 +21,15 @@
 
   <main class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-4">
     <section
-      class="rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm"
+      class="rounded-2xl border border-slate-200 bg-surface-light p-4 shadow-sm dark:border-slate-700 dark:bg-surface-dark"
       aria-label="收藏包摘要"
     >
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0">
-          <h2 class="text-base font-bold leading-snug text-white">收藏你想再用的英文句子。</h2>
-          <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+          <h2 class="text-base font-bold leading-snug text-slate-900 dark:text-white">
+            收藏你想再用的英文句子。
+          </h2>
+          <p class="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             先用你的單字庫組出自然句子；需要的新核心字會另外建議新增。
           </p>
         </div>
@@ -41,15 +43,25 @@
       </div>
 
       <div class="mt-4 grid grid-cols-2 gap-3">
-        <div class="rounded-xl border border-slate-700 bg-background-dark/70 p-3">
-          <strong class="block text-xl font-black text-white">{{ store.collectionCount() }}</strong>
-          <span class="mt-1 block text-xs font-bold text-slate-300">收藏項目</span>
+        <div
+          class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-background-dark/70"
+        >
+          <strong class="block text-xl font-black text-slate-900 dark:text-white">{{
+            store.collectionCount()
+          }}</strong>
+          <span class="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-300"
+            >收藏項目</span
+          >
         </div>
-        <div class="rounded-xl border border-slate-700 bg-background-dark/70 p-3">
-          <strong class="block text-xl font-black text-white"
+        <div
+          class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-background-dark/70"
+        >
+          <strong class="block text-xl font-black text-slate-900 dark:text-white"
             >{{ store.vocabularyCoverage() }}%</strong
           >
-          <span class="mt-1 block text-xs font-bold text-slate-300">單字覆蓋率</span>
+          <span class="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-300"
+            >單字覆蓋率</span
+          >
         </div>
       </div>
     </section>
@@ -70,8 +82,11 @@
 
     <section class="space-y-3" aria-label="收藏列表">
       <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold text-white">收藏列表</h2>
-        <span class="text-xs font-bold text-slate-300" data-testid="collection-visible-count">
+        <h2 class="text-sm font-bold text-slate-900 dark:text-white">收藏列表</h2>
+        <span
+          class="text-xs font-bold text-slate-500 dark:text-slate-300"
+          data-testid="collection-visible-count"
+        >
           {{ visibleItems().length }} 個項目
         </span>
       </div>
@@ -86,7 +101,7 @@
 
       @if (store.loading()) {
         <div
-          class="rounded-2xl border border-slate-700 bg-surface-dark p-4 text-sm font-bold text-slate-300"
+          class="rounded-2xl border border-slate-200 bg-surface-light p-4 text-sm font-bold text-slate-500 dark:border-slate-700 dark:bg-surface-dark dark:text-slate-300"
         >
           讀取收藏中...
         </div>

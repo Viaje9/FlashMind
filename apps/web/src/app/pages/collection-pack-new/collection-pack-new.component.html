@@ -27,9 +27,11 @@
 
   <main class="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-44 pt-4">
     @if (store.chatGroups().length === 0) {
-      <section class="rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-sm">
-        <h2 class="text-base font-bold text-white">用你的單字庫造句</h2>
-        <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+      <section
+        class="rounded-2xl border border-slate-200 bg-surface-light p-4 shadow-sm dark:border-slate-700 dark:bg-surface-dark"
+      >
+        <h2 class="text-base font-bold text-slate-900 dark:text-white">用你的單字庫造句</h2>
+        <p class="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
           輸入中文句子，AI 會優先用你已學過的單字組成英文，並建議需要新增的核心單字。
         </p>
       </section>
@@ -68,7 +70,7 @@
         @if (group.assistantText) {
           <div class="flex justify-start">
             <div
-              class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 text-sm font-bold leading-relaxed text-slate-200"
+              class="max-w-[88%] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold leading-relaxed text-slate-700 shadow-sm dark:border-slate-700 dark:bg-card-dark dark:text-slate-200"
             >
               {{ group.assistantText }}
             </div>
@@ -106,7 +108,7 @@
           data-testid="collection-chat-loading-message"
         >
           <div
-            class="max-w-[88%] rounded-2xl border border-slate-700 bg-card-dark px-4 py-3 shadow-sm"
+            class="max-w-[88%] rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-card-dark"
           >
             <div class="flex items-center gap-3">
               <span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary/15">
@@ -115,7 +117,7 @@
                 </span>
               </span>
               <div class="min-w-0">
-                <p class="text-sm font-bold leading-relaxed text-slate-200">
+                <p class="text-sm font-bold leading-relaxed text-slate-700 dark:text-slate-200">
                   AI 正在整理可收藏的表達
                 </p>
                 <div class="mt-2 flex items-center gap-1.5" aria-hidden="true">
@@ -137,14 +139,14 @@
   </main>
 
   <form
-    class="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-slate-800 bg-background-dark/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-2 backdrop-blur-xl"
+    class="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-slate-200 bg-background-light/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-background-dark/95"
     (ngSubmit)="onSubmit()"
   >
     <div
-      class="flex items-end gap-2 rounded-2xl border border-slate-700 bg-card-dark/95 p-2 shadow-2xl shadow-black/30 transition focus-within:border-primary/80 focus-within:shadow-primary/10"
+      class="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl shadow-slate-200/60 transition focus-within:border-primary/80 focus-within:shadow-primary/10 dark:border-slate-700 dark:bg-card-dark/95 dark:shadow-black/30"
     >
       <textarea
-        class="max-h-28 min-h-10 flex-1 resize-none overflow-y-auto rounded-xl border-0 bg-transparent px-3 py-2 text-sm font-bold leading-relaxed text-white caret-primary outline-none [field-sizing:content] placeholder:text-slate-500 focus:ring-0"
+        class="max-h-28 min-h-10 flex-1 resize-none overflow-y-auto rounded-xl border-0 bg-transparent px-3 py-2 text-sm font-bold leading-relaxed text-slate-900 caret-primary outline-none [field-sizing:content] placeholder:text-slate-400 focus:ring-0 dark:text-white dark:placeholder:text-slate-500"
         [formControl]="inputControl"
         rows="1"
         placeholder="輸入中文或英文..."
@@ -177,10 +179,10 @@
       data-testid="collection-deck-picker"
     >
       <section
-        class="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-700 bg-surface-dark p-4 shadow-2xl shadow-black/40"
+        class="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-surface-light p-4 shadow-2xl shadow-slate-300/50 dark:border-slate-700 dark:bg-surface-dark dark:shadow-black/40"
       >
-        <h2 class="text-base font-black text-white">加入到哪個牌組？</h2>
-        <p class="mt-2 text-sm font-medium leading-relaxed text-slate-300">
+        <h2 class="text-base font-black text-slate-900 dark:text-white">加入到哪個牌組？</h2>
+        <p class="mt-2 text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
           這次選擇會記住，下次新增單字會自動預選同一個牌組。
         </p>
 
@@ -191,11 +193,13 @@
               class="flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition"
               [class.border-primary]="selectedDeckId() === deck.id"
               [class.bg-primary/10]="selectedDeckId() === deck.id"
-              [class.border-slate-700]="selectedDeckId() !== deck.id"
-              [class.bg-card-dark]="selectedDeckId() !== deck.id"
+              [class.border-slate-200]="selectedDeckId() !== deck.id"
+              [class.dark:border-slate-700]="selectedDeckId() !== deck.id"
+              [class.bg-white]="selectedDeckId() !== deck.id"
+              [class.dark:bg-card-dark]="selectedDeckId() !== deck.id"
               (click)="onSelectDeck(deck.id)"
             >
-              <span class="text-sm font-bold text-white">{{ deck.name }}</span>
+              <span class="text-sm font-bold text-slate-900 dark:text-white">{{ deck.name }}</span>
               @if (selectedDeckId() === deck.id) {
                 <span class="material-symbols-outlined text-[20px] text-primary">check</span>
               }
@@ -222,11 +226,11 @@
       data-testid="collection-flashcard-dialog"
     >
       <section
-        class="grid max-h-[calc(100dvh-2rem)] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-slate-700 bg-background-dark shadow-2xl shadow-black/40"
+        class="grid max-h-[calc(100dvh-2rem)] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-slate-200 bg-background-light shadow-2xl shadow-slate-300/50 dark:border-slate-700 dark:bg-background-dark dark:shadow-black/40"
       >
-        <header class="border-b border-slate-800 p-4">
-          <h2 class="text-base font-black text-white">新增快閃卡</h2>
-          <p class="mt-1 text-sm font-medium text-slate-300">
+        <header class="border-b border-slate-200 p-4 dark:border-slate-800">
+          <h2 class="text-base font-black text-slate-900 dark:text-white">新增快閃卡</h2>
+          <p class="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300">
             加入到「{{ flashcardContext()?.deck?.name }}」
           </p>
         </header>
@@ -234,7 +238,7 @@
         <div class="min-h-0 space-y-5 overflow-y-auto p-4">
           @if (flashcardError()) {
             <p
-              class="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-bold text-red-100"
+              class="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-bold text-red-700 dark:text-red-100"
             >
               {{ flashcardError() }}
             </p>
@@ -246,7 +250,7 @@
             </label>
             <textarea
               id="collection-flashcard-front"
-              class="min-h-16 w-full resize-none rounded-xl border border-slate-700 bg-card-dark px-3 py-3 text-sm font-bold leading-relaxed text-white outline-none transition focus:border-primary"
+              class="min-h-16 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-relaxed text-slate-900 outline-none transition focus:border-primary dark:border-slate-700 dark:bg-card-dark dark:text-white"
               [value]="flashcardFront()"
               (input)="flashcardFront.set($any($event.target).value)"
               data-testid="collection-flashcard-front"
@@ -260,7 +264,7 @@
 
             <button
               type="button"
-              class="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 py-3 font-medium text-purple-300 transition-all hover:bg-purple-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+              class="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 py-3 font-medium text-purple-700 transition-all hover:bg-purple-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:text-purple-300"
               data-testid="collection-flashcard-ai-generate"
               [disabled]="!canFlashcardAiGenerate() || flashcardAiGenerating()"
               (click)="onFlashcardAiGenerate()"
@@ -297,7 +301,7 @@
           </section>
         </div>
 
-        <footer class="flex justify-end gap-2 border-t border-slate-800 p-4">
+        <footer class="flex justify-end gap-2 border-t border-slate-200 p-4 dark:border-slate-800">
           <fm-button variant="ghost" size="sm" type="button" (click)="onCancelFlashcard()">
             取消
           </fm-button>
