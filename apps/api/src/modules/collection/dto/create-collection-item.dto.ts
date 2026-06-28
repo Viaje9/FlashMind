@@ -3,7 +3,6 @@ import {
   IsEnum,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -30,7 +29,7 @@ export class CollectionSaveRelatedCandidateDto {
 
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsString({ each: true })
   sourceCardIds?: string[];
 }
 
@@ -59,7 +58,7 @@ export class CreateCollectionItemDto {
 
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsString({ each: true })
   sourceCardIds?: string[];
 
   @IsOptional()
