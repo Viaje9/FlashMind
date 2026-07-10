@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -21,6 +22,7 @@ import {
   CreateCollectionChatMessageDto,
   CreateCollectionItemDto,
   ListCollectionItemsDto,
+  UpdateCollectionItemDto,
 } from './dto';
 
 @Controller('collections')
@@ -43,6 +45,20 @@ export class CollectionController {
     @Body() dto: CreateCollectionItemDto,
   ) {
     return this.collectionService.createItem(req.user.id, dto);
+  }
+
+  @Get(':id')
+  async getItem(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.collectionService.getItem(req.user.id, id);
+  }
+
+  @Patch(':id')
+  async updateItem(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateCollectionItemDto,
+  ) {
+    return this.collectionService.updateItem(req.user.id, id, dto);
   }
 
   @Delete(':id')

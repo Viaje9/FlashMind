@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import {
   COLLECTION_KIND_LABEL,
   type CollectionBreakdownItem,
@@ -129,6 +130,20 @@ import {
           }
         </section>
       }
+
+      @if (item().kind === 'sentence') {
+        <a
+          class="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-black text-slate-700 transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary dark:border-slate-700 dark:bg-background-dark/60 dark:text-slate-200"
+          [routerLink]="['/collections', item().id, 'edit']"
+          [attr.data-testid]="'collection-edit-' + item().id"
+        >
+          <span class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">edit_note</span>
+            修改這個句子
+          </span>
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </a>
+      }
     </article>
 
     <ng-template #chunkCard let-chunk="chunk">
@@ -147,7 +162,7 @@ import {
       </div>
     </ng-template>
   `,
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CollectionItemCardComponent {

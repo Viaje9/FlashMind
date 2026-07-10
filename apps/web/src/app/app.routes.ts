@@ -57,6 +57,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'collections/:id/edit',
+    loadComponent: () =>
+      import('./pages/collection-pack-edit/collection-pack-edit.component').then(
+        (module) => module.CollectionPackEditComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'collections',
     loadComponent: () =>
       import('./pages/collection-pack-list/collection-pack-list.component').then(

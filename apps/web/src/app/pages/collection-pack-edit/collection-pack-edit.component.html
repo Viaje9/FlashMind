@@ -1,0 +1,177 @@
+<div class="relative min-h-screen overflow-hidden pb-12">
+  <div
+    class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.14),transparent_42%),radial-gradient(circle_at_85%_25%,rgba(251,191,36,0.12),transparent_38%)]"
+  ></div>
+
+  <fm-page-header
+    title="句子修訂桌"
+    subtitle="FlashMind"
+    [titleClickable]="true"
+    (titleClick)="onHeaderTitleClick()"
+    testId="collection-edit-header"
+  >
+    <fm-icon-button
+      class="fm-header-left"
+      variant="ghost"
+      ariaLabel="返回收藏包"
+      routerLink="/collections"
+    >
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pt-4">
+    @if (loading()) {
+      <section
+        class="rounded-3xl border border-slate-200 bg-white/80 p-5 shadow-sm dark:border-slate-700 dark:bg-surface-dark/80"
+      >
+        <p class="text-sm font-bold text-slate-500 dark:text-slate-300">正在攤開你的句子…</p>
+      </section>
+    } @else if (item()) {
+      <section
+        class="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 dark:border-slate-700 dark:bg-surface-dark dark:shadow-black/20"
+        aria-label="編輯收藏句子"
+      >
+        <div
+          class="absolute right-4 top-4 font-mono text-[10px] font-black tracking-[0.18em] text-slate-300 dark:text-slate-600"
+        >
+          DRAFT / {{ item()?.id?.slice(0, 6) }}
+        </div>
+        <p class="text-[11px] font-black tracking-[0.18em] text-cyan-700 dark:text-cyan-300">
+          CURRENT SENTENCE
+        </p>
+
+        <label
+          class="mt-5 block text-xs font-black text-slate-500 dark:text-slate-300"
+          for="collection-edit-text"
+          >英文句子</label
+        >
+        <textarea
+          id="collection-edit-text"
+          class="mt-2 min-h-28 w-full resize-none border-0 border-b-2 border-slate-200 bg-transparent px-0 py-2 text-2xl font-bold leading-snug tracking-tight text-slate-950 outline-none transition focus:border-cyan-500 dark:border-slate-700 dark:text-white"
+          [value]="text()"
+          (input)="text.set($any($event.target).value); saved.set(false)"
+          data-testid="collection-edit-text"
+        ></textarea>
+
+        <label
+          class="mt-5 block text-xs font-black text-slate-500 dark:text-slate-300"
+          for="collection-edit-meaning"
+          >中文意思</label
+        >
+        <textarea
+          id="collection-edit-meaning"
+          class="mt-2 min-h-16 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold leading-relaxed text-slate-700 outline-none transition focus:border-cyan-500 dark:border-slate-700 dark:bg-background-dark/60 dark:text-slate-200"
+          [value]="meaning()"
+          (input)="meaning.set($any($event.target).value); saved.set(false)"
+          data-testid="collection-edit-meaning"
+        ></textarea>
+      </section>
+
+      <section
+        class="rounded-3xl border border-amber-300/60 bg-amber-50/90 p-5 shadow-lg shadow-amber-100/50 dark:border-amber-500/20 dark:bg-amber-950/20 dark:shadow-none"
+        aria-label="AI 修改提示"
+      >
+        <div class="flex items-start gap-3">
+          <span
+            class="grid size-9 shrink-0 place-items-center rounded-full bg-amber-300 text-amber-950"
+          >
+            <span class="material-symbols-outlined text-[20px]">stylus_note</span>
+          </span>
+          <div>
+            <h2 class="text-lg font-black tracking-tight text-slate-950 dark:text-amber-50">
+              寫一張修改便條
+            </h2>
+            <p
+              class="mt-1 text-sm font-medium leading-relaxed text-slate-600 dark:text-amber-100/70"
+            >
+              告訴 AI 想保留什麼、換成什麼語氣或情境。
+            </p>
+          </div>
+        </div>
+
+        @if (suggestion()) {
+          <div
+            class="mt-5 border-y border-dashed border-amber-400 py-5 dark:border-amber-600/50"
+            aria-label="AI 修改建議"
+            data-testid="collection-edit-suggestion"
+          >
+            <p class="text-[11px] font-black tracking-[0.18em] text-amber-700 dark:text-amber-300">
+              AI PROPOSED REVISION
+            </p>
+            <blockquote
+              class="mt-3 border-l-4 border-amber-400 pl-4 text-xl font-black leading-snug tracking-tight text-slate-950 dark:text-white"
+            >
+              {{ suggestion()?.text }}
+            </blockquote>
+            <p
+              class="mt-2 pl-5 text-sm font-bold leading-relaxed text-slate-600 dark:text-amber-100/70"
+            >
+              {{ suggestion()?.meaning }}
+            </p>
+            <div class="mt-4 flex justify-end gap-2">
+              <fm-button variant="ghost" size="sm" (click)="suggestion.set(null)"
+                >不要這版</fm-button
+              >
+              <fm-button size="sm" testId="collection-edit-apply" (click)="applySuggestion()"
+                >套用這版</fm-button
+              >
+            </div>
+          </div>
+        }
+
+        <textarea
+          class="mt-5 min-h-24 w-full resize-none rounded-2xl border border-amber-300 bg-white px-4 py-3 text-sm font-bold leading-relaxed text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-200/40 dark:border-amber-600/30 dark:bg-background-dark dark:text-white"
+          [value]="prompt()"
+          (input)="prompt.set($any($event.target).value)"
+          placeholder="例如：保留 schedule，改成和同事討論專案延誤的自然說法"
+          data-testid="collection-edit-prompt"
+        ></textarea>
+
+        <fm-button
+          class="mt-3 block"
+          [fullWidth]="true"
+          [disabled]="!prompt().trim() || prompting()"
+          testId="collection-edit-prompt-submit"
+          (click)="onPrompt()"
+        >
+          <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+          {{ prompting() ? '正在改稿…' : '請 AI 提一個版本' }}
+        </fm-button>
+      </section>
+
+      @if (store.errorMessage()) {
+        <p
+          class="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-100"
+        >
+          {{ store.errorMessage() }}
+        </p>
+      }
+
+      <div
+        class="sticky bottom-3 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-surface-dark/90"
+      >
+        <fm-button
+          [fullWidth]="true"
+          [disabled]="!text().trim() || saving()"
+          testId="collection-edit-save"
+          (click)="onSave()"
+        >
+          <span class="material-symbols-outlined text-[18px]">{{
+            saved() ? 'check' : 'save'
+          }}</span>
+          {{ saving() ? '儲存中…' : saved() ? '已儲存' : '儲存修改' }}
+        </fm-button>
+      </div>
+    } @else {
+      <section
+        class="rounded-3xl border border-slate-200 bg-white p-5 text-center dark:border-slate-700 dark:bg-surface-dark"
+      >
+        <p class="font-bold text-slate-700 dark:text-slate-200">找不到這個收藏句子。</p>
+        <a class="mt-3 inline-flex text-sm font-black text-primary" routerLink="/collections"
+          >回收藏列表</a
+        >
+      </section>
+    }
+  </main>
+</div>

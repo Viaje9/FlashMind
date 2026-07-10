@@ -847,6 +847,84 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /collections/{id}:
+    get:
+      operationId: getCollectionItem
+      tags:
+        - Collections
+      summary: 取得單筆收藏包項目
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionItemResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 收藏項目不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateCollectionItem
+      tags:
+        - Collections
+      summary: 更新收藏包句子
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCollectionItemRequest"
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionItemResponse"
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 收藏項目不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
     delete:
       operationId: deleteCollectionItem
       tags:
@@ -2712,6 +2790,22 @@ components:
           description: 使用者確認此候選時要一併保存的關聯語塊
           items:
             $ref: "#/components/schemas/CollectionSaveRelatedCandidate"
+
+    UpdateCollectionItemRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: We fell behind schedule, so we adjusted the plan.
+        meaning:
+          type: string
+          nullable: true
+          maxLength: 500
+          example: 我們進度落後了，所以調整了計畫。
 
     CollectionSuggestion:
       type: object

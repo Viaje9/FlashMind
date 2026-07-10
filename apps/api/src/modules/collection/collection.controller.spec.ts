@@ -11,7 +11,9 @@ describe('CollectionController', () => {
   let controller: CollectionController;
   let service: {
     listItems: jest.Mock;
+    getItem: jest.Mock;
     createItem: jest.Mock;
+    updateItem: jest.Mock;
     deleteItem: jest.Mock;
     createChatSession: jest.Mock;
     createChatMessage: jest.Mock;
@@ -27,7 +29,9 @@ describe('CollectionController', () => {
   beforeEach(async () => {
     service = {
       listItems: jest.fn(),
+      getItem: jest.fn(),
       createItem: jest.fn(),
+      updateItem: jest.fn(),
       deleteItem: jest.fn(),
       createChatSession: jest.fn(),
       createChatMessage: jest.fn(),
@@ -78,6 +82,23 @@ describe('CollectionController', () => {
     await controller.createItem(req, dto);
 
     expect(service.createItem).toHaveBeenCalledWith('user-1', dto);
+  });
+
+  it('讀取與更新單筆收藏會限制目前使用者', async () => {
+    service.getItem.mockResolvedValue({ data: { id: 'item-1' } });
+    service.updateItem.mockResolvedValue({ data: { id: 'item-1' } });
+
+    await controller.getItem(req, 'item-1');
+    await controller.updateItem(req, 'item-1', {
+      text: 'A clearer sentence.',
+      meaning: '更清楚的句子。',
+    });
+
+    expect(service.getItem).toHaveBeenCalledWith('user-1', 'item-1');
+    expect(service.updateItem).toHaveBeenCalledWith('user-1', 'item-1', {
+      text: 'A clearer sentence.',
+      meaning: '更清楚的句子。',
+    });
   });
 
   it('刪除收藏會限制目前使用者', async () => {

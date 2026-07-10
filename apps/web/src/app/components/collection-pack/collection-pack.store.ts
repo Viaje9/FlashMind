@@ -45,6 +45,63 @@ export class CollectionPackStore {
   readonly collectionCount = computed(() => this.items().length);
   readonly vocabularyCoverage = signal(0);
 
+  async getItem(id: string): Promise<CollectionItem | null> {
+    this.errorMessage.set(null);
+
+    try {
+      const response = await firstValueFrom(this.collectionsApi.getCollectionItem(id));
+      return this.mapItem(response.data);
+    } catch {
+      this.errorMessage.set('收藏內容讀取失敗，請稍後再試。');
+      return null;
+    }
+  }
+
+  async updateItem(id: string, text: string, meaning: string): Promise<CollectionItem | null> {
+    this.errorMessage.set(null);
+
+    try {
+      const response = await firstValueFrom(
+        this.collectionsApi.updateCollectionItem(id, {
+          text: text.trim(),
+          meaning: meaning.trim(),
+        }),
+      );
+      const item = this.mapItem(response.data);
+      this.items.update((items) => items.map((current) => (current.id === id ? item : current)));
+      return item;
+    } catch {
+      this.errorMessage.set('收藏內容儲存失敗，請稍後再試。');
+      return null;
+    }
+  }
+
+  async suggestSentenceEdit(
+    item: CollectionItem,
+    instruction: string,
+  ): Promise<CollectionSuggestion | null> {
+    this.errorMessage.set(null);
+
+    try {
+      const sessionId = await this.ensureChatSession();
+      const response = await firstValueFrom(
+        this.collectionsApi.createCollectionChatMessage(sessionId, {
+          message: [
+            '請修改以下已收藏的英文句子，回傳一個 sentence 候選與對應中文。',
+            `原句：${item.text}`,
+            `原中文：${item.meaning}`,
+            `修改要求：${instruction.trim()}`,
+          ].join('\n'),
+        }),
+      );
+      const candidate = response.data.candidates.find((item) => item.kind === 'sentence');
+      return candidate ? this.mapSuggestion(candidate) : null;
+    } catch {
+      this.errorMessage.set('AI 改寫失敗，請換個提示再試。');
+      return null;
+    }
+  }
+
   async loadItems(filter: CollectionFilter = 'all', searchTerm = ''): Promise<void> {
     this.loading.set(true);
     this.errorMessage.set(null);

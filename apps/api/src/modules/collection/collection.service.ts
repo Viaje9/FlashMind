@@ -18,6 +18,7 @@ import {
   CreateCollectionChatMessageDto,
   CreateCollectionItemDto,
   ListCollectionItemsDto,
+  UpdateCollectionItemDto,
 } from './dto';
 import {
   CollectionAiCandidate,
@@ -191,6 +192,47 @@ export class CollectionService {
         where: { id: rootItem.id },
         include: COLLECTION_ITEM_INCLUDE,
       });
+    });
+
+    return { data: this.mapItem(item) };
+  }
+
+  async getItem(userId: string, id: string) {
+    const item = await this.prisma.collectionItem.findFirst({
+      where: { id, userId },
+      include: COLLECTION_ITEM_INCLUDE,
+    });
+
+    if (!item) {
+      throw this.notFound('找不到收藏項目');
+    }
+
+    return { data: this.mapItem(item) };
+  }
+
+  async updateItem(userId: string, id: string, dto: UpdateCollectionItemDto) {
+    const existing = await this.prisma.collectionItem.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw this.notFound('找不到收藏項目');
+    }
+
+    const normalizedText = this.tools.normalizeText(dto.text);
+    if (!normalizedText) {
+      throw this.validationError('收藏內容不可為空');
+    }
+
+    const item = await this.prisma.collectionItem.update({
+      where: { id },
+      data: {
+        text: dto.text.trim(),
+        normalizedText,
+        zhMeaning: dto.meaning?.trim() || null,
+      },
+      include: COLLECTION_ITEM_INCLUDE,
     });
 
     return { data: this.mapItem(item) };

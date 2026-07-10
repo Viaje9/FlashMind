@@ -84,6 +84,7 @@ export * from "./synthesizeSpeechRequest";
 export * from "./synthesizeWordRequest";
 export * from "./updateCardMeaningRequest";
 export * from "./updateCardRequest";
+export * from "./updateCollectionItemRequest";
 export * from "./updateDeckRequest";
 export * from "./user";
 export * from "./userResponse";

@@ -39,6 +39,8 @@ import { CreateCollectionChatMessageRequest } from "../model/createCollectionCha
 import { CreateCollectionItemRequest } from "../model/createCollectionItemRequest";
 // @ts-ignore
 import { ErrorResponse } from "../model/errorResponse";
+// @ts-ignore
+import { UpdateCollectionItemRequest } from "../model/updateCollectionItemRequest";
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS } from "../variables";
@@ -55,6 +57,40 @@ export class CollectionsService extends BaseService {
     @Optional() configuration?: Configuration,
   ) {
     super(basePath, configuration);
+  }
+
+  /** @endpoint get /collections/{id} */
+  public getCollectionItem(id: string): Observable<CollectionItemResponse> {
+    if (id === null || id === undefined) {
+      throw new Error(
+        "Required parameter id was null or undefined when calling getCollectionItem.",
+      );
+    }
+
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.get<CollectionItemResponse>(
+      `${basePath}/collections/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`,
+      withCredentials ? { withCredentials } : {},
+    );
+  }
+
+  /** @endpoint patch /collections/{id} */
+  public updateCollectionItem(
+    id: string,
+    updateCollectionItemRequest: UpdateCollectionItemRequest,
+  ): Observable<CollectionItemResponse> {
+    if (id === null || id === undefined) {
+      throw new Error(
+        "Required parameter id was null or undefined when calling updateCollectionItem.",
+      );
+    }
+
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.patch<CollectionItemResponse>(
+      `${basePath}/collections/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`,
+      updateCollectionItemRequest,
+      withCredentials ? { withCredentials } : {},
+    );
   }
 
   /**

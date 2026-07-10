@@ -58,6 +58,7 @@ describe('CollectionService', () => {
       collectionItem: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
+        update: jest.fn(),
         delete: jest.fn(),
       },
       card: {
@@ -103,6 +104,48 @@ describe('CollectionService', () => {
       ),
     };
   }
+
+  it('取得單筆收藏時會限制目前使用者', async () => {
+    const { service, prisma } = createService();
+    prisma.collectionItem.findFirst.mockResolvedValue(createItemFixture());
+
+    const result = await service.getItem('user-1', 'item-1');
+
+    expect(prisma.collectionItem.findFirst).toHaveBeenCalledWith({
+      where: { id: 'item-1', userId: 'user-1' },
+      include: expect.any(Object),
+    });
+    expect(result.data.text).toBe('We started to fall behind schedule.');
+  });
+
+  it('更新收藏句子時會正規化文字並限制目前使用者', async () => {
+    const { service, prisma } = createService();
+    prisma.collectionItem.findFirst.mockResolvedValue({ id: 'item-1' });
+    prisma.collectionItem.update.mockResolvedValue(
+      createItemFixture({
+        text: 'We fell behind schedule.',
+        normalizedText: 'we fell behind schedule.',
+        zhMeaning: '我們進度落後了。',
+      }),
+    );
+
+    const result = await service.updateItem('user-1', 'item-1', {
+      text: '  We fell behind schedule.  ',
+      meaning: '我們進度落後了。',
+    });
+
+    expect(prisma.collectionItem.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'item-1' },
+        data: expect.objectContaining({
+          text: 'We fell behind schedule.',
+          normalizedText: 'we fell behind schedule.',
+          zhMeaning: '我們進度落後了。',
+        }),
+      }),
+    );
+    expect(result.data.text).toBe('We fell behind schedule.');
+  });
 
   it('保存候選時會 upsert 本體、關聯語塊、來源卡片與 relation', async () => {
     const { service, tx } = createService();
