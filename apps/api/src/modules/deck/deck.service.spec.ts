@@ -22,6 +22,7 @@ describe('DeckService', () => {
     },
     card: {
       count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn(),
     },
     reviewLog: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -195,6 +196,179 @@ describe('DeckService', () => {
 
       await expect(service.findById('deck-123', 'other-user')).rejects.toThrow(
         ForbiddenException,
+      );
+    });
+  });
+
+  describe('exportDeck', () => {
+    it('只應匯出牌組設定與依序排列的卡片內容', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findMany.mockResolvedValue([
+        {
+          front: 'Where are they?',
+          meanings: [
+            {
+              zhMeaning: '他們在哪裡？',
+              enExample: 'Where are they now?',
+              zhExample: '他們現在在哪裡？',
+              sortOrder: 0,
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.exportDeck('deck-123', mockUserId);
+
+      expect(prisma.card.findMany).toHaveBeenCalledWith({
+        where: { deckId: 'deck-123' },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          front: true,
+          meanings: {
+            orderBy: { sortOrder: 'asc' },
+            select: {
+              zhMeaning: true,
+              enExample: true,
+              zhExample: true,
+              sortOrder: true,
+            },
+          },
+        },
+      });
+      expect(result).toEqual({
+        data: {
+          version: 1,
+          name: '英文單字',
+          dailyNewCards: 20,
+          dailyReviewCards: 100,
+          dailyResetHour: 4,
+          learningSteps: '1m,10m',
+          relearningSteps: '10m',
+          requestRetention: 0.9,
+          maximumInterval: 36500,
+          enableReverse: false,
+          cards: [
+            {
+              front: 'Where are they?',
+              meanings: [
+                {
+                  zhMeaning: '他們在哪裡？',
+                  enExample: 'Where are they now?',
+                  zhExample: '他們現在在哪裡？',
+                  sortOrder: 0,
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+
+    it('使用者無權限時不應讀取卡片', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+
+      await expect(
+        service.exportDeck('deck-123', 'other-user'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.card.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('importDeck', () => {
+    it('應建立不含學習狀態的新牌組與卡片', async () => {
+      mockPrismaService.deck.findMany.mockResolvedValue([{ name: '英文單字' }]);
+      mockPrismaService.deck.create.mockResolvedValue({ id: 'imported-deck' });
+
+      const result = await service.importDeck(mockUserId, {
+        version: 1,
+        name: '英文單字',
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        dailyResetHour: 4,
+        learningSteps: '1m,10m',
+        relearningSteps: '10m',
+        requestRetention: 0.9,
+        maximumInterval: 36500,
+        enableReverse: false,
+        cards: [
+          {
+            front: 'Hello',
+            meanings: [
+              {
+                zhMeaning: '你好',
+                enExample: null,
+                zhExample: null,
+                sortOrder: 0,
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(prisma.deck.create).toHaveBeenCalledWith({
+        data: {
+          name: '英文單字（匯入）',
+          dailyNewCards: 20,
+          dailyReviewCards: 100,
+          dailyResetHour: 4,
+          learningSteps: '1m,10m',
+          relearningSteps: '10m',
+          requestRetention: 0.9,
+          maximumInterval: 36500,
+          enableReverse: false,
+          userId: mockUserId,
+          cards: {
+            create: [
+              {
+                front: 'Hello',
+                meanings: {
+                  create: [
+                    {
+                      zhMeaning: '你好',
+                      enExample: null,
+                      zhExample: null,
+                      sortOrder: 0,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      });
+      expect(result).toEqual({
+        data: { id: 'imported-deck', name: '英文單字（匯入）' },
+      });
+    });
+
+    it('應遞增匯入後綴直到名稱不衝突', async () => {
+      mockPrismaService.deck.findMany.mockResolvedValue([
+        { name: '英文單字' },
+        { name: '英文單字（匯入）' },
+        { name: '英文單字（匯入 2）' },
+      ]);
+      mockPrismaService.deck.create.mockResolvedValue({ id: 'imported-deck' });
+
+      const dto = {
+        version: 1 as const,
+        name: '英文單字',
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        dailyResetHour: 4,
+        learningSteps: '1m,10m',
+        relearningSteps: '10m',
+        requestRetention: 0.9,
+        maximumInterval: 36500,
+        enableReverse: false,
+        cards: [],
+      };
+
+      await service.importDeck(mockUserId, dto);
+
+      expect(prisma.deck.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ name: '英文單字（匯入 3）' }),
+        }),
       );
     });
   });

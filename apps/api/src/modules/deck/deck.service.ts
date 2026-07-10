@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { CardState } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateDeckDto, UpdateDeckDto, SetDailyOverrideDto } from './dto';
+import {
+  CreateDeckDto,
+  UpdateDeckDto,
+  SetDailyOverrideDto,
+  ImportDeckDto,
+} from './dto';
 import {
   getStartOfStudyDay,
   getEffectiveDailyLimits,
@@ -45,6 +50,28 @@ export interface DeckDetail {
     createdAt: string;
     lastStudiedAt: string | null;
   };
+}
+
+export interface DeckExport {
+  version: 1;
+  name: string;
+  dailyNewCards: number;
+  dailyReviewCards: number;
+  dailyResetHour: number;
+  learningSteps: string;
+  relearningSteps: string;
+  requestRetention: number;
+  maximumInterval: number;
+  enableReverse: boolean;
+  cards: Array<{
+    front: string;
+    meanings: Array<{
+      zhMeaning: string;
+      enExample: string | null;
+      zhExample: string | null;
+      sortOrder: number;
+    }>;
+  }>;
 }
 
 @Injectable()
@@ -244,6 +271,101 @@ export class DeckService {
           )?.reviewedAt.toISOString() ?? null,
       },
     };
+  }
+
+  async exportDeck(id: string, userId: string): Promise<{ data: DeckExport }> {
+    const deck = await this.prisma.deck.findUnique({ where: { id } });
+
+    if (!deck) {
+      throw new NotFoundException({
+        error: { code: 'DECK_NOT_FOUND', message: '找不到此牌組' },
+      });
+    }
+
+    if (deck.userId !== userId) {
+      throw new ForbiddenException({
+        error: { code: 'FORBIDDEN', message: '無權限存取此牌組' },
+      });
+    }
+
+    const cards = await this.prisma.card.findMany({
+      where: { deckId: id },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        front: true,
+        meanings: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            zhMeaning: true,
+            enExample: true,
+            zhExample: true,
+            sortOrder: true,
+          },
+        },
+      },
+    });
+
+    return {
+      data: {
+        version: 1,
+        name: deck.name,
+        dailyNewCards: deck.dailyNewCards,
+        dailyReviewCards: deck.dailyReviewCards,
+        dailyResetHour: deck.dailyResetHour,
+        learningSteps: deck.learningSteps,
+        relearningSteps: deck.relearningSteps,
+        requestRetention: deck.requestRetention,
+        maximumInterval: deck.maximumInterval,
+        enableReverse: deck.enableReverse,
+        cards,
+      },
+    };
+  }
+
+  async importDeck(userId: string, dto: ImportDeckDto) {
+    const existingDecks = await this.prisma.deck.findMany({
+      where: { userId },
+      select: { name: true },
+    });
+    const names = new Set(existingDecks.map(({ name }) => name));
+    let name = dto.name;
+
+    if (names.has(name)) {
+      name = `${dto.name}（匯入）`;
+      for (let suffix = 2; names.has(name); suffix++) {
+        name = `${dto.name}（匯入 ${suffix}）`;
+      }
+    }
+
+    const deck = await this.prisma.deck.create({
+      data: {
+        name,
+        dailyNewCards: dto.dailyNewCards,
+        dailyReviewCards: dto.dailyReviewCards,
+        dailyResetHour: dto.dailyResetHour,
+        learningSteps: dto.learningSteps,
+        relearningSteps: dto.relearningSteps,
+        requestRetention: dto.requestRetention,
+        maximumInterval: dto.maximumInterval,
+        enableReverse: dto.enableReverse,
+        userId,
+        cards: {
+          create: dto.cards.map((card) => ({
+            front: card.front,
+            meanings: {
+              create: card.meanings.map((meaning) => ({
+                zhMeaning: meaning.zhMeaning,
+                enExample: meaning.enExample ?? null,
+                zhExample: meaning.zhExample ?? null,
+                sortOrder: meaning.sortOrder,
+              })),
+            },
+          })),
+        },
+      },
+    });
+
+    return { data: { id: deck.id, name } };
   }
 
   async create(userId: string, dto: CreateDeckDto) {

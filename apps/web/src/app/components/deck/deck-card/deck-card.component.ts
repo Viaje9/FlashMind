@@ -6,7 +6,7 @@ import { FmButtonComponent, FmProgressBarComponent } from '@flashmind/ui';
   imports: [FmButtonComponent, FmProgressBarComponent],
   templateUrl: './deck-card.component.html',
   styleUrl: './deck-card.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FmDeckCardComponent {
   readonly title = input('');
@@ -26,6 +26,7 @@ export class FmDeckCardComponent {
 
   readonly actionClick = output<void>();
   readonly cardClick = output<void>();
+  readonly shareClick = output<void>();
 
   readonly newProgressPercent = computed(() => {
     const limit = this.dailyNewCards();

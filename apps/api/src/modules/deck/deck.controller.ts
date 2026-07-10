@@ -13,7 +13,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { DeckService } from './deck.service';
-import { CreateDeckDto, UpdateDeckDto, SetDailyOverrideDto } from './dto';
+import {
+  CreateDeckDto,
+  UpdateDeckDto,
+  SetDailyOverrideDto,
+  ImportDeckDto,
+} from './dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
 import type { AuthenticatedRequest } from '../auth/auth.guard';
@@ -41,10 +46,24 @@ export class DeckController {
     return this.deckService.create(req.user.id, dto);
   }
 
+  @Post('import')
+  @HttpCode(HttpStatus.CREATED)
+  async importDeck(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ImportDeckDto,
+  ) {
+    return this.deckService.importDeck(req.user.id, dto);
+  }
+
   @Get(':id')
   async getDeck(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     const deck = await this.deckService.findById(id, req.user.id);
     return { data: deck };
+  }
+
+  @Get(':id/export')
+  async exportDeck(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.deckService.exportDeck(id, req.user.id);
   }
 
   @Patch(':id')

@@ -8,12 +8,15 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import {
   FmEmptyStateComponent,
   FmFabComponent,
   FmIconButtonComponent,
   FmPageHeaderComponent,
   FmSearchInputComponent,
+  DialogService,
+  FmConfirmDialogComponent,
 } from '@flashmind/ui';
 import { FmDeckCardComponent } from '../../components/deck/deck-card/deck-card.component';
 import { DecksService, DeckListItem } from '@flashmind/api-client';
@@ -35,6 +38,10 @@ interface DeckPreview {
   todayReviewStudied: number;
 }
 
+interface DeckExportResponse {
+  data: Record<string, unknown> & { name: string };
+}
+
 @Component({
   selector: 'app-deck-list-page',
   imports: [
@@ -54,6 +61,8 @@ interface DeckPreview {
 export class DeckListComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly decksService = inject(DecksService);
+  private readonly http = inject(HttpClient);
+  private readonly dialogService = inject(DialogService);
 
   readonly searchControl = new FormControl('');
   readonly searchTerm = signal('');
@@ -124,5 +133,35 @@ export class DeckListComponent implements OnInit {
 
   onStartStudy(deckId: string) {
     void this.router.navigate(['/decks', deckId, 'study']);
+  }
+
+  onShare(deck: DeckPreview) {
+    const dialogRef = this.dialogService.open(FmConfirmDialogComponent, {
+      data: {
+        title: '分享牌組',
+        message: '確定要 share 這個牌組嗎？',
+        confirmText: '確定',
+        cancelText: '取消',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+
+      this.http
+        .get<DeckExportResponse>(`/api/decks/${encodeURIComponent(deck.id)}/export`)
+        .subscribe((response) => this.downloadDeck(response.data));
+    });
+  }
+
+  private downloadDeck(deck: DeckExportResponse['data']) {
+    const blob = new Blob([JSON.stringify(deck, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = deck.name.replace(/[\\/:*?"<>|]/g, '-').trim() || 'deck';
+    link.href = url;
+    link.download = `${safeName}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 }

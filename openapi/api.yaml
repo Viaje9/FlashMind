@@ -337,10 +337,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example:
-                error:
-                  code: DECK_NOT_FOUND
-                  message: 找不到此牌組
 
     patch:
       operationId: updateDeck
@@ -435,6 +431,82 @@ paths:
   # ============================================================
   # Cards
   # ============================================================
+  /decks/{id}/export:
+    get:
+      operationId: exportDeck
+      tags:
+        - Decks
+      summary: 匯出單一牌組
+      description: 匯出指定牌組的持久設定與全部卡片內容，不包含學習紀錄與排程狀態。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeckExportResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /decks/import:
+    post:
+      operationId: importDeck
+      tags:
+        - Decks
+      summary: 匯入單一牌組
+      description: 從 FlashMind 牌組 JSON 建立新牌組與卡片，不匯入學習紀錄或排程狀態。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeckExport"
+      responses:
+        "201":
+          description: 匯入成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeckImportResponse"
+        "400":
+          description: JSON 格式或版本不正確
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /decks/{deckId}/cards:
     get:
       operationId: listCards
@@ -2298,6 +2370,110 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/DeckDetail"
+
+    DeckExportMeaning:
+      type: object
+      required:
+        - zhMeaning
+        - enExample
+        - zhExample
+        - sortOrder
+      properties:
+        zhMeaning:
+          type: string
+          description: 中文詞義
+        enExample:
+          type: string
+          nullable: true
+          description: 英文例句
+        zhExample:
+          type: string
+          nullable: true
+          description: 中文例句
+        sortOrder:
+          type: integer
+          description: 詞義顯示順序
+
+    DeckExportCard:
+      type: object
+      required:
+        - front
+        - meanings
+      properties:
+        front:
+          type: string
+          description: 卡片正面內容
+        meanings:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeckExportMeaning"
+
+    DeckExport:
+      type: object
+      required:
+        - version
+        - name
+        - dailyNewCards
+        - dailyReviewCards
+        - dailyResetHour
+        - learningSteps
+        - relearningSteps
+        - requestRetention
+        - maximumInterval
+        - enableReverse
+        - cards
+      properties:
+        version:
+          type: integer
+          enum: [1]
+          description: 匯出格式版本
+        name:
+          type: string
+        dailyNewCards:
+          type: integer
+        dailyReviewCards:
+          type: integer
+        dailyResetHour:
+          type: integer
+        learningSteps:
+          type: string
+        relearningSteps:
+          type: string
+        requestRetention:
+          type: number
+          format: float
+        maximumInterval:
+          type: integer
+        enableReverse:
+          type: boolean
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeckExportCard"
+
+    DeckExportResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/DeckExport"
+
+    DeckImportResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: string
+            name:
+              type: string
 
     # ============================================================
     # Cards

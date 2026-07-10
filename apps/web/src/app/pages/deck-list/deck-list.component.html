@@ -35,8 +35,10 @@
           [dailyReviewCards]="deck.dailyReviewCards"
           [todayNewStudied]="deck.todayNewStudied"
           [todayReviewStudied]="deck.todayReviewStudied"
+          [testId]="'deck-card-' + deck.id"
           (cardClick)="onCardClick(deck.id)"
           (actionClick)="onStartStudy(deck.id)"
+          (shareClick)="onShare(deck)"
         ></fm-deck-card>
       }
 
