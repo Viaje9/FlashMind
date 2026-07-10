@@ -117,6 +117,26 @@
           (click)="onCardClick()"
           (keydown.enter)="onCardClick()"
         >
+          @if (!isReverse()) {
+            <button
+              type="button"
+              class="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm transition hover:border-primary/40 hover:bg-primary/5 active:scale-95 disabled:cursor-wait disabled:opacity-60 dark:bg-surface-dark"
+              aria-label="播放正面發音"
+              data-testid="study-front-audio"
+              [disabled]="wordAudioLoading()"
+              (click)="onAudioClick(); $event.stopPropagation()"
+            >
+              @if (wordAudioLoading()) {
+                <span class="material-symbols-outlined animate-spin text-[20px]"
+                  >progress_activity</span
+                >
+                載入語音
+              } @else {
+                <span class="material-symbols-outlined text-[20px]">volume_up</span>
+                播放發音
+              }
+            </button>
+          }
           <div
             class="card bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20 shadow-lg w-full study-front-card"
           >

@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, OnDestroy, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  OnDestroy,
+  untracked,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { FmStudyCardComponent, StudyExample } from './components/study-card/study-card.component';
@@ -6,7 +15,12 @@ import { FmStudyProgressComponent } from './components/study-progress/study-prog
 import { FmSwipeableCardComponent } from './components/swipeable-card/swipeable-card.component';
 import { StudyStore } from '../../components/study/study.store';
 import { TtsStore } from '../../components/tts/tts.store';
-import { mapMeaningsToExamples, getStudyWord, getStudyTranslations, StudyRating } from '../../components/study/study.domain';
+import {
+  mapMeaningsToExamples,
+  getStudyWord,
+  getStudyTranslations,
+  StudyRating,
+} from '../../components/study/study.domain';
 
 @Component({
   selector: 'app-study-page',
@@ -47,6 +61,7 @@ export class StudyComponent implements OnInit, OnDestroy {
     const card = this.currentCard();
     return card ? getStudyTranslations(card) : [];
   });
+  readonly audioText = computed(() => this.currentCard()?.front ?? '');
   readonly examples = computed((): StudyExample[] => {
     const card = this.currentCard();
     return card ? mapMeaningsToExamples(card) : [];
@@ -89,7 +104,7 @@ export class StudyComponent implements OnInit, OnDestroy {
   });
 
   // TTS loading 狀態
-  readonly wordAudioLoading = computed(() => this.ttsStore.isLoading(this.word()));
+  readonly wordAudioLoading = computed(() => this.ttsStore.isLoading(this.audioText()));
   readonly exampleAudioLoadingIndex = computed(() => {
     const examples = this.examples();
     for (let i = 0; i < examples.length; i++) {
@@ -128,9 +143,9 @@ export class StudyComponent implements OnInit, OnDestroy {
   }
 
   onAudioClick(): void {
-    const word = this.word();
-    if (word) {
-      this.ttsStore.playWord(word);
+    const audioText = this.audioText();
+    if (audioText) {
+      this.ttsStore.playWord(audioText);
     }
   }
 
