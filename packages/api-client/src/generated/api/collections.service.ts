@@ -59,40 +59,6 @@ export class CollectionsService extends BaseService {
     super(basePath, configuration);
   }
 
-  /** @endpoint get /collections/{id} */
-  public getCollectionItem(id: string): Observable<CollectionItemResponse> {
-    if (id === null || id === undefined) {
-      throw new Error(
-        "Required parameter id was null or undefined when calling getCollectionItem.",
-      );
-    }
-
-    const { basePath, withCredentials } = this.configuration;
-    return this.httpClient.get<CollectionItemResponse>(
-      `${basePath}/collections/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`,
-      withCredentials ? { withCredentials } : {},
-    );
-  }
-
-  /** @endpoint patch /collections/{id} */
-  public updateCollectionItem(
-    id: string,
-    updateCollectionItemRequest: UpdateCollectionItemRequest,
-  ): Observable<CollectionItemResponse> {
-    if (id === null || id === undefined) {
-      throw new Error(
-        "Required parameter id was null or undefined when calling updateCollectionItem.",
-      );
-    }
-
-    const { basePath, withCredentials } = this.configuration;
-    return this.httpClient.patch<CollectionItemResponse>(
-      `${basePath}/collections/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`,
-      updateCollectionItemRequest,
-      withCredentials ? { withCredentials } : {},
-    );
-  }
-
   /**
    * 送出收藏包聊天訊息
    * 將使用者訊息送到收藏包 AI agent，回傳 AI 回覆與可收藏候選。
@@ -547,6 +513,111 @@ export class CollectionsService extends BaseService {
   }
 
   /**
+   * 取得單筆收藏包項目
+   * @endpoint get /collections/{id}
+   * @param id
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public getCollectionItem(
+    id: string,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<CollectionItemResponse>;
+  public getCollectionItem(
+    id: string,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<CollectionItemResponse>>;
+  public getCollectionItem(
+    id: string,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<CollectionItemResponse>>;
+  public getCollectionItem(
+    id: string,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (id === null || id === undefined) {
+      throw new Error(
+        "Required parameter id was null or undefined when calling getCollectionItem.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/collections/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<CollectionItemResponse>(
+      "get",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
    * 取得收藏包聊天訊息
    * 取得收藏包聊天 session 內的歷史訊息與 assistant metadata。
    * @endpoint get /collections/chat-sessions/{sessionId}/messages
@@ -790,6 +861,136 @@ export class CollectionsService extends BaseService {
       {
         context: localVarHttpContext,
         params: localVarQueryParameters.toHttpParams(),
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 更新收藏包句子
+   * @endpoint patch /collections/{id}
+   * @param id
+   * @param updateCollectionItemRequest
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public updateCollectionItem(
+    id: string,
+    updateCollectionItemRequest: UpdateCollectionItemRequest,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<CollectionItemResponse>;
+  public updateCollectionItem(
+    id: string,
+    updateCollectionItemRequest: UpdateCollectionItemRequest,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<CollectionItemResponse>>;
+  public updateCollectionItem(
+    id: string,
+    updateCollectionItemRequest: UpdateCollectionItemRequest,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<CollectionItemResponse>>;
+  public updateCollectionItem(
+    id: string,
+    updateCollectionItemRequest: UpdateCollectionItemRequest,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (id === null || id === undefined) {
+      throw new Error(
+        "Required parameter id was null or undefined when calling updateCollectionItem.",
+      );
+    }
+    if (
+      updateCollectionItemRequest === null ||
+      updateCollectionItemRequest === undefined
+    ) {
+      throw new Error(
+        "Required parameter updateCollectionItemRequest was null or undefined when calling updateCollectionItem.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    // to determine the Content-Type header
+    const consumes: string[] = ["application/json"];
+    const httpContentTypeSelected: string | undefined =
+      this.configuration.selectHeaderContentType(consumes);
+    if (httpContentTypeSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Content-Type",
+        httpContentTypeSelected,
+      );
+    }
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/collections/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<CollectionItemResponse>(
+      "patch",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        body: updateCollectionItemRequest,
         responseType: <any>responseType_,
         ...(withCredentials ? { withCredentials } : {}),
         headers: localVarHeaders,

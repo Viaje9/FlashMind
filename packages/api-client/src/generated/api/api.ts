@@ -16,6 +16,8 @@ export * from "./study.service";
 import { StudyService } from "./study.service";
 export * from "./tTS.service";
 import { TTSService } from "./tTS.service";
+export * from "./topicConversations.service";
+import { TopicConversationsService } from "./topicConversations.service";
 export const APIS = [
   AIService,
   AuthService,
@@ -26,4 +28,5 @@ export const APIS = [
   SpeakingService,
   StudyService,
   TTSService,
+  TopicConversationsService,
 ];

@@ -11,6 +11,7 @@ import { TtsModule } from './modules/tts/tts.module';
 import { StudyModule } from './modules/study/study.module';
 import { SpeakingModule } from './modules/speaking/speaking.module';
 import { CollectionModule } from './modules/collection/collection.module';
+import { TopicConversationModule } from './modules/topic-conversation/topic-conversation.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CollectionModule } from './modules/collection/collection.module';
     StudyModule,
     SpeakingModule,
     CollectionModule,
+    TopicConversationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

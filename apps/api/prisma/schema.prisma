@@ -12,19 +12,20 @@ enum Provider {
 }
 
 model User {
-  id                     String                  @id @default(cuid())
-  email                  String                  @unique
-  passwordHash           String?
-  primaryProvider        Provider                @default(EMAIL)
-  timezone               String                  @default("Asia/Taipei")
-  lastLoginAt            DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  oauthAccounts          OAuthAccount[]
-  sessions               Session[]
-  decks                  Deck[]
-  collectionItems        CollectionItem[]
-  collectionChatSessions CollectionChatSession[]
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  passwordHash            String?
+  primaryProvider         Provider                 @default(EMAIL)
+  timezone                String                   @default("Asia/Taipei")
+  lastLoginAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  oauthAccounts           OAuthAccount[]
+  sessions                Session[]
+  decks                   Deck[]
+  collectionItems         CollectionItem[]
+  collectionChatSessions  CollectionChatSession[]
+  topicConversationTopics TopicConversationTopic[]
 }
 
 model OAuthAccount {
@@ -260,6 +261,61 @@ model CollectionChatMessage {
   createdAt DateTime           @default(now())
 
   session CollectionChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+enum TopicConversationRole {
+  USER
+  ASSISTANT
+}
+
+enum TopicConversationCorrectionStatus {
+  CORRECT
+  IMPROVED
+  CORRECTED
+}
+
+model TopicConversationTopic {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String
+  scenario        String
+  normalizedTitle String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions TopicConversationSession[]
+
+  @@unique([userId, normalizedTitle])
+  @@index([userId, createdAt])
+}
+
+model TopicConversationSession {
+  id        String   @id @default(cuid())
+  topicId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topic    TopicConversationTopic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  messages TopicConversationMessage[]
+
+  @@index([topicId, updatedAt])
+  @@index([updatedAt])
+}
+
+model TopicConversationMessage {
+  id                    String                             @id @default(cuid())
+  sessionId             String
+  role                  TopicConversationRole
+  content               String
+  correctionStatus      TopicConversationCorrectionStatus?
+  correctedText         String?
+  correctionExplanation String?
+  createdAt             DateTime                           @default(now())
+
+  session TopicConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
 }

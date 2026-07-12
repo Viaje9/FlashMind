@@ -73,6 +73,30 @@
           >
         </div>
       </button>
+
+      <button
+        type="button"
+        (click)="onEntryClick('/topic-conversations')"
+        data-testid="home-entry-topic-conversations"
+        class="group relative w-full overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-left transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/30"
+      >
+        <span
+          class="absolute -right-5 -top-5 size-20 rounded-full border border-emerald-200/70 dark:border-emerald-800/60"
+          aria-hidden="true"
+        ></span>
+        <div class="relative flex items-start justify-between gap-3">
+          <div>
+            <p class="text-base font-semibold text-slate-900 dark:text-white">主題對話</p>
+            <p class="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+              跟著新主題自由聊天，每句英文都會得到安靜而清楚的修正。
+            </p>
+          </div>
+          <span
+            class="material-symbols-outlined text-emerald-500 transition group-hover:translate-x-0.5"
+            >arrow_forward</span
+          >
+        </div>
+      </button>
     </section>
   </main>
 </div>

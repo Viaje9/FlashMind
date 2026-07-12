@@ -17,6 +17,12 @@ describe('HomeEntryPreferenceService', () => {
     expect(service.getPreferredPath()).toBe('/speaking');
   });
 
+  it('應該支援主題對話入口偏好', () => {
+    service.save('/topic-conversations');
+
+    expect(service.getPreferredPath()).toBe('/topic-conversations');
+  });
+
   it('即使儲存日期不是今天也應該讀取偏好', () => {
     localStorage.setItem(
       STORAGE_KEY,

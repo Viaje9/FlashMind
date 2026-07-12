@@ -49,6 +49,22 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'topic-conversations/history',
+    loadComponent: () =>
+      import('./pages/topic-conversation-history/topic-conversation-history.component').then(
+        (module) => module.TopicConversationHistoryComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'topic-conversations',
+    loadComponent: () =>
+      import('./pages/topic-conversation/topic-conversation.component').then(
+        (module) => module.TopicConversationComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'collections/new',
     loadComponent: () =>
       import('./pages/collection-pack-new/collection-pack-new.component').then(

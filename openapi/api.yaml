@@ -1165,6 +1165,304 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ============================================================
+  # Topic Conversations
+  # ============================================================
+  /topic-conversations:
+    get:
+      operationId: listTopicConversations
+      tags:
+        - Topic Conversations
+      summary: 取得主題對話歷史
+      description: 依最近更新時間取得目前使用者的主題對話場次，支援 cursor-based 分頁。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Base64 編碼的下一頁 cursor
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: 每頁場次數量
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationSessionListResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: createTopicConversation
+      tags:
+        - Topic Conversations
+      summary: 建立新的主題對話
+      description: 產生盡量不與歷史重複的新主題，建立場次並保存 AI 的英文開場訊息。
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationSessionDetailResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: 暫時無法產生不同的新主題
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤或無法產生不重複主題
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/{id}:
+    get:
+      operationId: getTopicConversation
+      tags:
+        - Topic Conversations
+      summary: 取得主題對話詳情
+      description: 取得目前使用者指定場次的主題、完整訊息與文法修正，訊息依建立時間排序。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 主題對話場次 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationSessionDetailResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到主題對話場次
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/{id}/messages:
+    post:
+      operationId: createTopicConversationMessage
+      tags:
+        - Topic Conversations
+      summary: 送出主題對話訊息
+      description: 保存使用者原始英文訊息，產生獨立的文法修正，並由 AI 以英文延續目前對話。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 主題對話場次 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTopicConversationMessageRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationMessageResponse"
+        "400":
+          description: 訊息為空白或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到主題對話場次
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/{id}/messages/stream:
+    post:
+      operationId: streamTopicConversationMessage
+      tags:
+        - Topic Conversations
+      summary: 串流送出主題對話訊息
+      description: 立即保存使用者訊息，以 SSE 傳送 AI 回覆片段，完成後回傳正式訊息與文法修正結果。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 主題對話場次 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTopicConversationMessageRequest"
+      responses:
+        "200":
+          description: SSE 串流，依序包含 assistant_delta、result 與 done 事件
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: 訊息為空白或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到主題對話場次
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/{id}/hint:
+    post:
+      operationId: createTopicConversationHint
+      tags:
+        - Topic Conversations
+      summary: 產生主題對話提示
+      description: 僅在使用者主動要求時，根據目前主題與對話歷史產生簡短回應建議，不會代替使用者送出訊息。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 主題對話場次 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationHintResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到主題對話場次
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/{id}/replay:
+    post:
+      operationId: replayTopicConversation
+      tags:
+        - Topic Conversations
+      summary: 再練一次既有主題
+      description: 沿用指定場次的主題建立新的練習場次與 AI 英文開場訊息，不修改原始場次。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 原始主題對話場次 ID
+          schema:
+            type: string
+      responses:
+        "201":
+          description: 建立成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationSessionDetailResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到原始主題對話場次
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ============================================================
   # AI
   # ============================================================
   /ai/generate-card-content:
@@ -3173,6 +3471,250 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CollectionChatMessageItem"
+
+    # ============================================================
+    # Topic Conversations
+    # ============================================================
+    TopicConversationRole:
+      type: string
+      enum: [user, assistant]
+      description: 主題對話訊息角色
+
+    TopicConversationCorrectionStatus:
+      type: string
+      enum: [correct, improved, corrected]
+      description: |
+        使用者訊息的文法與自然度檢查結果：
+        - correct：句子自然正確，不需改寫
+        - improved：句子可理解且文法正確，但有更自然的說法
+        - corrected：句子有文法或明顯用字問題
+
+    TopicConversationTopic:
+      type: object
+      description: 使用者擁有的主題對話題目
+      required:
+        - id
+        - title
+        - scenario
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: 主題 ID
+        title:
+          type: string
+          description: 主題標題
+          example: 在飯店辦理入住
+        scenario:
+          type: string
+          description: 對話情境說明
+          example: 你抵達預訂的飯店，準備向櫃檯人員辦理入住。
+        createdAt:
+          type: string
+          format: date-time
+          description: 主題建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 主題更新時間
+
+    TopicConversationCorrection:
+      type: object
+      description: 與正常聊天回覆分開呈現的使用者訊息修正
+      required:
+        - status
+        - suggestedText
+        - explanation
+      properties:
+        status:
+          $ref: "#/components/schemas/TopicConversationCorrectionStatus"
+        suggestedText:
+          type: string
+          nullable: true
+          description: 建議句；status 為 correct 時為 null
+          example: I went hiking with my friend.
+        explanation:
+          type: string
+          nullable: true
+          description: 繁體中文的簡短修正說明；不需修正時為 null
+          example: 描述已發生的事情時，go 應改為過去式 went。
+
+    TopicConversationMessage:
+      type: object
+      description: 主題對話中的單則訊息
+      required:
+        - id
+        - role
+        - content
+        - correction
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: 訊息 ID
+        role:
+          $ref: "#/components/schemas/TopicConversationRole"
+        content:
+          type: string
+          description: 使用者原始訊息或 AI 的英文對話內容
+          example: I go hiking with my friend.
+        correction:
+          allOf:
+            - $ref: "#/components/schemas/TopicConversationCorrection"
+          nullable: true
+          description: 使用者訊息的修正；AI 訊息與尚未完成修正的訊息為 null
+        createdAt:
+          type: string
+          format: date-time
+          description: 訊息建立時間
+
+    TopicConversationSessionSummary:
+      type: object
+      description: 主題對話歷史列表中的場次摘要
+      required:
+        - id
+        - topic
+        - messageCount
+        - lastMessagePreview
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: 對話場次 ID
+        topic:
+          $ref: "#/components/schemas/TopicConversationTopic"
+        messageCount:
+          type: integer
+          minimum: 1
+          description: 場次內的訊息總數
+          example: 7
+        lastMessagePreview:
+          type: string
+          description: 最近一則訊息摘要
+          example: Yes, I have a reservation under Chen.
+        createdAt:
+          type: string
+          format: date-time
+          description: 場次建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 場次最近更新時間
+
+    TopicConversationSessionDetail:
+      type: object
+      description: 含完整訊息與修正的主題對話場次
+      required:
+        - id
+        - topic
+        - messages
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: 對話場次 ID
+        topic:
+          $ref: "#/components/schemas/TopicConversationTopic"
+        messages:
+          type: array
+          description: 依建立時間排序的完整訊息
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/TopicConversationMessage"
+        createdAt:
+          type: string
+          format: date-time
+          description: 場次建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 場次最近更新時間
+
+    CreateTopicConversationMessageRequest:
+      type: object
+      description: 送出主題對話訊息的請求
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: 使用者自由輸入的完整英文訊息
+          example: I go hiking with my friend.
+
+    TopicConversationMessageExchange:
+      type: object
+      description: 一輪主題對話產生的使用者訊息、修正與 AI 回覆
+      required:
+        - userMessage
+        - assistantMessage
+      properties:
+        userMessage:
+          $ref: "#/components/schemas/TopicConversationMessage"
+        assistantMessage:
+          $ref: "#/components/schemas/TopicConversationMessage"
+
+    TopicConversationHint:
+      type: object
+      description: 使用者主動要求的回應提示
+      required:
+        - suggestions
+      properties:
+        suggestions:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: 根據目前上下文產生的簡短英文回應建議
+          items:
+            type: string
+          example:
+            - I have a reservation under Chen.
+            - Could you check the booking for me?
+
+    TopicConversationSessionListResponse:
+      type: object
+      description: 主題對話歷史列表回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicConversationSessionSummary"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    TopicConversationSessionDetailResponse:
+      type: object
+      description: 主題對話場次詳情回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/TopicConversationSessionDetail"
+
+    TopicConversationMessageResponse:
+      type: object
+      description: 主題對話訊息回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/TopicConversationMessageExchange"
+
+    TopicConversationHintResponse:
+      type: object
+      description: 主題對話提示回應（符合 ADR-016 統一 Wrapper）
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/TopicConversationHint"
 
     # ============================================================
     # AI

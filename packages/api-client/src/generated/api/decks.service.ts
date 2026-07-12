@@ -26,6 +26,12 @@ import { CreateDeckRequest } from "../model/createDeckRequest";
 // @ts-ignore
 import { DeckDetailResponse } from "../model/deckDetailResponse";
 // @ts-ignore
+import { DeckExport } from "../model/deckExport";
+// @ts-ignore
+import { DeckExportResponse } from "../model/deckExportResponse";
+// @ts-ignore
+import { DeckImportResponse } from "../model/deckImportResponse";
+// @ts-ignore
 import { DeckListResponse } from "../model/deckListResponse";
 // @ts-ignore
 import { DeckResponse } from "../model/deckResponse";
@@ -276,6 +282,112 @@ export class DecksService extends BaseService {
   }
 
   /**
+   * 匯出單一牌組
+   * 匯出指定牌組的持久設定與全部卡片內容，不包含學習紀錄與排程狀態。
+   * @endpoint get /decks/{id}/export
+   * @param id 牌組 ID
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public exportDeck(
+    id: string,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<DeckExportResponse>;
+  public exportDeck(
+    id: string,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<DeckExportResponse>>;
+  public exportDeck(
+    id: string,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<DeckExportResponse>>;
+  public exportDeck(
+    id: string,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (id === null || id === undefined) {
+      throw new Error(
+        "Required parameter id was null or undefined when calling exportDeck.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/decks/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}/export`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<DeckExportResponse>(
+      "get",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
    * 取得牌組詳情
    * 取得指定牌組的詳細資訊，包含學習統計。
    * @endpoint get /decks/{id}
@@ -369,6 +481,124 @@ export class DecksService extends BaseService {
       `${basePath}${localVarPath}`,
       {
         context: localVarHttpContext,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 匯入單一牌組
+   * 從 FlashMind 牌組 JSON 建立新牌組與卡片，不匯入學習紀錄或排程狀態。
+   * @endpoint post /decks/import
+   * @param deckExport
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public importDeck(
+    deckExport: DeckExport,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<DeckImportResponse>;
+  public importDeck(
+    deckExport: DeckExport,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<DeckImportResponse>>;
+  public importDeck(
+    deckExport: DeckExport,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<DeckImportResponse>>;
+  public importDeck(
+    deckExport: DeckExport,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (deckExport === null || deckExport === undefined) {
+      throw new Error(
+        "Required parameter deckExport was null or undefined when calling importDeck.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    // to determine the Content-Type header
+    const consumes: string[] = ["application/json"];
+    const httpContentTypeSelected: string | undefined =
+      this.configuration.selectHeaderContentType(consumes);
+    if (httpContentTypeSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Content-Type",
+        httpContentTypeSelected,
+      );
+    }
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/decks/import`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<DeckImportResponse>(
+      "post",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        body: deckExport,
         responseType: <any>responseType_,
         ...(withCredentials ? { withCredentials } : {}),
         headers: localVarHeaders,
