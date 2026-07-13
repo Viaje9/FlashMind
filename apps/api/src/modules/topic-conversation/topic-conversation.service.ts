@@ -41,6 +41,12 @@ export class TopicConversationService {
   ) {}
 
   async createConversation(userId: string) {
+    await this.prisma.topicConversationTopic.deleteMany({
+      where: {
+        userId,
+        sessions: { none: { startedAt: { not: null } } },
+      },
+    });
     const excludedTopics = await this.prisma.topicConversationTopic.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -110,7 +116,7 @@ export class TopicConversationService {
     const limit = Math.min(query.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
     const cursorId = query.cursor ? this.decodeCursor(query.cursor) : undefined;
     const sessions = await this.prisma.topicConversationSession.findMany({
-      where: { topic: { userId } },
+      where: { topic: { userId }, startedAt: { not: null } },
       include: {
         topic: true,
         messages: {
@@ -177,13 +183,22 @@ export class TopicConversationService {
     if (!message) throw this.validationError('訊息不可為空');
 
     const session = await this.findOwnedSession(userId, sessionId);
-    const userMessage = await this.prisma.topicConversationMessage.create({
-      data: {
-        sessionId,
-        role: TopicConversationRole.USER,
-        content: message,
-      },
-    });
+    const [userMessage] = await this.prisma.$transaction([
+      this.prisma.topicConversationMessage.create({
+        data: {
+          sessionId,
+          role: TopicConversationRole.USER,
+          content: message,
+        },
+      }),
+      this.prisma.topicConversationSession.update({
+        where: { id: sessionId },
+        data: {
+          updatedAt: new Date(),
+          ...(session.startedAt ? {} : { startedAt: new Date() }),
+        },
+      }),
+    ]);
     const result = await this.aiProvider.continueConversation({
       topic: {
         title: session.topic.title,
@@ -213,10 +228,6 @@ export class TopicConversationService {
           role: TopicConversationRole.ASSISTANT,
           content: result.reply.trim(),
         },
-      }),
-      this.prisma.topicConversationSession.update({
-        where: { id: sessionId },
-        data: { updatedAt: new Date() },
       }),
     ]);
 
@@ -276,6 +287,13 @@ export class TopicConversationService {
     });
 
     return { data: this.mapSession(session) };
+  }
+
+  async deleteConversation(userId: string, sessionId: string) {
+    await this.findOwnedSession(userId, sessionId);
+    await this.prisma.topicConversationSession.delete({
+      where: { id: sessionId },
+    });
   }
 
   private async findOwnedSession(userId: string, sessionId: string) {

@@ -1276,6 +1276,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+    delete:
+      operationId: deleteTopicConversation
+      tags:
+        - Topic Conversations
+      summary: 刪除主題對話
+      description: 刪除目前使用者指定的對話場次與其所有訊息。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 主題對話場次 ID
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 刪除成功
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到主題對話場次
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /topic-conversations/{id}/messages:
     post:
       operationId: createTopicConversationMessage

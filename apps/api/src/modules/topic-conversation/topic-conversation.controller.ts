@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -43,6 +44,15 @@ export class TopicConversationController {
   @Get(':id')
   getConversation(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.service.getConversation(req.user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteConversation(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.service.deleteConversation(req.user.id, id);
   }
 
   @Post(':id/messages')

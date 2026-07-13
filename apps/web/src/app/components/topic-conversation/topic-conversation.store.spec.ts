@@ -1,4 +1,5 @@
 import '@angular/compiler';
+import { HttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
   Configuration,
@@ -48,6 +49,7 @@ describe('TopicConversationStore', () => {
     createTopicConversationHint: ReturnType<typeof vi.fn>;
     replayTopicConversation: ReturnType<typeof vi.fn>;
   };
+  let http: { delete: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     api = {
@@ -58,6 +60,7 @@ describe('TopicConversationStore', () => {
       createTopicConversationHint: vi.fn(),
       replayTopicConversation: vi.fn(),
     };
+    http = { delete: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -70,6 +73,7 @@ describe('TopicConversationStore', () => {
           provide: Configuration,
           useValue: new Configuration({ basePath: '/api' }),
         },
+        { provide: HttpClient, useValue: http },
       ],
     });
 
@@ -252,6 +256,21 @@ describe('TopicConversationStore', () => {
       undefined,
     ]);
     expect(store.hasMoreHistory()).toBe(false);
+  });
+
+  it('刪除成功後應立即從歷史移除該對話', async () => {
+    api.listTopicConversations.mockReturnValue(
+      of({ data: [historySummary('session-1', 'First message')], meta: {} }),
+    );
+    http.delete.mockReturnValue(of(undefined));
+    await store.loadHistory();
+
+    expect(await store.deleteConversation('session-1')).toBe(true);
+    expect(http.delete).toHaveBeenCalledWith(
+      '/api/topic-conversations/session-1',
+      expect.objectContaining({ context: expect.anything() }),
+    );
+    expect(store.historyItems()).toEqual([]);
   });
 
   it('應沿用既有主題建立新場次，不修改原場次', async () => {

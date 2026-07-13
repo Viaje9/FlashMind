@@ -1,4 +1,4 @@
-import { HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   Configuration,
@@ -50,6 +50,7 @@ const initialState: TopicConversationStoreState = {
 @Injectable({ providedIn: 'root' })
 export class TopicConversationStore {
   private readonly api = inject(TopicConversationsService);
+  private readonly http = inject(HttpClient);
   private readonly apiConfiguration = inject(Configuration);
   private readonly skipLoadingOptions = {
     context: new HttpContext().set(SKIP_LOADING, true),
@@ -248,6 +249,35 @@ export class TopicConversationStore {
 
   async loadHistory(): Promise<void> {
     await this.fetchHistory(true);
+  }
+
+  async loadLatestConversation(): Promise<boolean> {
+    await this.fetchHistory(true);
+    const latest = this.state().historyItems[0];
+    return latest ? this.loadConversation(latest.id) : false;
+  }
+
+  async deleteConversation(id: string): Promise<boolean> {
+    const conversationId = id.trim();
+    if (!conversationId) return false;
+
+    try {
+      await firstValueFrom(
+        this.http.delete<void>(
+          `${this.apiBasePath()}/topic-conversations/${encodeURIComponent(conversationId)}`,
+          this.skipLoadingOptions,
+        ),
+      );
+      this.state.update((state) => ({
+        ...state,
+        historyItems: state.historyItems.filter((item) => item.id !== conversationId),
+        currentSession: state.currentSession?.id === conversationId ? null : state.currentSession,
+      }));
+      return true;
+    } catch {
+      this.setError('刪除主題對話失敗，請稍後再試。');
+      return false;
+    }
   }
 
   async loadMoreHistory(): Promise<void> {

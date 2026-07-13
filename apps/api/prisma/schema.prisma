@@ -295,6 +295,7 @@ model TopicConversationTopic {
 model TopicConversationSession {
   id        String   @id @default(cuid())
   topicId   String
+  startedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

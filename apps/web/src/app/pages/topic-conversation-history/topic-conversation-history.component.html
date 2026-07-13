@@ -15,6 +15,7 @@
       ariaLabel="開始新主題"
       testId="topic-conversation-history-new"
       routerLink="/topic-conversations"
+      [queryParams]="{ new: 'true' }"
     >
       <span class="material-symbols-outlined text-[21px]">add_comment</span>
     </fm-icon-button>
@@ -62,8 +63,10 @@
           <app-topic-conversation-history-item
             [item]="item"
             [replaying]="replayingId() === item.id"
+            [deleting]="deletingId() === item.id"
             (open)="openConversation($event)"
             (replay)="replayConversation($event)"
+            (delete)="deleteConversation($event)"
           />
         }
       </section>

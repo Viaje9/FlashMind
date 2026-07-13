@@ -47,7 +47,10 @@ export class TopicConversationComponent implements OnInit {
       return;
     }
 
-    await this.startNewConversation();
+    const forceNew = this.route.snapshot.queryParamMap.get('new') === 'true';
+    if (forceNew || !(await this.store.loadLatestConversation())) {
+      await this.startNewConversation();
+    }
   }
 
   async startNewConversation(): Promise<void> {

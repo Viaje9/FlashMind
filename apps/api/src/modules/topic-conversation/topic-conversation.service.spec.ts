@@ -50,12 +50,14 @@ describe('TopicConversationService', () => {
       topicConversationTopic: {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       topicConversationSession: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn().mockResolvedValue({}),
+        delete: jest.fn().mockResolvedValue({}),
       },
       topicConversationMessage: {
         create: jest.fn(),
@@ -94,6 +96,13 @@ describe('TopicConversationService', () => {
     });
 
     const result = await service.createConversation('user-1');
+
+    expect(prisma.topicConversationTopic.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        sessions: { none: { startedAt: { not: null } } },
+      },
+    });
 
     expect(aiProvider.generateTopic).toHaveBeenCalledWith({
       excludedTopics: [
@@ -214,6 +223,12 @@ describe('TopicConversationService', () => {
     expect(result.data.assistantMessage.content).toContain(
       'What kind of stories',
     );
+    expect(prisma.topicConversationSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'session-1' },
+        data: expect.objectContaining({ startedAt: expect.any(Date) }),
+      }),
+    );
   });
 
   it('串流送出訊息時會即時轉送 AI reply delta 並保存最終結果', async () => {
@@ -332,5 +347,31 @@ describe('TopicConversationService', () => {
       }),
     );
     expect(result.data.id).toBe('session-2');
+  });
+
+  it('歷史只列出已送出第一則訊息的場次', async () => {
+    const { service, prisma } = createService();
+    prisma.topicConversationSession.findMany.mockResolvedValue([]);
+
+    await service.listConversations('user-1', {});
+
+    expect(prisma.topicConversationSession.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { topic: { userId: 'user-1' }, startedAt: { not: null } },
+      }),
+    );
+  });
+
+  it('刪除擁有的場次時會一併交由 cascade 清除訊息', async () => {
+    const { service, prisma } = createService();
+    prisma.topicConversationSession.findFirst.mockResolvedValue(
+      sessionFixture(),
+    );
+
+    await service.deleteConversation('user-1', 'session-1');
+
+    expect(prisma.topicConversationSession.delete).toHaveBeenCalledWith({
+      where: { id: 'session-1' },
+    });
   });
 });
