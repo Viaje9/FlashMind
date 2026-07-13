@@ -71,6 +71,15 @@ export class TopicConversationComponent implements OnInit {
     const success = await sendPromise;
     if (!success) return;
 
+    const sessionId = this.store.currentSession()?.id;
+    if (sessionId) {
+      await this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { sessionId },
+        replaceUrl: true,
+      });
+    }
+
     this.scrollToBottom();
   }
 

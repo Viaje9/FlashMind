@@ -17,6 +17,7 @@ import type { Response } from 'express';
 import { AuthGuard, type AuthenticatedRequest } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
 import {
+  CreateTopicConversationDto,
   CreateTopicConversationMessageDto,
   ListTopicConversationsDto,
 } from './dto';
@@ -37,8 +38,21 @@ export class TopicConversationController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  createConversation(@Req() req: AuthenticatedRequest) {
-    return this.service.createConversation(req.user.id);
+  createConversation(
+    @Req() req: AuthenticatedRequest,
+    @Body() draft: CreateTopicConversationDto,
+  ) {
+    return this.service.createConversation(req.user.id, draft);
+  }
+
+  @Post('draft')
+  createDraft(@Req() req: AuthenticatedRequest) {
+    return this.service.createDraft(req.user.id);
+  }
+
+  @Post('draft/hint')
+  createDraftHint(@Body() draft: CreateTopicConversationDto) {
+    return this.service.createDraftHint(draft);
   }
 
   @Get(':id')

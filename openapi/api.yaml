@@ -1211,9 +1211,15 @@ paths:
       tags:
         - Topic Conversations
       summary: 建立新的主題對話
-      description: 產生盡量不與歷史重複的新主題，建立場次並保存 AI 的英文開場訊息。
+      description: 使用先前產生的草稿建立場次並保存 AI 的英文開場訊息。只應在使用者送出第一則訊息時呼叫。
       security:
         - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopicConversationDraft"
       responses:
         "201":
           description: 建立成功
@@ -1235,6 +1241,67 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: AI 服務錯誤或無法產生不重複主題
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/draft:
+    post:
+      operationId: createTopicConversationDraft
+      tags:
+        - Topic Conversations
+      summary: 產生未持久化的主題草稿
+      description: 產生盡量不與歷史重複的新主題與 AI 英文開場訊息，但不建立 Topic、Session 或 Message。
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 草稿產生成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TopicConversationDraft"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topic-conversations/draft/hint:
+    post:
+      operationId: createTopicConversationDraftHint
+      tags:
+        - Topic Conversations
+      summary: 為未持久化的主題草稿產生提示
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopicConversationDraft"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicConversationHintResponse"
+        "401":
+          description: 未授權
           content:
             application/json:
               schema:
@@ -3548,6 +3615,27 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    TopicConversationDraft:
+      type: object
+      description: 尚未寫入資料庫的主題對話草稿
+      required:
+        - title
+        - scenario
+        - openingMessage
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        scenario:
+          type: string
+          minLength: 1
+          maxLength: 500
+        openingMessage:
+          type: string
+          minLength: 1
+          maxLength: 1000
           description: 主題更新時間
 
     TopicConversationCorrection:

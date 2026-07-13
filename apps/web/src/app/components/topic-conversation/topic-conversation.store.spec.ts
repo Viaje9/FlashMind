@@ -49,7 +49,7 @@ describe('TopicConversationStore', () => {
     createTopicConversationHint: ReturnType<typeof vi.fn>;
     replayTopicConversation: ReturnType<typeof vi.fn>;
   };
-  let http: { delete: ReturnType<typeof vi.fn> };
+  let http: { post: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     api = {
@@ -60,7 +60,20 @@ describe('TopicConversationStore', () => {
       createTopicConversationHint: vi.fn(),
       replayTopicConversation: vi.fn(),
     };
-    http = { delete: vi.fn() };
+    http = {
+      post: vi.fn((url: string) =>
+        url.endsWith('/draft')
+          ? of({
+              data: {
+                title: topic.title,
+                scenario: topic.scenario,
+                openingMessage: openingMessage.content,
+              },
+            })
+          : of({ data: initialSession }),
+      ),
+      delete: vi.fn(),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -84,16 +97,18 @@ describe('TopicConversationStore', () => {
     vi.unstubAllGlobals();
   });
 
-  it('應建立新主題場次並保存 AI 開場訊息', async () => {
-    api.createTopicConversation.mockReturnValue(of({ data: initialSession }));
-
+  it('應只建立未持久化的新主題草稿與 AI 開場訊息', async () => {
     const result = await store.createConversation();
 
-    expect(result?.id).toBe('session-1');
+    expect(result?.id).toMatch(/^draft-/);
     expect(store.currentSession()?.topic.title).toBe(topic.title);
     expect(store.messages().map((message) => message.content)).toEqual([openingMessage.content]);
     expect(store.creating()).toBe(false);
-    expect(api.createTopicConversation.mock.calls[0]?.[2].context.get(SKIP_LOADING)).toBe(true);
+    expect(http.post).toHaveBeenCalledWith(
+      '/api/topic-conversations/draft',
+      {},
+      expect.objectContaining({ context: expect.anything() }),
+    );
   });
 
   it('應依場次 ID 載入完整歷史與修正', async () => {
@@ -175,6 +190,7 @@ describe('TopicConversationStore', () => {
     const sendPromise = store.sendMessage('  I have reservation.  ');
 
     expect(store.sending()).toBe(true);
+    await Promise.resolve();
     expect(store.messages().map((message) => message.content)).toEqual([
       openingMessage.content,
       'I have reservation.',
@@ -216,13 +232,15 @@ describe('TopicConversationStore', () => {
     await store.createConversation();
 
     expect(api.createTopicConversationHint).not.toHaveBeenCalled();
+    http.post.mockReturnValueOnce(
+      of({ data: { suggestions: ['  Mention the booking name.  ', '', 'Show your passport.'] } }),
+    );
 
     const suggestions = await store.requestHint();
 
-    expect(api.createTopicConversationHint).toHaveBeenCalledWith(
-      'session-1',
-      undefined,
-      undefined,
+    expect(http.post).toHaveBeenCalledWith(
+      '/api/topic-conversations/draft/hint',
+      expect.objectContaining({ title: topic.title }),
       expect.any(Object),
     );
     expect(suggestions).toEqual(['Mention the booking name.', 'Show your passport.']);

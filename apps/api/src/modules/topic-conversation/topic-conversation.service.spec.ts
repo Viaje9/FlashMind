@@ -50,7 +50,6 @@ describe('TopicConversationService', () => {
       topicConversationTopic: {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(),
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       topicConversationSession: {
         findMany: jest.fn(),
@@ -80,7 +79,7 @@ describe('TopicConversationService', () => {
     };
   }
 
-  it('建立新對話時會排除歷史主題並保存 AI 開場', async () => {
+  it('產生草稿時不寫入資料庫，確認開始後才保存 AI 開場', async () => {
     const { service, prisma, aiProvider } = createService();
     prisma.topicConversationTopic.findMany.mockResolvedValue([
       { title: '在咖啡店點餐', scenario: '向店員點一杯飲料。' },
@@ -95,20 +94,16 @@ describe('TopicConversationService', () => {
       sessions: [sessionFixture()],
     });
 
-    const result = await service.createConversation('user-1');
-
-    expect(prisma.topicConversationTopic.deleteMany).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-1',
-        sessions: { none: { startedAt: { not: null } } },
-      },
-    });
+    const draft = await service.createDraft('user-1');
 
     expect(aiProvider.generateTopic).toHaveBeenCalledWith({
       excludedTopics: [
         { title: '在咖啡店點餐', scenario: '向店員點一杯飲料。' },
       ],
     });
+    expect(prisma.topicConversationTopic.create).not.toHaveBeenCalled();
+
+    const result = await service.createConversation('user-1', draft.data);
     expect(prisma.topicConversationTopic.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -129,34 +124,6 @@ describe('TopicConversationService', () => {
       }),
     );
     expect(result.data.id).toBe('session-1');
-  });
-
-  it('正規化標題衝突時會把候選加入排除清單並重試', async () => {
-    const { service, prisma, aiProvider } = createService();
-    aiProvider.generateTopic
-      .mockResolvedValueOnce({
-        title: '在咖啡店點餐！',
-        scenario: '點一杯咖啡。',
-        openingMessage: 'What would you like?',
-      })
-      .mockResolvedValueOnce({
-        title: '在書店找一本書',
-        scenario: '詢問店員。',
-        openingMessage: 'Can I help you?',
-      });
-    prisma.topicConversationTopic.create
-      .mockRejectedValueOnce({ code: 'P2002' })
-      .mockResolvedValueOnce({
-        ...topicFixture(),
-        sessions: [sessionFixture()],
-      });
-
-    await service.createConversation('user-1');
-
-    expect(aiProvider.generateTopic).toHaveBeenCalledTimes(2);
-    expect(aiProvider.generateTopic).toHaveBeenLastCalledWith({
-      excludedTopics: [{ title: '在咖啡店點餐！', scenario: '點一杯咖啡。' }],
-    });
   });
 
   it('送出訊息會保存原句、結構化修正與 AI 回覆', async () => {
@@ -222,12 +189,6 @@ describe('TopicConversationService', () => {
     expect(result.data.userMessage.correction.status).toBe('corrected');
     expect(result.data.assistantMessage.content).toContain(
       'What kind of stories',
-    );
-    expect(prisma.topicConversationSession.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'session-1' },
-        data: expect.objectContaining({ startedAt: expect.any(Date) }),
-      }),
     );
   });
 
@@ -308,6 +269,22 @@ describe('TopicConversationService', () => {
     expect(prisma.topicConversationMessage.create).not.toHaveBeenCalled();
   });
 
+  it('草稿提示不需要先建立場次', async () => {
+    const { service, prisma, aiProvider } = createService();
+    aiProvider.generateHint.mockResolvedValue({
+      suggestions: ['I need some help.'],
+    });
+
+    const result = await service.createDraftHint({
+      title: '在書店找一本書',
+      scenario: '你正在向店員詢問一本找不到的書。',
+      openingMessage: 'Can I help you find a book?',
+    });
+
+    expect(result.data.suggestions).toEqual(['I need some help.']);
+    expect(prisma.topicConversationSession.findFirst).not.toHaveBeenCalled();
+  });
+
   it('讀取不屬於目前使用者的場次時回傳找不到資源', async () => {
     const { service, prisma } = createService();
     prisma.topicConversationSession.findFirst.mockResolvedValue(null);
@@ -349,7 +326,7 @@ describe('TopicConversationService', () => {
     expect(result.data.id).toBe('session-2');
   });
 
-  it('歷史只列出已送出第一則訊息的場次', async () => {
+  it('歷史直接列出已建立的場次', async () => {
     const { service, prisma } = createService();
     prisma.topicConversationSession.findMany.mockResolvedValue([]);
 
@@ -357,7 +334,7 @@ describe('TopicConversationService', () => {
 
     expect(prisma.topicConversationSession.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { topic: { userId: 'user-1' }, startedAt: { not: null } },
+        where: { topic: { userId: 'user-1' } },
       }),
     );
   });
