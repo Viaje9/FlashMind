@@ -1,4 +1,4 @@
-import { HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   Configuration,
@@ -50,6 +50,7 @@ const initialState: TopicConversationStoreState = {
 @Injectable({ providedIn: 'root' })
 export class TopicConversationStore {
   private readonly api = inject(TopicConversationsService);
+  private readonly http = inject(HttpClient);
   private readonly apiConfiguration = inject(Configuration);
   private readonly skipLoadingOptions = {
     context: new HttpContext().set(SKIP_LOADING, true),
@@ -83,9 +84,33 @@ export class TopicConversationStore {
 
     try {
       const response = await firstValueFrom(
-        this.api.createTopicConversation(undefined, undefined, this.skipLoadingOptions),
+        this.http.post<{
+          data: { title: string; scenario: string; openingMessage: string };
+        }>(`${this.apiBasePath()}/topic-conversations/draft`, {}, this.skipLoadingOptions),
       );
-      const currentSession = mapTopicConversationSession(response.data);
+      const createdAt = new Date().toISOString();
+      const currentSession: TopicConversationSessionView = {
+        id: `draft-${Date.now()}`,
+        topic: {
+          id: '',
+          title: response.data.title,
+          scenario: response.data.scenario,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        messages: [
+          {
+            id: `draft-opening-${Date.now()}`,
+            role: TopicConversationRole.Assistant,
+            content: response.data.openingMessage,
+            correction: null,
+            createdAt,
+            streaming: false,
+          },
+        ],
+        createdAt,
+        updatedAt: createdAt,
+      };
       this.state.update((state) => ({ ...state, currentSession }));
       return currentSession;
     } catch {
@@ -131,12 +156,34 @@ export class TopicConversationStore {
   }
 
   async sendMessage(message: string): Promise<boolean> {
-    const currentSession = this.state().currentSession;
+    let currentSession = this.state().currentSession;
     if (!currentSession || !canSendTopicConversationMessage(message, this.state().sending)) {
       return false;
     }
 
     const normalized = message.trim();
+    if (currentSession.id.startsWith('draft-')) {
+      this.state.update((state) => ({ ...state, sending: true, error: null }));
+      try {
+        const response = await firstValueFrom(
+          this.http.post<{ data: import('@flashmind/api-client').TopicConversationSessionDetail }>(
+            `${this.apiBasePath()}/topic-conversations`,
+            {
+              title: currentSession.topic.title,
+              scenario: currentSession.topic.scenario,
+              openingMessage: currentSession.messages[0]?.content ?? '',
+            },
+            this.skipLoadingOptions,
+          ),
+        );
+        currentSession = mapTopicConversationSession(response.data);
+        this.state.update((state) => ({ ...state, currentSession }));
+      } catch {
+        this.setError('建立主題對話失敗，請稍後再試。');
+        this.state.update((state) => ({ ...state, sending: false }));
+        return false;
+      }
+    }
     const conversationId = currentSession.id;
     const pendingId = `pending-${Date.now()}`;
     const pendingUserId = `${pendingId}-user`;
@@ -225,14 +272,26 @@ export class TopicConversationStore {
     }));
 
     try {
-      const response = await firstValueFrom(
-        this.api.createTopicConversationHint(
-          conversationId,
-          undefined,
-          undefined,
-          this.skipLoadingOptions,
-        ),
-      );
+      const response = currentSession.id.startsWith('draft-')
+        ? await firstValueFrom(
+            this.http.post<{ data: { suggestions: string[] } }>(
+              `${this.apiBasePath()}/topic-conversations/draft/hint`,
+              {
+                title: currentSession.topic.title,
+                scenario: currentSession.topic.scenario,
+                openingMessage: currentSession.messages[0]?.content ?? '',
+              },
+              this.skipLoadingOptions,
+            ),
+          )
+        : await firstValueFrom(
+            this.api.createTopicConversationHint(
+              conversationId,
+              undefined,
+              undefined,
+              this.skipLoadingOptions,
+            ),
+          );
       const suggestions = response.data.suggestions
         .map((suggestion) => suggestion.trim())
         .filter(Boolean);
@@ -248,6 +307,35 @@ export class TopicConversationStore {
 
   async loadHistory(): Promise<void> {
     await this.fetchHistory(true);
+  }
+
+  async loadLatestConversation(): Promise<boolean> {
+    await this.fetchHistory(true);
+    const latest = this.state().historyItems[0];
+    return latest ? this.loadConversation(latest.id) : false;
+  }
+
+  async deleteConversation(id: string): Promise<boolean> {
+    const conversationId = id.trim();
+    if (!conversationId) return false;
+
+    try {
+      await firstValueFrom(
+        this.http.delete<void>(
+          `${this.apiBasePath()}/topic-conversations/${encodeURIComponent(conversationId)}`,
+          this.skipLoadingOptions,
+        ),
+      );
+      this.state.update((state) => ({
+        ...state,
+        historyItems: state.historyItems.filter((item) => item.id !== conversationId),
+        currentSession: state.currentSession?.id === conversationId ? null : state.currentSession,
+      }));
+      return true;
+    } catch {
+      this.setError('刪除主題對話失敗，請稍後再試。');
+      return false;
+    }
   }
 
   async loadMoreHistory(): Promise<void> {

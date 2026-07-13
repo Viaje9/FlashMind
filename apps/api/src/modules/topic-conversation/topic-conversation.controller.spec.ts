@@ -10,11 +10,14 @@ describe('TopicConversationController', () => {
   let controller: TopicConversationController;
   let service: {
     createConversation: jest.Mock;
+    createDraft: jest.Mock;
+    createDraftHint: jest.Mock;
     listConversations: jest.Mock;
     getConversation: jest.Mock;
     createMessage: jest.Mock;
     createHint: jest.Mock;
     replayConversation: jest.Mock;
+    deleteConversation: jest.Mock;
   };
   const req = {
     user: {
@@ -27,11 +30,14 @@ describe('TopicConversationController', () => {
   beforeEach(async () => {
     service = {
       createConversation: jest.fn(),
+      createDraft: jest.fn(),
+      createDraftHint: jest.fn(),
       listConversations: jest.fn(),
       getConversation: jest.fn(),
       createMessage: jest.fn(),
       createHint: jest.fn(),
       replayConversation: jest.fn(),
+      deleteConversation: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TopicConversationController],
@@ -46,10 +52,17 @@ describe('TopicConversationController', () => {
   });
 
   it('建立與列表會帶入目前使用者', async () => {
-    await controller.createConversation(req);
+    const draft = {
+      title: '在書店找書',
+      scenario: '向店員詢問書籍',
+      openingMessage: 'Can I help you?',
+    };
+    await controller.createDraft(req);
+    await controller.createConversation(req, draft);
     await controller.listConversations(req, { limit: 20 });
 
-    expect(service.createConversation).toHaveBeenCalledWith('user-1');
+    expect(service.createDraft).toHaveBeenCalledWith('user-1');
+    expect(service.createConversation).toHaveBeenCalledWith('user-1', draft);
     expect(service.listConversations).toHaveBeenCalledWith('user-1', {
       limit: 20,
     });

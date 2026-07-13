@@ -6,6 +6,8 @@ import {
   FmEmptyStateComponent,
   FmIconButtonComponent,
   FmPageHeaderComponent,
+  DialogService,
+  FmConfirmDialogComponent,
 } from '@flashmind/ui';
 import { TopicConversationStore } from '../../components/topic-conversation/topic-conversation.store';
 import { TopicConversationHistoryItemComponent } from './components/topic-conversation-history-item.component';
@@ -26,8 +28,10 @@ import { TopicConversationHistoryItemComponent } from './components/topic-conver
 })
 export class TopicConversationHistoryComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly dialogService = inject(DialogService);
   readonly store = inject(TopicConversationStore);
   readonly replayingId = signal<string | null>(null);
+  readonly deletingId = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.store.loadHistory();
@@ -47,6 +51,27 @@ export class TopicConversationHistoryComponent implements OnInit {
 
     await this.router.navigate(['/topic-conversations'], {
       queryParams: { sessionId: session.id },
+    });
+  }
+
+  deleteConversation(id: string): void {
+    const item = this.store.historyItems().find((historyItem) => historyItem.id === id);
+    if (!item) return;
+
+    const dialogRef = this.dialogService.open(FmConfirmDialogComponent, {
+      data: {
+        title: '刪除對話',
+        message: `確定要刪除「${item.title}」及其中的所有訊息嗎？`,
+        confirmText: '刪除',
+        cancelText: '取消',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (!confirmed) return;
+      this.deletingId.set(id);
+      await this.store.deleteConversation(id);
+      this.deletingId.set(null);
     });
   }
 }

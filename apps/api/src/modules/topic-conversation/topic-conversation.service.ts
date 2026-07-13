@@ -13,6 +13,7 @@ import {
 
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
+  CreateTopicConversationDto,
   CreateTopicConversationMessageDto,
   ListTopicConversationsDto,
 } from './dto';
@@ -24,7 +25,6 @@ import {
 const DEFAULT_PAGE_LIMIT = 20;
 const MAX_PAGE_LIMIT = 100;
 const TOPIC_HISTORY_LIMIT = 100;
-const MAX_TOPIC_GENERATION_ATTEMPTS = 3;
 
 const SESSION_INCLUDE = {
   topic: true,
@@ -40,7 +40,7 @@ export class TopicConversationService {
     private readonly aiProvider: TopicConversationAiProvider,
   ) {}
 
-  async createConversation(userId: string) {
+  async createDraft(userId: string) {
     const excludedTopics = await this.prisma.topicConversationTopic.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -48,62 +48,62 @@ export class TopicConversationService {
       select: { title: true, scenario: true },
     });
 
-    for (
-      let attempt = 0;
-      attempt < MAX_TOPIC_GENERATION_ATTEMPTS;
-      attempt += 1
-    ) {
-      const generated = await this.aiProvider.generateTopic({ excludedTopics });
-      const title = generated.title.trim();
-      const scenario = generated.scenario.trim();
-      const openingMessage = generated.openingMessage.trim();
+    const generated = await this.aiProvider.generateTopic({ excludedTopics });
+    const title = generated.title.trim();
+    const scenario = generated.scenario.trim();
+    const openingMessage = generated.openingMessage.trim();
 
-      if (!title || !scenario || !openingMessage) {
-        throw this.aiError();
-      }
+    if (!title || !scenario || !openingMessage) throw this.aiError();
+    return { data: { title, scenario, openingMessage } };
+  }
 
-      try {
-        const topic = await this.prisma.topicConversationTopic.create({
-          data: {
-            userId,
-            title,
-            scenario,
-            normalizedTitle: this.normalizeTitle(title),
-            sessions: {
-              create: {
-                messages: {
-                  create: {
-                    role: TopicConversationRole.ASSISTANT,
-                    content: openingMessage,
-                  },
+  async createConversation(userId: string, draft: CreateTopicConversationDto) {
+    const title = draft.title.trim();
+    const scenario = draft.scenario.trim();
+    const openingMessage = draft.openingMessage.trim();
+    if (!title || !scenario || !openingMessage) {
+      throw this.validationError('主題草稿內容不完整');
+    }
+
+    try {
+      const topic = await this.prisma.topicConversationTopic.create({
+        data: {
+          userId,
+          title,
+          scenario,
+          normalizedTitle: this.normalizeTitle(title),
+          sessions: {
+            create: {
+              messages: {
+                create: {
+                  role: TopicConversationRole.ASSISTANT,
+                  content: openingMessage,
                 },
               },
             },
           },
-          include: {
-            sessions: {
-              orderBy: { createdAt: 'desc' },
-              take: 1,
-              include: SESSION_INCLUDE,
-            },
+        },
+        include: {
+          sessions: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: SESSION_INCLUDE,
           },
-        });
+        },
+      });
 
-        const session = topic.sessions[0];
-        if (!session) throw this.aiError();
-        return { data: this.mapSession(session) };
-      } catch (error) {
-        if (!this.isUniqueConflict(error)) throw error;
-        excludedTopics.push({ title, scenario });
-      }
+      const session = topic.sessions[0];
+      if (!session) throw this.aiError();
+      return { data: this.mapSession(session) };
+    } catch (error) {
+      if (!this.isUniqueConflict(error)) throw error;
+      throw new ConflictException({
+        error: {
+          code: 'TOPIC_CONVERSATION_DUPLICATE_TOPIC',
+          message: '這個主題已經存在，請產生另一個新主題',
+        },
+      });
     }
-
-    throw new ConflictException({
-      error: {
-        code: 'TOPIC_CONVERSATION_DUPLICATE_TOPIC',
-        message: '暫時找不到不同的新主題，請稍後再試',
-      },
-    });
   }
 
   async listConversations(userId: string, query: ListTopicConversationsDto) {
@@ -255,6 +255,21 @@ export class TopicConversationService {
     };
   }
 
+  async createDraftHint(draft: CreateTopicConversationDto) {
+    const result = await this.aiProvider.generateHint({
+      topic: { title: draft.title.trim(), scenario: draft.scenario.trim() },
+      history: [{ role: 'assistant', content: draft.openingMessage.trim() }],
+    });
+
+    return {
+      data: {
+        suggestions: [...new Set(result.suggestions.map((item) => item.trim()))]
+          .filter(Boolean)
+          .slice(0, 3),
+      },
+    };
+  }
+
   async replayConversation(userId: string, sessionId: string) {
     const source = await this.findOwnedSession(userId, sessionId);
     const openingMessage = source.messages.find(
@@ -276,6 +291,13 @@ export class TopicConversationService {
     });
 
     return { data: this.mapSession(session) };
+  }
+
+  async deleteConversation(userId: string, sessionId: string) {
+    await this.findOwnedSession(userId, sessionId);
+    await this.prisma.topicConversationSession.delete({
+      where: { id: sessionId },
+    });
   }
 
   private async findOwnedSession(userId: string, sessionId: string) {

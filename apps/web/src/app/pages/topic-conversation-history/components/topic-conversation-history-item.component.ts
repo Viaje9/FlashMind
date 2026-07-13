@@ -40,6 +40,16 @@ import type { TopicConversationHistoryItem } from '../../../components/topic-con
         <fm-button
           variant="ghost"
           size="sm"
+          [disabled]="deleting()"
+          [testId]="'topic-conversation-history-delete-' + item().id"
+          (click)="delete.emit(item().id)"
+        >
+          <span class="material-symbols-outlined text-[17px]">delete</span>
+          {{ deleting() ? '刪除中…' : '刪除' }}
+        </fm-button>
+        <fm-button
+          variant="ghost"
+          size="sm"
           [disabled]="replaying()"
           [testId]="'topic-conversation-history-repeat-' + item().id"
           (click)="replay.emit(item().id)"
@@ -63,8 +73,10 @@ import type { TopicConversationHistoryItem } from '../../../components/topic-con
 export class TopicConversationHistoryItemComponent {
   readonly item = input.required<TopicConversationHistoryItem>();
   readonly replaying = input(false);
+  readonly deleting = input(false);
   readonly open = output<string>();
   readonly replay = output<string>();
+  readonly delete = output<string>();
 
   formatUpdatedAt(value: string): string {
     return new Intl.DateTimeFormat('zh-TW', {

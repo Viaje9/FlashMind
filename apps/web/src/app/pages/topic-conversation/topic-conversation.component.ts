@@ -47,7 +47,10 @@ export class TopicConversationComponent implements OnInit {
       return;
     }
 
-    await this.startNewConversation();
+    const forceNew = this.route.snapshot.queryParamMap.get('new') === 'true';
+    if (forceNew || !(await this.store.loadLatestConversation())) {
+      await this.startNewConversation();
+    }
   }
 
   async startNewConversation(): Promise<void> {
@@ -67,6 +70,15 @@ export class TopicConversationComponent implements OnInit {
     this.scrollToBottom('auto');
     const success = await sendPromise;
     if (!success) return;
+
+    const sessionId = this.store.currentSession()?.id;
+    if (sessionId) {
+      await this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { sessionId },
+        replaceUrl: true,
+      });
+    }
 
     this.scrollToBottom();
   }
