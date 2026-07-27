@@ -34,6 +34,52 @@ describe('FsrsService', () => {
     });
   });
 
+  describe('calculateProficiency', () => {
+    const learnedCard: CardScheduleState = {
+      state: 'REVIEW',
+      due: new Date('2026-01-20T10:00:00Z'),
+      stability: 10,
+      difficulty: 5,
+      elapsedDays: 0,
+      scheduledDays: 10,
+      reps: 3,
+      lapses: 0,
+      lastReview: new Date('2026-01-19T10:00:00Z'),
+      learningStep: 0,
+    };
+
+    it('新卡片不應回傳熟練度', () => {
+      expect(
+        service.calculateProficiency(
+          service.initializeCard(),
+          new Date('2026-01-19T10:00:00Z'),
+        ),
+      ).toBeNull();
+    });
+
+    it.each([
+      [0.9, 'PROFICIENT'],
+      [0.7, 'FAIR'],
+      [0.4, 'UNSTABLE'],
+      [0.3999, 'NEEDS_WORK'],
+    ] as const)('記憶機率 %s 應分類為 %s', (retrievability, expected) => {
+      jest
+        .spyOn(service, 'calculateRetrievability')
+        .mockReturnValue(retrievability);
+
+      expect(service.calculateProficiency(learnedCard)).toBe(expected);
+    });
+
+    it('已學卡片應使用 FSRS 計算目前記憶機率', () => {
+      const retrievability = service.calculateRetrievability(
+        learnedCard,
+        new Date('2026-01-19T10:00:00Z'),
+      );
+
+      expect(retrievability).toBe(1);
+    });
+  });
+
   describe('calculateNextReview', () => {
     let newCardState: CardScheduleState;
     const now = new Date('2026-01-19T10:00:00Z');

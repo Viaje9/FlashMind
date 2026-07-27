@@ -40,6 +40,10 @@ export interface CardListItem {
    * 該方向的下次複習時間（ISO 8601 UTC），新卡片為 null
    */
   due?: string | null;
+  /**
+   * 該方向目前的熟練度；新卡片或排程資料不足時為 null
+   */
+  proficiency: CardListItem.ProficiencyEnum | null;
 }
 export namespace CardListItem {
   export const DirectionEnum = {
@@ -55,4 +59,12 @@ export namespace CardListItem {
     Relearning: "RELEARNING",
   } as const;
   export type StateEnum = (typeof StateEnum)[keyof typeof StateEnum];
+  export const ProficiencyEnum = {
+    Proficient: "PROFICIENT",
+    Fair: "FAIR",
+    Unstable: "UNSTABLE",
+    NeedsWork: "NEEDS_WORK",
+  } as const;
+  export type ProficiencyEnum =
+    (typeof ProficiencyEnum)[keyof typeof ProficiencyEnum];
 }

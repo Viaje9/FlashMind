@@ -2,10 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CardService } from './card.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FsrsService } from '../fsrs';
 
 describe('CardService', () => {
   let service: CardService;
   let prisma: PrismaService;
+  const mockFsrsService = {
+    calculateProficiency: jest.fn(),
+  };
 
   const mockPrismaService = {
     deck: {
@@ -77,6 +81,7 @@ describe('CardService', () => {
       providers: [
         CardService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: FsrsService, useValue: mockFsrsService },
       ],
     }).compile();
 
@@ -84,6 +89,10 @@ describe('CardService', () => {
     prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    mockFsrsService.calculateProficiency.mockReset();
+    mockFsrsService.calculateProficiency
+      .mockReturnValueOnce(null)
+      .mockReturnValue('FAIR');
   });
 
   describe('findAllByDeckId', () => {
@@ -102,6 +111,7 @@ describe('CardService', () => {
         summary: '你好',
         state: 'NEW',
         due: null,
+        proficiency: null,
       });
     });
 
@@ -148,6 +158,7 @@ describe('CardService', () => {
           summary: '你好',
           state: 'NEW',
           due: null,
+          proficiency: null,
         },
         {
           id: `${mockCardId}:REVERSE`,
@@ -157,6 +168,7 @@ describe('CardService', () => {
           summary: '你好',
           state: 'REVIEW',
           due: '2026-01-18T10:00:00.000Z',
+          proficiency: 'FAIR',
         },
       ]);
     });

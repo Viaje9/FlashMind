@@ -128,6 +128,36 @@ describe('DeckDetailComponent filters', () => {
     ]);
   });
 
+  it('篩選下拉應提供四種熟練度且不包含尚未學習', () => {
+    expect(component.filterOptions).toEqual(
+      expect.arrayContaining([
+        { label: '熟練', value: DECK_DETAIL_CARD_FILTER.PROFICIENT },
+        { label: '尚可', value: DECK_DETAIL_CARD_FILTER.FAIR },
+        { label: '不穩定', value: DECK_DETAIL_CARD_FILTER.UNSTABLE },
+        { label: '需要加強', value: DECK_DETAIL_CARD_FILTER.NEEDS_WORK },
+      ]),
+    );
+    expect(component.filterOptions.some((option) => option.label === '尚未學習')).toBe(false);
+  });
+
+  it('選擇熟練度時應只顯示對應卡片並排除新卡片', () => {
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.PROFICIENT);
+    expect(component.filteredCards().map((card) => card.id)).toEqual(['due-3']);
+
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.FAIR);
+    expect(component.filteredCards().map((card) => card.id)).toEqual(['due-2']);
+
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.UNSTABLE);
+    expect(component.filteredCards().map((card) => card.id)).toEqual(['due-1d']);
+
+    component.selectFilterOption(DECK_DETAIL_CARD_FILTER.NEEDS_WORK);
+    expect(component.filteredCards().map((card) => card.id)).toEqual([
+      'overdue',
+      'due-6h',
+      'due-12h',
+    ]);
+  });
+
   it('有反面卡時應顯示方向下拉，且預設文案為全部卡面', () => {
     expect(component.showDirectionFilter()).toBe(true);
     expect(component.selectedDirectionFilterLabel()).toBe('全部卡面');
@@ -215,6 +245,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: '尚未練習',
       state: 'NEW',
       due: null,
+      proficiency: null,
     },
     {
       id: 'due-6h',
@@ -224,6 +255,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: 'due in six hours',
       state: 'REVIEW',
       due: '2026-03-01T06:00:00.000Z',
+      proficiency: 'NEEDS_WORK',
     },
     {
       id: 'due-12h',
@@ -233,6 +265,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: 'due in twelve hours',
       state: 'LEARNING',
       due: '2026-03-01T12:00:00.000Z',
+      proficiency: 'NEEDS_WORK',
     },
     {
       id: 'due-1d',
@@ -242,6 +275,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: 'due in one day',
       state: 'REVIEW',
       due: '2026-03-02T00:00:00.000Z',
+      proficiency: 'UNSTABLE',
     },
     {
       id: 'due-2',
@@ -251,6 +285,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: 'target due in two days',
       state: 'REVIEW',
       due: '2026-03-03T00:00:00.000Z',
+      proficiency: 'FAIR',
     },
     {
       id: 'due-3',
@@ -260,6 +295,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: 'outside two days',
       state: 'REVIEW',
       due: '2026-03-04T00:00:00.000Z',
+      proficiency: 'PROFICIENT',
     },
     {
       id: 'overdue',
@@ -269,6 +305,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: 'already overdue',
       state: 'REVIEW',
       due: '2026-02-28T00:00:00.000Z',
+      proficiency: 'NEEDS_WORK',
     },
   ];
 
@@ -281,6 +318,7 @@ function createCardStoreMock(options: { reverse?: boolean } = {}) {
       summary: '尚未練習（反面）',
       state: 'NEW',
       due: null,
+      proficiency: null,
     });
   }
 

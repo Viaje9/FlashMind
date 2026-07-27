@@ -2944,6 +2944,7 @@ components:
         - front
         - summary
         - state
+        - proficiency
       properties:
         id:
           type: string
@@ -2977,6 +2978,12 @@ components:
           nullable: true
           description: 該方向的下次複習時間（ISO 8601 UTC），新卡片為 null
           example: "2026-02-01T10:00:00Z"
+        proficiency:
+          type: string
+          enum: [PROFICIENT, FAIR, UNSTABLE, NEEDS_WORK]
+          nullable: true
+          description: 該方向目前的熟練度；新卡片或排程資料不足時為 null
+          example: PROFICIENT
 
     CreateCardMeaningRequest:
       type: object

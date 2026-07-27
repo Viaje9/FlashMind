@@ -11,6 +11,11 @@ import {
   ImportCardsResult,
   ImportCardError,
 } from './dto';
+import {
+  FsrsService,
+  type CardProficiency,
+  type CardScheduleState,
+} from '../fsrs';
 
 export interface CardListItem {
   id: string;
@@ -20,6 +25,7 @@ export interface CardListItem {
   summary: string;
   state: string;
   due: string | null;
+  proficiency: CardProficiency | null;
 }
 
 export interface CardMeaning {
@@ -39,7 +45,10 @@ export interface CardDetail {
 
 @Injectable()
 export class CardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fsrsService: FsrsService,
+  ) {}
 
   private async validateDeckAccess(
     deckId: string,
@@ -86,6 +95,7 @@ export class CardService {
 
     return cards.flatMap((card) => {
       const summary = card.meanings[0]?.zhMeaning ?? '';
+      const now = new Date();
       const forwardItem: CardListItem = {
         id: card.id,
         cardId: card.id,
@@ -94,6 +104,21 @@ export class CardService {
         summary,
         state: card.state,
         due: card.due?.toISOString() ?? null,
+        proficiency: this.fsrsService.calculateProficiency(
+          {
+            state: card.state,
+            due: card.due,
+            stability: card.stability,
+            difficulty: card.difficulty,
+            elapsedDays: card.elapsedDays,
+            scheduledDays: card.scheduledDays,
+            reps: card.reps,
+            lapses: card.lapses,
+            lastReview: card.lastReview,
+            learningStep: card.learningStep,
+          } as CardScheduleState,
+          now,
+        ),
       };
 
       if (!deck.enableReverse) {
@@ -110,6 +135,21 @@ export class CardService {
           summary,
           state: card.reverseState,
           due: card.reverseDue?.toISOString() ?? null,
+          proficiency: this.fsrsService.calculateProficiency(
+            {
+              state: card.reverseState,
+              due: card.reverseDue,
+              stability: card.reverseStability,
+              difficulty: card.reverseDifficulty,
+              elapsedDays: card.reverseElapsedDays,
+              scheduledDays: card.reverseScheduledDays,
+              reps: card.reverseReps,
+              lapses: card.reverseLapses,
+              lastReview: card.reverseLastReview,
+              learningStep: card.reverseLearningStep,
+            } as CardScheduleState,
+            now,
+          ),
         },
       ];
     });

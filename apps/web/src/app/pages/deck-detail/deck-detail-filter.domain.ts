@@ -9,6 +9,10 @@ export const DECK_DETAIL_CARD_FILTER = {
   DUE_IN_1_DAY: 'due-in-1-day',
   DUE_IN_2_DAYS: 'due-in-2-days',
   NEW: 'new',
+  PROFICIENT: 'proficient',
+  FAIR: 'fair',
+  UNSTABLE: 'unstable',
+  NEEDS_WORK: 'needs-work',
 } as const;
 
 export type DeckDetailCardFilter =
@@ -23,6 +27,9 @@ export const DECK_DETAIL_CARD_DIRECTION_FILTER = {
 export type DeckDetailCardDirectionFilter =
   (typeof DECK_DETAIL_CARD_DIRECTION_FILTER)[keyof typeof DECK_DETAIL_CARD_DIRECTION_FILTER];
 
+export type DeckDetailCardProficiency = NonNullable<CardListItem['proficiency']>;
+export type DeckDetailCardListItem = CardListItem;
+
 export interface FilterDeckCardsParams {
   searchTerm: string;
   filter: DeckDetailCardFilter;
@@ -33,7 +40,7 @@ export interface FilterDeckCardsParams {
 export type DeckDetailCardSortDirection = 'asc' | 'desc';
 
 export function filterDeckCards(
-  cards: CardListItem[],
+  cards: DeckDetailCardListItem[],
   params: FilterDeckCardsParams,
 ): CardListItem[] {
   const normalizedSearchTerm = params.searchTerm.trim().toLowerCase();
@@ -84,10 +91,25 @@ function matchesFilter(card: CardListItem, filter: DeckDetailCardFilter, now: Da
       return isDueWithinDays(card, now, 2);
     case DECK_DETAIL_CARD_FILTER.NEW:
       return card.state === 'NEW';
+    case DECK_DETAIL_CARD_FILTER.PROFICIENT:
+      return matchesProficiency(card, 'PROFICIENT');
+    case DECK_DETAIL_CARD_FILTER.FAIR:
+      return matchesProficiency(card, 'FAIR');
+    case DECK_DETAIL_CARD_FILTER.UNSTABLE:
+      return matchesProficiency(card, 'UNSTABLE');
+    case DECK_DETAIL_CARD_FILTER.NEEDS_WORK:
+      return matchesProficiency(card, 'NEEDS_WORK');
     case DECK_DETAIL_CARD_FILTER.ALL:
     default:
       return true;
   }
+}
+
+function matchesProficiency(
+  card: DeckDetailCardListItem,
+  proficiency: DeckDetailCardProficiency,
+): boolean {
+  return card.state !== 'NEW' && card.proficiency === proficiency;
 }
 
 function matchesDirectionFilter(

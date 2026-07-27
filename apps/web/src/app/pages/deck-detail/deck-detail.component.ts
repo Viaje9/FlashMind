@@ -96,6 +96,10 @@ export class DeckDetailComponent implements OnInit {
     { label: '一天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_1_DAY },
     { label: '兩天內到期', value: DECK_DETAIL_CARD_FILTER.DUE_IN_2_DAYS },
     { label: '尚未練習的新卡片', value: DECK_DETAIL_CARD_FILTER.NEW },
+    { label: '熟練', value: DECK_DETAIL_CARD_FILTER.PROFICIENT },
+    { label: '尚可', value: DECK_DETAIL_CARD_FILTER.FAIR },
+    { label: '不穩定', value: DECK_DETAIL_CARD_FILTER.UNSTABLE },
+    { label: '需要加強', value: DECK_DETAIL_CARD_FILTER.NEEDS_WORK },
   ];
   readonly directionFilterOptions: ReadonlyArray<{
     label: string;

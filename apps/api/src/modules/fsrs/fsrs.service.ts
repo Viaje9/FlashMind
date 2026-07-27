@@ -19,6 +19,7 @@ import { createHash } from 'crypto';
  * - unknown: 不知道（左滑）
  */
 export type StudyRating = 'known' | 'unfamiliar' | 'unknown';
+export type CardProficiency = 'PROFICIENT' | 'FAIR' | 'UNSTABLE' | 'NEEDS_WORK';
 
 /**
  * 每牌組的 FSRS 參數
@@ -169,6 +170,62 @@ export class FsrsService {
       lastReview: card.last_review ?? null,
       learningStep: 0,
     };
+  }
+
+  /**
+   * 依目前時間計算卡片的 FSRS 記憶機率（0～1）。
+   * 新卡片或尚未具備完整排程資料時不計算。
+   */
+  calculateRetrievability(
+    state: CardScheduleState,
+    now: Date = new Date(),
+  ): number | null {
+    if (
+      state.state === 'NEW' ||
+      state.stability === null ||
+      state.stability <= 0 ||
+      !state.lastReview
+    ) {
+      return null;
+    }
+
+    const card: FsrsCard = {
+      due: state.due ?? now,
+      stability: state.stability,
+      difficulty: state.difficulty ?? 0,
+      elapsed_days: state.elapsedDays,
+      scheduled_days: state.scheduledDays,
+      learning_steps: state.learningStep,
+      reps: state.reps,
+      lapses: state.lapses,
+      state: this.mapStateToFsrs(state.state),
+      last_review: state.lastReview,
+    };
+
+    return this.defaultScheduler.get_retrievability(card, now, false);
+  }
+
+  /**
+   * 將目前記憶機率轉換成前台使用的熟練度級別。
+   */
+  calculateProficiency(
+    state: CardScheduleState,
+    now: Date = new Date(),
+  ): CardProficiency | null {
+    const retrievability = this.calculateRetrievability(state, now);
+    if (retrievability === null) {
+      return null;
+    }
+    if (retrievability >= 0.9) {
+      return 'PROFICIENT';
+    }
+    if (retrievability >= 0.7) {
+      return 'FAIR';
+    }
+    if (retrievability >= 0.4) {
+      return 'UNSTABLE';
+    }
+    return 'NEEDS_WORK';
   }
 
   /**

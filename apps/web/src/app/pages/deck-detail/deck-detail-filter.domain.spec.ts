@@ -6,6 +6,7 @@ import {
   hasReverseCards,
   type DeckDetailCardFilter,
   type DeckDetailCardDirectionFilter,
+  type DeckDetailCardListItem,
   DECK_DETAIL_CARD_FILTER,
   sortDeckCards,
 } from './deck-detail-filter.domain';
@@ -19,8 +20,9 @@ function createCard(
     direction?: CardListItem.DirectionEnum;
     state?: CardListItem.StateEnum;
     due?: string | null;
+    proficiency?: DeckDetailCardListItem['proficiency'];
   } = {},
-): CardListItem {
+): DeckDetailCardListItem {
   return {
     id,
     cardId: options.cardId ?? id,
@@ -29,6 +31,7 @@ function createCard(
     summary: options.summary ?? `summary-${id}`,
     state: options.state ?? 'REVIEW',
     due: options.due ?? null,
+    proficiency: options.proficiency ?? null,
   };
 }
 
@@ -139,6 +142,26 @@ describe('deck-detail-filter.domain', () => {
     const result = filterBy(cards, DECK_DETAIL_CARD_FILTER.NEW);
 
     expect(result.map((card) => card.id)).toEqual(['forward-new', 'reverse-new']);
+  });
+
+  it.each([
+    [DECK_DETAIL_CARD_FILTER.PROFICIENT, 'PROFICIENT'],
+    [DECK_DETAIL_CARD_FILTER.FAIR, 'FAIR'],
+    [DECK_DETAIL_CARD_FILTER.UNSTABLE, 'UNSTABLE'],
+    [DECK_DETAIL_CARD_FILTER.NEEDS_WORK, 'NEEDS_WORK'],
+  ] as const)('熟練度篩選 %s 應只回傳對應熟練度', (filter, proficiency) => {
+    const cards = [
+      createCard('target', { proficiency }),
+      createCard('other', {
+        proficiency: proficiency === 'PROFICIENT' ? 'FAIR' : 'PROFICIENT',
+      }),
+      createCard('without-proficiency'),
+      createCard('new-card', { state: 'NEW', proficiency }),
+    ];
+
+    const result = filterBy(cards, filter);
+
+    expect(result.map((card) => card.id)).toEqual(['target']);
   });
 
   it('搜尋條件應與篩選條件取交集（同時生效）', () => {
