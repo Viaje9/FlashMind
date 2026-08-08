@@ -99,10 +99,20 @@
               [word]="word()"
               [translations]="translations()"
               [examples]="examples()"
+              [relatedExample]="relatedExample()"
+              [relatedExampleAudioLoading]="relatedExampleAudioLoading()"
+              [relatedExampleLoading]="relatedExampleLoading()"
+              [relatedExampleSaving]="relatedExampleSaving()"
+              [relatedExampleError]="relatedExampleError()"
               [wordAudioLoading]="wordAudioLoading()"
               [exampleAudioLoadingIndex]="exampleAudioLoadingIndex()"
               (audioClick)="onAudioClick()"
               (exampleAudioClick)="onExampleAudioClick($event)"
+              (relatedExampleAudioClick)="onRelatedExampleAudioClick()"
+              (relatedExampleGenerate)="onGenerateRelatedExample()"
+              (relatedExampleRegenerate)="onGenerateRelatedExample()"
+              (relatedExampleConfirm)="onConfirmRelatedExample()"
+              (relatedExampleCancel)="onCancelRelatedExample()"
             ></fm-study-card>
           </div>
         </fm-swipeable-card>

@@ -1715,6 +1715,60 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /decks/{deckId}/study/cards/{cardId}/related-example:
+    post:
+      operationId: generateRelatedExample
+      tags:
+        - Study
+      summary: 產生關聯例句
+      description: 使用使用者已熟練的字彙，為指定學習卡片產生新的例句預覽。此操作不會保存卡片。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: deckId
+          in: path
+          required: true
+          description: 牌組 ID
+          schema:
+            type: string
+        - name: cardId
+          in: path
+          required: true
+          description: 卡片 ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 產生成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelatedExampleResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 無權限存取此牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 牌組或卡片不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /decks/{deckId}/study/summary:
     get:
       operationId: getStudySummary
@@ -4313,6 +4367,41 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StudyCard"
+
+    RelatedExample:
+      type: object
+      required:
+        - zhMeaning
+        - enExample
+        - zhExample
+      properties:
+        zhMeaning:
+          type: string
+          description: 目標單字在例句中的中文解釋
+        enExample:
+          type: string
+          description: 新的英文例句
+        zhExample:
+          type: string
+          description: 新例句的中文翻譯
+        unfamiliarWords:
+          type: array
+          description: 例句中可能尚未學過、前端需要標亮的英文內容單字
+          items:
+            type: string
+        learningWords:
+          type: array
+          description: 例句中目前正在學習、前端需要以另一種顏色標亮的英文單字
+          items:
+            type: string
+
+    RelatedExampleResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/RelatedExample"
 
     SubmitReviewRequest:
       type: object

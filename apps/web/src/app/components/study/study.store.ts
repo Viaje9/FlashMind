@@ -1,5 +1,12 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { StudyService, StudyCard, StudySummary, SubmitReviewRequest } from '@flashmind/api-client';
+import {
+  CardsService,
+  RelatedExample,
+  StudyService,
+  StudyCard,
+  StudySummary,
+  SubmitReviewRequest,
+} from '@flashmind/api-client';
 import { firstValueFrom } from 'rxjs';
 import {
   StudyRating,
@@ -28,6 +35,7 @@ export interface StudyStoreState {
 @Injectable({ providedIn: 'root' })
 export class StudyStore {
   private readonly studyService = inject(StudyService);
+  private readonly cardsService = inject(CardsService);
 
   private readonly state = signal<StudyStoreState>({
     deckId: null,
@@ -251,6 +259,65 @@ export class StudyStore {
       this.state.update((s) => ({ ...s, summary: response.data }));
     } catch {
       // 靜默失敗
+    }
+  }
+
+  async generateRelatedExample(): Promise<RelatedExample | null> {
+    const state = this.state();
+    const card = this.currentCard();
+    if (!state.deckId || !card) return null;
+
+    try {
+      const response = await firstValueFrom(
+        this.studyService.generateRelatedExample(state.deckId, card.id),
+      );
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
+  async saveRelatedExample(example: RelatedExample): Promise<boolean> {
+    const state = this.state();
+    const card = this.currentCard();
+    if (!state.deckId || !card) return false;
+
+    try {
+      const response = await firstValueFrom(
+        this.cardsService.updateCard(state.deckId, card.id, {
+          meanings: [
+            ...card.meanings.map((meaning) => ({
+              id: meaning.id,
+              zhMeaning: meaning.zhMeaning,
+              enExample: meaning.enExample ?? null,
+              zhExample: meaning.zhExample ?? null,
+            })),
+            {
+              zhMeaning: example.zhMeaning,
+              enExample: example.enExample,
+              zhExample: example.zhExample,
+            },
+          ],
+        }),
+      );
+
+      const meanings = response.data.meanings;
+      const updateCardMeanings = (studyCard: StudyCard): StudyCard => ({
+        ...studyCard,
+        meanings,
+      });
+      this.state.update((current) => ({
+        ...current,
+        cards: current.cards.map((studyCard) =>
+          studyCard.id === card.id ? updateCardMeanings(studyCard) : studyCard,
+        ),
+        failedQueue: current.failedQueue.map((studyCard) =>
+          studyCard.id === card.id ? updateCardMeanings(studyCard) : studyCard,
+        ),
+      }));
+      return true;
+    } catch {
+      return false;
     }
   }
 

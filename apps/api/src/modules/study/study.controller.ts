@@ -31,6 +31,20 @@ export class StudyController {
     return { data: cards };
   }
 
+  @Post('cards/:cardId/related-example')
+  async generateRelatedExample(
+    @Param('deckId') deckId: string,
+    @Param('cardId') cardId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const result = await this.studyService.generateRelatedExample(
+      deckId,
+      cardId,
+      req.user.id,
+    );
+    return { data: result };
+  }
+
   @Post('review')
   async submitReview(
     @Param('deckId') deckId: string,

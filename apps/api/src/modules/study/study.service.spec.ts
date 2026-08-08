@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { FsrsService } from '../fsrs';
 import { CardState, StudyRating as PrismaStudyRating } from '@prisma/client';
 import { getStartOfStudyDay } from './study-day';
+import { AiService } from '../ai/ai.service';
 
 describe('StudyService', () => {
   let service: StudyService;
@@ -38,6 +39,11 @@ describe('StudyService', () => {
         .map((x: string) => x.trim())
         .filter((x: string) => x.length > 0),
     ),
+    calculateProficiency: jest.fn(() => 'PROFICIENT'),
+  };
+
+  const mockAiService = {
+    generateRelatedExample: jest.fn(),
   };
 
   const mockUserId = 'user-123';
@@ -137,6 +143,7 @@ describe('StudyService', () => {
         StudyService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: FsrsService, useValue: mockFsrsService },
+        { provide: AiService, useValue: mockAiService },
       ],
     }).compile();
 
@@ -625,6 +632,78 @@ describe('StudyService', () => {
 
       expect(mockPrismaService.card.findMany.mock.calls[2][0].take).toBe(6);
       expect(mockPrismaService.card.findMany.mock.calls[3][0].take).toBe(4);
+    });
+  });
+
+  describe('generateRelatedExample', () => {
+    it('應傳入排除目前卡片且依熟練度排序的字彙給 AI', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue({
+        id: mockCardId,
+        deckId: mockDeckId,
+        front: 'Hello',
+        state: CardState.LEARNING,
+      });
+      mockPrismaService.card.findMany.mockResolvedValue([
+        {
+          front: 'fair-word',
+          state: CardState.REVIEW,
+          due: new Date(),
+          stability: 1,
+          difficulty: 5,
+          elapsedDays: 1,
+          scheduledDays: 1,
+          reps: 1,
+          lapses: 0,
+          lastReview: new Date(),
+          learningStep: 0,
+        },
+        {
+          front: 'proficient-word',
+          state: CardState.REVIEW,
+          due: new Date(),
+          stability: 10,
+          difficulty: 5,
+          elapsedDays: 10,
+          scheduledDays: 10,
+          reps: 5,
+          lapses: 0,
+          lastReview: new Date(),
+          learningStep: 0,
+        },
+      ]);
+      mockFsrsService.calculateProficiency
+        .mockReturnValueOnce('FAIR')
+        .mockReturnValueOnce('PROFICIENT');
+      mockAiService.generateRelatedExample.mockResolvedValue({
+        zhMeaning: '問候 (interj.)',
+        enExample: 'Hello, proficient-word and new-word.',
+        zhExample: '你好，熟練單字。',
+        unfamiliarWords: ['new-word', 'fair-word'],
+        learningWords: [],
+      });
+
+      const result = await service.generateRelatedExample(
+        mockDeckId,
+        mockCardId,
+        mockUserId,
+      );
+
+      expect(result.enExample).toContain('Hello');
+      expect(result.unfamiliarWords).toEqual(['new-word']);
+      expect(result.learningWords).toEqual(['hello']);
+      expect(mockAiService.generateRelatedExample).toHaveBeenCalledWith(
+        'Hello',
+        ['proficient-word', 'fair-word'],
+      );
+      expect(mockPrismaService.card.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { not: mockCardId },
+            state: { not: CardState.NEW },
+          }),
+        }),
+      );
     });
   });
 

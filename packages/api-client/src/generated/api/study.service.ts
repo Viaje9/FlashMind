@@ -26,6 +26,8 @@ import { ErrorResponse } from "../model/errorResponse";
 // @ts-ignore
 import { ReviewResultResponse } from "../model/reviewResultResponse";
 // @ts-ignore
+import { RelatedExampleResponse } from "../model/relatedExampleResponse";
+// @ts-ignore
 import { StudyCardsResponse } from "../model/studyCardsResponse";
 // @ts-ignore
 import { StudySummaryResponse } from "../model/studySummaryResponse";
@@ -151,6 +153,106 @@ export class StudyService extends BaseService {
           ? { transferCache: localVarTransferCache }
           : {}),
         reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 產生關聯例句
+   * 使用使用者已熟練的字彙，為指定學習卡片產生新的例句預覽。此操作不會保存卡片。
+   * @endpoint post /decks/{deckId}/study/cards/{cardId}/related-example
+   */
+  public generateRelatedExample(
+    deckId: string,
+    cardId: string,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<RelatedExampleResponse>;
+  public generateRelatedExample(
+    deckId: string,
+    cardId: string,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<RelatedExampleResponse>>;
+  public generateRelatedExample(
+    deckId: string,
+    cardId: string,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<RelatedExampleResponse>>;
+  public generateRelatedExample(
+    deckId: string,
+    cardId: string,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (deckId === null || deckId === undefined) {
+      throw new Error(
+        "Required parameter deckId was null or undefined when calling generateRelatedExample.",
+      );
+    }
+    if (cardId === null || cardId === undefined) {
+      throw new Error(
+        "Required parameter cardId was null or undefined when calling generateRelatedExample.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text"))
+        responseType_ = "text";
+      else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected))
+        responseType_ = "json";
+      else responseType_ = "blob";
+    }
+    const localVarPath = `/decks/${this.configuration.encodeParam({ name: "deckId", value: deckId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}/study/cards/${this.configuration.encodeParam({ name: "cardId", value: cardId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}/related-example`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<RelatedExampleResponse>(
+      "post",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress,
       },
     );
   }

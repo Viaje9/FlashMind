@@ -170,4 +170,38 @@ describe('AiService', () => {
       expect(result.meanings[1].zhMeaning).toBe('賽跑 (n.)');
     });
   });
+
+  describe('generateRelatedExample', () => {
+    it('應回傳例句與 AI 判定的生字清單', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  zhMeaning: '安排 (v.)',
+                  enExample: 'We can arrange a convenient meeting.',
+                  zhExample: '我們可以安排一個方便的會議。',
+                  unfamiliarWords: ['convenient'],
+                }),
+              },
+            },
+          ],
+        }),
+      });
+
+      const result = await service.generateRelatedExample('arrange', [
+        'meeting',
+      ]);
+
+      expect(result).toEqual({
+        zhMeaning: '安排 (v.)',
+        enExample: 'We can arrange a convenient meeting.',
+        zhExample: '我們可以安排一個方便的會議。',
+        unfamiliarWords: ['convenient'],
+        learningWords: [],
+      });
+    });
+  });
 });

@@ -86,6 +86,8 @@ export * from "./studyCard";
 export * from "./studyCardsResponse";
 export * from "./studySummary";
 export * from "./studySummaryResponse";
+export * from "./relatedExample";
+export * from "./relatedExampleResponse";
 export * from "./submitReviewRequest";
 export * from "./synthesizeSpeechRequest";
 export * from "./synthesizeWordRequest";

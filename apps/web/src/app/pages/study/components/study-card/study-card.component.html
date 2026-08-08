@@ -37,8 +37,113 @@
         </p>
       }
     </div>
+    <div class="w-12 h-1 bg-slate-100 dark:bg-slate-800 rounded-full mb-6"></div>
+    <div class="w-full mb-5">
+      @if (!relatedExample()) {
+        <button
+          type="button"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"
+          [disabled]="relatedExampleLoading() || relatedExampleSaving()"
+          (click)="relatedExampleGenerate.emit(); $event.stopPropagation()"
+        >
+          @if (relatedExampleLoading()) {
+            <span class="material-symbols-outlined text-[20px] animate-spin"
+              >progress_activity</span
+            >
+            產生中...
+          } @else {
+            <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+            用熟悉單字造句
+          }
+        </button>
+        @if (relatedExampleError()) {
+          <p class="mt-2 text-center text-sm text-error">{{ relatedExampleError() }}</p>
+        }
+      } @else {
+        <article class="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+          <p class="mb-1.5 text-sm font-bold text-primary">AI 關聯例句預覽</p>
+          <div class="flex items-start justify-between gap-3">
+            <p class="text-base font-semibold leading-snug text-slate-800 dark:text-slate-200">
+              @for (segment of relatedExampleSegments(); track $index) {
+                @if (segment.status === 'unfamiliar') {
+                  <mark
+                    class="rounded bg-amber-200/80 px-0.5 text-amber-950 dark:bg-amber-400/30 dark:text-amber-100"
+                    title="可能是尚未學過的單字"
+                    >{{ segment.text }}</mark
+                  >
+                } @else if (segment.status === 'learning') {
+                  <mark
+                    class="rounded bg-blue-200/80 px-0.5 text-blue-950 dark:bg-blue-400/30 dark:text-blue-100"
+                    title="目前正在學習的單字"
+                    >{{ segment.text }}</mark
+                  >
+                } @else {
+                  {{ segment.text }}
+                }
+              }
+            </p>
+            <button
+              type="button"
+              class="shrink-0 flex items-center justify-center size-8 rounded-full text-primary bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              aria-label="播放預覽例句語音"
+              [disabled]="relatedExampleAudioLoading() || relatedExampleSaving()"
+              (click)="relatedExampleAudioClick.emit(); $event.stopPropagation()"
+            >
+              @if (relatedExampleAudioLoading()) {
+                <span class="material-symbols-outlined text-[20px] animate-spin"
+                  >progress_activity</span
+                >
+              } @else {
+                <span class="material-symbols-outlined text-[20px]">volume_up</span>
+              }
+            </button>
+          </div>
+          <p class="mt-1 text-sm text-secondary-text">{{ relatedExample()!.zhExample }}</p>
+          <p class="mt-2 text-sm font-medium text-teal-600 dark:text-teal-300">
+            {{ relatedExample()!.zhMeaning }}
+          </p>
+          @if (relatedExampleError()) {
+            <p class="mt-2 text-sm text-error">{{ relatedExampleError() }}</p>
+          }
+          <div class="mt-3 flex gap-2">
+            <button
+              type="button"
+              class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              [disabled]="relatedExampleLoading() || relatedExampleSaving()"
+              (click)="relatedExampleRegenerate.emit(); $event.stopPropagation()"
+            >
+              @if (relatedExampleLoading()) {
+                重新產生中...
+              } @else {
+                重新產生
+              }
+            </button>
+            <button
+              type="button"
+              class="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60"
+              [disabled]="relatedExampleLoading() || relatedExampleSaving()"
+              (click)="relatedExampleConfirm.emit(); $event.stopPropagation()"
+            >
+              @if (relatedExampleSaving()) {
+                保存中...
+              } @else {
+                加入這張卡
+              }
+            </button>
+          </div>
+          <button
+            type="button"
+            class="mt-2 w-full py-1 text-xs text-secondary-text hover:text-slate-700 dark:hover:text-slate-200"
+            [disabled]="relatedExampleLoading() || relatedExampleSaving()"
+            (click)="relatedExampleCancel.emit(); $event.stopPropagation()"
+          >
+            取消預覽
+          </button>
+        </article>
+      }
+    </div>
+
     @if (hasExamples()) {
-      <div class="w-12 h-1 bg-slate-100 dark:bg-slate-800 rounded-full mb-6"></div>
       <div class="w-full space-y-4">
         @for (example of examples(); track $index) {
           <article

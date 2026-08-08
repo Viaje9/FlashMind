@@ -11,6 +11,14 @@ export interface GenerateCardContentResult {
   meanings: GeneratedMeaning[];
 }
 
+export interface GenerateRelatedExampleResult {
+  zhMeaning: string;
+  enExample: string;
+  zhExample: string;
+  unfamiliarWords: string[];
+  learningWords: string[];
+}
+
 @Injectable()
 export class AiService {
   private readonly apiKey: string;
@@ -87,6 +95,68 @@ export class AiService {
     }
   }
 
+  async generateRelatedExample(
+    target: string,
+    familiarWords: string[],
+  ): Promise<GenerateRelatedExampleResult> {
+    const prompt = this.buildRelatedExamplePrompt(target, familiarWords);
+
+    try {
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          messages: [
+            { role: 'system', content: prompt.system },
+            { role: 'user', content: prompt.user },
+          ],
+          temperature: 0.7,
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          'OpenAI API error:',
+          response.status,
+          await response.text(),
+        );
+        throw new InternalServerErrorException({
+          error: {
+            code: 'AI_SERVICE_ERROR',
+            message: 'AI 服務暫時無法使用，請稍後再試',
+          },
+        });
+      }
+
+      const data = (await response.json()) as {
+        choices: { message: { content: string } }[];
+      };
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new InternalServerErrorException({
+          error: { code: 'AI_SERVICE_ERROR', message: 'AI 服務回應格式錯誤' },
+        });
+      }
+
+      return this.parseRelatedExampleResponse(content);
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException({
+        error: {
+          code: 'AI_SERVICE_ERROR',
+          message: 'AI 服務暫時無法使用，請稍後再試',
+        },
+      });
+    }
+  }
+
   private buildPrompt(text: string): { system: string; user: string } {
     return {
       system: `你是一位專業的英語教學助理，專門幫助台灣學生學習英文單字。
@@ -117,6 +187,36 @@ export class AiService {
     };
   }
 
+  private buildRelatedExamplePrompt(
+    target: string,
+    familiarWords: string[],
+  ): { system: string; user: string } {
+    const wordList =
+      familiarWords.length > 0
+        ? familiarWords.join(', ')
+        : '（目前沒有可用的熟悉字彙）';
+    return {
+      system: `你是一位專業的英語教學助理，幫助台灣學生透過熟悉字彙建立記憶關聯。
+請為指定的目標單字或片語產生一組新的詞義與例句。
+
+回應必須是 JSON：
+{
+  "zhMeaning": "目標單字在這個句子中的中文解釋 (詞性)",
+  "enExample": "英文例句",
+  "zhExample": "例句的正體中文翻譯",
+  "unfamiliarWords": ["句子中可能是生字的英文單字"]
+}
+
+規則：
+1. 英文例句必須自然，且必須包含目標單字或片語。
+2. 優先使用提供的熟悉字彙；若不足或不自然，可以自行補足常用字。
+3. 句子適合日常英文學習，不要為了塞入字彙而產生不自然的句子。
+4. unfamiliarWords 只列出句子中可能尚未學過的內容單字，必須使用它們在英文例句中實際出現的形式；不要列出目標單字，也不要列出冠詞、介系詞、代名詞等基本功能字。
+5. 使用正體中文，詞義需包含詞性標註。`,
+      user: `目標單字或片語：${target}\n優先使用的熟悉字彙：${wordList}`,
+    };
+  }
+
   private parseResponse(content: string): GenerateCardContentResult {
     try {
       const parsed = JSON.parse(content) as { meanings?: GeneratedMeaning[] };
@@ -138,6 +238,35 @@ export class AiService {
           code: 'AI_SERVICE_ERROR',
           message: 'AI 服務回應格式錯誤',
         },
+      });
+    }
+  }
+
+  private parseRelatedExampleResponse(
+    content: string,
+  ): GenerateRelatedExampleResult {
+    try {
+      const parsed = JSON.parse(
+        content,
+      ) as Partial<GenerateRelatedExampleResult>;
+      if (!parsed.zhMeaning || !parsed.enExample || !parsed.zhExample) {
+        throw new Error('Invalid response structure');
+      }
+      return {
+        zhMeaning: parsed.zhMeaning,
+        enExample: parsed.enExample,
+        zhExample: parsed.zhExample,
+        unfamiliarWords: Array.isArray(parsed.unfamiliarWords)
+          ? parsed.unfamiliarWords.filter(
+              (word): word is string =>
+                typeof word === 'string' && word.trim().length > 0,
+            )
+          : [],
+        learningWords: [],
+      };
+    } catch {
+      throw new InternalServerErrorException({
+        error: { code: 'AI_SERVICE_ERROR', message: 'AI 服務回應格式錯誤' },
       });
     }
   }

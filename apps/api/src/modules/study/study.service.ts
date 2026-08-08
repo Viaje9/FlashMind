@@ -16,6 +16,7 @@ import {
   shuffleWithSpacing,
   MIN_FORWARD_REVERSE_SPACING,
 } from './shuffle-with-spacing';
+import { AiService, GenerateRelatedExampleResult } from '../ai/ai.service';
 
 export interface StudyCardMeaning {
   id: string;
@@ -56,7 +57,135 @@ export class StudyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly fsrsService: FsrsService,
+    private readonly aiService: AiService,
   ) {}
+
+  async generateRelatedExample(
+    deckId: string,
+    cardId: string,
+    userId: string,
+  ): Promise<GenerateRelatedExampleResult> {
+    await this.validateDeckAccess(deckId, userId);
+
+    const targetCard = await this.prisma.card.findUnique({
+      where: { id: cardId },
+      select: { id: true, deckId: true, front: true, state: true },
+    });
+
+    if (!targetCard || targetCard.deckId !== deckId) {
+      throw new NotFoundException({
+        error: {
+          code: 'CARD_NOT_FOUND',
+          message: '找不到此卡片',
+        },
+      });
+    }
+
+    const cards = await this.prisma.card.findMany({
+      where: {
+        deck: { userId },
+        id: { not: cardId },
+        state: { not: CardState.NEW },
+      },
+      select: {
+        front: true,
+        state: true,
+        due: true,
+        stability: true,
+        difficulty: true,
+        elapsedDays: true,
+        scheduledDays: true,
+        reps: true,
+        lapses: true,
+        lastReview: true,
+        learningStep: true,
+      },
+    });
+
+    const proficiencyRank = {
+      PROFICIENT: 0,
+      FAIR: 1,
+      UNSTABLE: 2,
+      NEEDS_WORK: 3,
+    } as const;
+    const familiarWords = cards
+      .map((card) => {
+        const proficiency = this.fsrsService.calculateProficiency({
+          state: card.state,
+          due: card.due,
+          stability: card.stability,
+          difficulty: card.difficulty,
+          elapsedDays: card.elapsedDays,
+          scheduledDays: card.scheduledDays,
+          reps: card.reps,
+          lapses: card.lapses,
+          lastReview: card.lastReview,
+          learningStep: card.learningStep,
+        });
+        return { word: card.front.trim(), proficiency };
+      })
+      .filter((item) => item.word && item.proficiency)
+      .sort(
+        (a, b) =>
+          proficiencyRank[a.proficiency!] - proficiencyRank[b.proficiency!],
+      )
+      .map((item) => item.word)
+      .filter((word, index, words) => words.indexOf(word) === index)
+      .slice(0, 30);
+
+    const generated = await this.aiService.generateRelatedExample(
+      targetCard.front,
+      familiarWords,
+    );
+
+    const knownWords = new Set(
+      [targetCard.front, ...cards.map((card) => card.front)].map((word) =>
+        this.normalizeWord(word),
+      ),
+    );
+    const sentenceWords = new Set(
+      generated.enExample
+        .match(/[A-Za-z]+(?:[-'][A-Za-z]+)*/g)
+        ?.map((word) => this.normalizeWord(word)) ?? [],
+    );
+    const unfamiliarWords = generated.unfamiliarWords.filter((word) => {
+      const normalizedWord = this.normalizeWord(word);
+      return (
+        sentenceWords.has(normalizedWord) && !knownWords.has(normalizedWord)
+      );
+    });
+    const unfamiliarWordSet = new Set(
+      unfamiliarWords.map((word) => this.normalizeWord(word)),
+    );
+    const learningWords = [
+      ...cards,
+      { front: targetCard.front, state: targetCard.state },
+    ]
+      .filter(
+        (card) =>
+          card.state === CardState.LEARNING ||
+          card.state === CardState.RELEARNING,
+      )
+      .map((card) => this.normalizeWord(card.front))
+      .filter(
+        (word, index, words) =>
+          sentenceWords.has(word) &&
+          !unfamiliarWordSet.has(word) &&
+          words.indexOf(word) === index,
+      );
+    return {
+      ...generated,
+      unfamiliarWords,
+      learningWords,
+    };
+  }
+
+  private normalizeWord(word: string): string {
+    return word
+      .toLocaleLowerCase('en-US')
+      .replace(/[’']/g, '')
+      .replace(/[^a-z0-9-]/g, '');
+  }
 
   private async validateDeckAccess(
     deckId: string,

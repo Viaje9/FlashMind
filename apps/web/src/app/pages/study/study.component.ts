@@ -6,8 +6,10 @@ import {
   inject,
   OnInit,
   OnDestroy,
+  signal,
   untracked,
 } from '@angular/core';
+import type { RelatedExample } from '@flashmind/api-client';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { FmStudyCardComponent, StudyExample } from './components/study-card/study-card.component';
@@ -52,6 +54,10 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly isSubmitting = this.studyStore.isSubmitting;
   readonly stats = this.studyStore.stats;
   readonly deckName = this.studyStore.deckName;
+  readonly relatedExample = signal<RelatedExample | null>(null);
+  readonly relatedExampleLoading = signal(false);
+  readonly relatedExampleSaving = signal(false);
+  readonly relatedExampleError = signal<string | null>(null);
 
   readonly word = computed(() => {
     const card = this.currentCard();
@@ -114,6 +120,10 @@ export class StudyComponent implements OnInit, OnDestroy {
     }
     return null;
   });
+  readonly relatedExampleAudioLoading = computed(() => {
+    const example = this.relatedExample();
+    return example ? this.ttsStore.isLoading(example.enExample) : false;
+  });
 
   ngOnInit(): void {
     this.deckId = this.route.snapshot.paramMap.get('deckId') ?? '';
@@ -135,10 +145,14 @@ export class StudyComponent implements OnInit, OnDestroy {
   }
 
   onRating(rating: StudyRating): void {
+    this.relatedExample.set(null);
+    this.relatedExampleError.set(null);
     this.studyStore.submitRating(rating);
   }
 
   onUndo(): void {
+    this.relatedExample.set(null);
+    this.relatedExampleError.set(null);
     this.studyStore.undoRating();
   }
 
@@ -156,11 +170,54 @@ export class StudyComponent implements OnInit, OnDestroy {
     }
   }
 
+  onRelatedExampleAudioClick(): void {
+    const example = this.relatedExample();
+    if (example?.enExample) {
+      this.ttsStore.play(example.enExample);
+    }
+  }
+
+  async onGenerateRelatedExample(): Promise<void> {
+    if (this.relatedExampleLoading() || this.relatedExampleSaving()) return;
+    this.relatedExampleLoading.set(true);
+    this.relatedExampleError.set(null);
+    const result = await this.studyStore.generateRelatedExample();
+    this.relatedExampleLoading.set(false);
+    if (result) {
+      this.relatedExample.set(result);
+    } else {
+      this.relatedExampleError.set('例句產生失敗，請稍後再試');
+    }
+  }
+
+  async onConfirmRelatedExample(): Promise<void> {
+    const example = this.relatedExample();
+    if (!example || this.relatedExampleSaving()) return;
+    this.relatedExampleSaving.set(true);
+    this.relatedExampleError.set(null);
+    const saved = await this.studyStore.saveRelatedExample(example);
+    this.relatedExampleSaving.set(false);
+    if (saved) {
+      this.relatedExample.set(null);
+    } else {
+      this.relatedExampleError.set('加入卡片失敗，請稍後再試');
+    }
+  }
+
+  onCancelRelatedExample(): void {
+    if (!this.relatedExampleLoading() && !this.relatedExampleSaving()) {
+      this.relatedExample.set(null);
+      this.relatedExampleError.set(null);
+    }
+  }
+
   onBackToDeck(): void {
     this.router.navigate(['/decks', this.deckId]);
   }
 
   onStudyAgain(): void {
+    this.relatedExample.set(null);
+    this.relatedExampleError.set(null);
     this.studyStore.startStudy(this.deckId, this.deckName());
   }
 }
