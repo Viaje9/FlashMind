@@ -69,7 +69,7 @@ export class StudyService {
 
     const targetCard = await this.prisma.card.findUnique({
       where: { id: cardId },
-      select: { id: true, deckId: true, front: true, state: true },
+      select: { id: true, deckId: true, front: true },
     });
 
     if (!targetCard || targetCard.deckId !== deckId) {
@@ -85,7 +85,6 @@ export class StudyService {
       where: {
         deck: { userId },
         id: { not: cardId },
-        state: { not: CardState.NEW },
       },
       select: {
         front: true,
@@ -157,16 +156,8 @@ export class StudyService {
     const unfamiliarWordSet = new Set(
       unfamiliarWords.map((word) => this.normalizeWord(word)),
     );
-    const learningWords = [
-      ...cards,
-      { front: targetCard.front, state: targetCard.state },
-    ]
-      .filter(
-        (card) =>
-          card.state === CardState.LEARNING ||
-          card.state === CardState.RELEARNING,
-      )
-      .map((card) => this.normalizeWord(card.front))
+    const learningWords = [targetCard.front]
+      .map((word) => this.normalizeWord(word))
       .filter(
         (word, index, words) =>
           sentenceWords.has(word) &&

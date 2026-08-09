@@ -15,4 +15,19 @@ import { SpeakingAssistantMessage } from "./speakingAssistantMessage";
 export interface SpeakingAssistantChatRequest {
   message: string;
   history?: Array<SpeakingAssistantMessage>;
+  /**
+   * 推理努力程度；none 不額外啟用推理，max 對應模型可用的最高程度。
+   */
+  effort?: SpeakingAssistantChatRequest.EffortEnum;
+}
+export namespace SpeakingAssistantChatRequest {
+  export const EffortEnum = {
+    None: "none",
+    Low: "low",
+    Medium: "medium",
+    High: "high",
+    Xhigh: "xhigh",
+    Max: "max",
+  } as const;
+  export type EffortEnum = (typeof EffortEnum)[keyof typeof EffortEnum];
 }

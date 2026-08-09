@@ -2248,6 +2248,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /speaking/assistant/chat/stream:
+    post:
+      operationId: streamSpeakingAssistant
+      tags:
+        - Speaking
+      summary: 串流口說 AI 助手對話
+      description: 以 Server-Sent Events 串流回傳文字與工具調用事件。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingAssistantChatRequest"
+      responses:
+        "200":
+          description: SSE 串流回應（assistant_delta、tool_call、tool_result、result、done）
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: 輸入資料不完整或格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 非白名單使用者
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: AI 服務錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /speaking/voice-preview:
     post:
       operationId: previewSpeakingVoice
@@ -4265,6 +4312,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SpeakingAssistantMessage"
+        effort:
+          type: string
+          enum: [none, low, medium, high, xhigh, max]
+          default: none
+          description: 推理努力程度；none 不額外啟用推理，max 對應模型可用的最高程度。
 
     SpeakingAssistantChatResult:
       type: object
@@ -4273,6 +4325,7 @@ components:
         - reply
         - model
         - usage
+        - toolCalls
       properties:
         reply:
           type: string
@@ -4282,6 +4335,25 @@ components:
           example: gpt-4o-mini
         usage:
           $ref: "#/components/schemas/SpeakingTokenUsage"
+        toolCalls:
+          type: array
+          description: 本回合實際調用的工具
+          items:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: 工具名稱
+              callId:
+                type: string
+                description: OpenAI 工具調用識別碼
+              arguments:
+                type: string
+                description: 工具調用參數 JSON
+              result:
+                description: 工具執行結果
 
     SpeakingAssistantChatResponse:
       type: object

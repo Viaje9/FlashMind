@@ -642,7 +642,7 @@ describe('StudyService', () => {
         id: mockCardId,
         deckId: mockDeckId,
         front: 'Hello',
-        state: CardState.LEARNING,
+        state: CardState.NEW,
       });
       mockPrismaService.card.findMany.mockResolvedValue([
         {
@@ -671,15 +671,29 @@ describe('StudyService', () => {
           lastReview: new Date(),
           learningStep: 0,
         },
+        {
+          front: 'existing-new-word',
+          state: CardState.NEW,
+          due: null,
+          stability: null,
+          difficulty: null,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0,
+          lastReview: null,
+          learningStep: 0,
+        },
       ]);
       mockFsrsService.calculateProficiency
         .mockReturnValueOnce('FAIR')
-        .mockReturnValueOnce('PROFICIENT');
+        .mockReturnValueOnce('PROFICIENT')
+        .mockReturnValueOnce(null);
       mockAiService.generateRelatedExample.mockResolvedValue({
         zhMeaning: '問候 (interj.)',
-        enExample: 'Hello, proficient-word and new-word.',
+        enExample: 'Hello, proficient-word, existing-new-word and new-word.',
         zhExample: '你好，熟練單字。',
-        unfamiliarWords: ['new-word', 'fair-word'],
+        unfamiliarWords: ['new-word', 'existing-new-word', 'fair-word'],
         learningWords: [],
       });
 
@@ -700,7 +714,6 @@ describe('StudyService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             id: { not: mockCardId },
-            state: { not: CardState.NEW },
           }),
         }),
       );

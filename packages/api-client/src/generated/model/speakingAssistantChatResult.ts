@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { SpeakingTokenUsage } from "./speakingTokenUsage";
+import { SpeakingAssistantChatResultToolCallsInner } from "./speakingAssistantChatResultToolCallsInner";
 
 /**
  * AI 助手對話結果
@@ -16,4 +17,8 @@ export interface SpeakingAssistantChatResult {
   reply: string;
   model: string;
   usage: SpeakingTokenUsage;
+  /**
+   * 本回合實際調用的工具
+   */
+  toolCalls: Array<SpeakingAssistantChatResultToolCallsInner>;
 }

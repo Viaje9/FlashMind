@@ -1,0 +1,212 @@
+<button
+  type="button"
+  class="study-assistant-toggle"
+  [class.study-assistant-toggle-open]="assistantPanelOpen()"
+  [style.top.px]="assistantToggleTop()"
+  (click)="toggleAssistant()"
+  (pointerdown)="onTogglePointerDown($event)"
+  (pointermove)="onTogglePointerMove($event)"
+  (pointerup)="onTogglePointerEnd($event)"
+  (pointercancel)="onTogglePointerEnd($event)"
+  aria-label="開啟卡片 AI 助手"
+  data-testid="study-assistant-toggle"
+>
+  <span class="material-symbols-outlined text-[22px]">forum</span>
+</button>
+
+@if (assistantPanelOpen()) {
+  <div class="pointer-events-none fixed inset-0 z-[85]">
+    <section
+      class="study-assistant-panel pointer-events-auto"
+      role="dialog"
+      aria-label="卡片 AI 助手"
+      [style.top.px]="assistantPanelTop()"
+      [style.height.px]="assistantPanelHeight()"
+      (pointerdown)="onPanelPointerDown($event)"
+      (pointermove)="onPanelPointerMove($event)"
+      (pointerup)="onPanelPointerEnd($event)"
+      (pointercancel)="onPanelPointerEnd($event)"
+    >
+      <header class="study-assistant-panel-header" data-study-assistant-drag-handle="true">
+        <h3 class="truncate text-sm font-bold text-slate-900">卡片 AI 助手</h3>
+        <p class="study-assistant-current-word truncate text-[11px] text-slate-500">
+          正在學習：{{ word() }}
+        </p>
+        <div class="flex shrink-0 items-center gap-1">
+          @if (assistantMessages().length) {
+            <button
+              type="button"
+              class="study-assistant-panel-action"
+              (click)="clearChat()"
+              aria-label="清除對話"
+              title="清除對話"
+            >
+              <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+            </button>
+          }
+          <button
+            type="button"
+            class="study-assistant-panel-action"
+            (click)="toggleAssistant()"
+            aria-label="關閉卡片 AI 助手"
+            title="關閉"
+          >
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="study-assistant-list" data-testid="study-assistant-list">
+        @if (!assistantMessages().length && !assistantSending()) {
+          <div class="flex h-full items-center justify-center px-4 text-center">
+            <div>
+              <span class="material-symbols-outlined text-3xl text-primary/70">forum</span>
+              <p class="mt-2 text-sm font-semibold text-slate-700">想問這個單字什麼？</p>
+              <p class="mt-1 text-xs leading-5 text-slate-500">
+                可以請我解釋意思、比較用法，或幫你造一個簡單例句。
+              </p>
+            </div>
+          </div>
+        }
+
+        @for (message of assistantMessages(); track message.id) {
+          <div
+            class="mb-2 flex"
+            [class.justify-end]="message.role === 'user'"
+            [class.justify-start]="message.role === 'assistant'"
+          >
+            <div
+              class="study-assistant-message max-w-[86%] rounded-2xl px-3 py-2 text-sm leading-5"
+              [class.bg-primary]="message.role === 'user'"
+              [class.text-white]="message.role === 'user'"
+              [class.bg-slate-100]="message.role === 'assistant'"
+              [class.text-slate-700]="message.role === 'assistant'"
+            >
+              @if (message.role === 'assistant') {
+                @if (message.toolCalls?.length) {
+                  <div class="study-assistant-tool-calls" aria-label="本回合調用的工具">
+                    <button
+                      type="button"
+                      class="study-assistant-tool-calls-toggle"
+                      (click)="toggleAllToolCalls(message.id)"
+                      [attr.aria-expanded]="message.toolCallsExpanded !== false"
+                      [attr.aria-label]="
+                        (message.toolCallsExpanded === false ? '展開' : '收合') + '全部工具調用'
+                      "
+                    >
+                      <span class="material-symbols-outlined text-[14px]" aria-hidden="true">
+                        {{ message.toolCallsExpanded === false ? 'chevron_right' : 'expand_more' }}
+                      </span>
+                      <span>工具調用（{{ message.toolCalls?.length ?? 0 }}）</span>
+                    </button>
+                    @if (message.toolCallsExpanded !== false) {
+                      @for (toolCall of message.toolCalls; track $index) {
+                        <div class="study-assistant-tool-call">
+                          <button
+                            type="button"
+                            class="study-assistant-tool-call-toggle"
+                            (click)="toggleToolCall(message.id, toolCall.callId)"
+                            [attr.aria-expanded]="toolCall.expanded"
+                            [attr.aria-label]="
+                              (toolCall.expanded ? '收合' : '展開') +
+                              '工具調用：' +
+                              getToolSummary(toolCall)
+                            "
+                          >
+                            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">
+                              {{ toolCall.expanded ? 'expand_more' : 'chevron_right' }}
+                            </span>
+                            <span>{{ getToolSummary(toolCall) }}</span>
+                          </button>
+                          @if (toolCall.expanded) {
+                            <div class="study-assistant-tool-call-details">
+                              <div>
+                                <span class="study-assistant-tool-call-label">參數</span>
+                                <pre>{{ formatToolArguments(toolCall.arguments) }}</pre>
+                              </div>
+                              @if (toolCall.result !== undefined) {
+                                <div>
+                                  <span class="study-assistant-tool-call-label">結果</span>
+                                  <pre>{{ formatToolResult(toolCall.result) }}</pre>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    }
+                  </div>
+                }
+                <div
+                  class="study-assistant-markdown"
+                  [innerHTML]="renderMarkdown(message.content)"
+                ></div>
+              } @else {
+                {{ message.content }}
+              }
+            </div>
+          </div>
+        }
+
+        @if (assistantSending()) {
+          <div class="flex justify-start">
+            <div class="flex items-center gap-1 rounded-2xl bg-slate-100 px-3 py-2">
+              <span class="study-assistant-dot"></span>
+              <span class="study-assistant-dot [animation-delay:120ms]"></span>
+              <span class="study-assistant-dot [animation-delay:240ms]"></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="study-assistant-input-wrap">
+        <textarea
+          class="study-assistant-textarea"
+          rows="1"
+          [formControl]="assistantInputControl"
+          placeholder="輸入你想問的內容..."
+          aria-label="輸入卡片 AI 問題"
+          (keydown)="onInputKeydown($event)"
+        ></textarea>
+        <div class="study-assistant-effort">
+          <button
+            type="button"
+            class="study-assistant-effort-button"
+            [attr.aria-label]="'切換 Effort，目前：' + selectedAssistantEffort().label"
+            [title]="selectedAssistantEffort().label"
+            (click)="cycleEffort()"
+          >
+            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">
+              {{ selectedAssistantEffort().icon }}
+            </span>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="study-assistant-send"
+          (click)="sendMessage()"
+          [disabled]="assistantSending() || !assistantInputControl.value.trim()"
+          aria-label="送出訊息"
+        >
+          <span class="material-symbols-outlined text-[19px]">send</span>
+        </button>
+      </div>
+      <button
+        type="button"
+        class="study-assistant-resize"
+        (pointerdown)="onResizePointerDown($event)"
+        (pointermove)="onResizePointerMove($event)"
+        (pointerup)="onResizePointerEnd($event)"
+        (pointercancel)="onResizePointerEnd($event)"
+        aria-label="調整聊天視窗大小"
+        title="調整聊天視窗大小"
+      >
+        <span class="study-assistant-resize-lines" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+    </section>
+  </div>
+}

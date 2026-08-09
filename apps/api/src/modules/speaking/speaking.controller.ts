@@ -6,15 +6,18 @@ import {
   Controller,
   ExceptionFilter,
   Post,
+  Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseFilters,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
 import { WhitelistGuard } from '../auth/whitelist.guard';
+import type { AuthenticatedRequest } from '../auth/auth.guard';
 import {
   CreateSpeakingChatDto,
   SpeakingAssistantChatDto,
@@ -157,9 +160,53 @@ export class SpeakingController {
   }
 
   @Post('assistant/chat')
-  async assistantChat(@Body() dto: SpeakingAssistantChatDto) {
-    const result = await this.speakingService.chatAssistant(dto);
+  async assistantChat(
+    @Body() dto: SpeakingAssistantChatDto,
+    @Req() req?: AuthenticatedRequest,
+  ) {
+    const result = await this.speakingService.chatAssistant(dto, req?.user?.id);
     return { data: result };
+  }
+
+  @Post('assistant/chat/stream')
+  async assistantChatStream(
+    @Body() dto: SpeakingAssistantChatDto,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const result = await this.speakingService.chatAssistantStream(
+        dto,
+        req?.user?.id,
+        (event) => {
+          if (event.type === 'text_delta') {
+            sendEvent('assistant_delta', { delta: event.delta });
+          } else if (event.type === 'tool_call') {
+            sendEvent('tool_call', event);
+          } else {
+            sendEvent('tool_result', event);
+          }
+        },
+      );
+      sendEvent('result', { data: result });
+      sendEvent('done', {});
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'AI 回覆失敗';
+      sendEvent('error', { message });
+    } finally {
+      res.end();
+    }
   }
 
   @Post('voice-preview')

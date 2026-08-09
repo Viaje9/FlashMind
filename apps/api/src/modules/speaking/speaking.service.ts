@@ -1,8 +1,15 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../prisma/prisma.service';
+import { FsrsService, type CardScheduleState } from '../fsrs';
 import {
   CreateSpeakingChatDto,
   SpeakingAssistantChatDto,
+  type SpeakingAssistantEffort,
   SpeakingChatHistoryItemDto,
 } from './dto';
 
@@ -53,7 +60,9 @@ Guidelines:
 - Answer in Traditional Chinese (繁體中文) by default, but use English for examples, sentences, and vocabulary
 - Be concise and clear
 - Provide examples when helpful
-- If the user writes in English, you may respond in English or mix both languages as appropriate`;
+- If the user writes in English, you may respond in English or mix both languages as appropriate
+- When the user asks whether a word is in their cards or asks about their proficiency, use the vocabulary tools instead of guessing
+- Clearly distinguish the user's saved card data from general English knowledge`;
 
 const TRANSLATE_PROMPT = `Translate the user's English text to Traditional Chinese (繁體中文).
 - Keep the meaning accurate and natural
@@ -84,6 +93,65 @@ const UPDATE_MEMORY_TOOL = {
     },
   },
 } as const;
+
+const SEARCH_USER_VOCABULARY_TOOL = {
+  type: 'function',
+  function: {
+    name: 'search_user_vocabulary',
+    description:
+      'Search the authenticated user vocabulary cards by an English word, phrase, or Chinese meaning. Use this before guessing whether a word is in the user cards.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The word, phrase, or Chinese meaning to search for.',
+        },
+        limit: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 10,
+          description:
+            'Maximum number of matching cards to return. Defaults to 5.',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+} as const;
+
+const GET_WORD_PROFICIENCY_TOOL = {
+  type: 'function',
+  function: {
+    name: 'get_word_proficiency',
+    description:
+      'Get the authenticated user exact vocabulary card proficiency, FSRS state, retrievability, and next review information for an English word.',
+    parameters: {
+      type: 'object',
+      properties: {
+        word: {
+          type: 'string',
+          description: 'The exact English word to look up.',
+        },
+      },
+      required: ['word'],
+      additionalProperties: false,
+    },
+  },
+} as const;
+
+const ASSISTANT_VOCABULARY_TOOLS = [
+  SEARCH_USER_VOCABULARY_TOOL,
+  GET_WORD_PROFICIENCY_TOOL,
+] as const;
+
+const ASSISTANT_RESPONSES_TOOLS = ASSISTANT_VOCABULARY_TOOLS.map((tool) => ({
+  type: 'function' as const,
+  name: tool.function.name,
+  description: tool.function.description,
+  parameters: tool.function.parameters,
+}));
 
 const SPEAKING_VOICES = [
   'alloy',
@@ -128,10 +196,34 @@ interface OpenAIChatResponse {
 }
 
 interface OpenAIChatToolCall {
+  id?: string;
   type?: string;
   function?: {
     name?: string;
     arguments?: string;
+  };
+}
+
+interface OpenAIResponsesOutputItem {
+  type?: string;
+  role?: string;
+  content?: Array<{
+    type?: string;
+    text?: string;
+  }>;
+  call_id?: string;
+  name?: string;
+  arguments?: string;
+}
+
+interface OpenAIResponsesResponse {
+  output_text?: string | null;
+  output?: OpenAIResponsesOutputItem[];
+  model?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
   };
 }
 
@@ -192,7 +284,25 @@ export interface SpeakingAssistantChatResult {
   reply: string;
   model: string;
   usage: SpeakingTokenUsage;
+  toolCalls: SpeakingAssistantToolCall[];
 }
+
+export interface SpeakingAssistantToolCall {
+  name: string;
+  callId?: string;
+  arguments?: string;
+  result?: unknown;
+}
+
+export type SpeakingAssistantStreamEvent =
+  | { type: 'text_delta'; delta: string }
+  | {
+      type: 'tool_call';
+      callId: string;
+      name: string;
+      arguments: string;
+    }
+  | { type: 'tool_result'; callId: string; name: string; result: unknown };
 
 export interface SpeakingVoicePreviewResult {
   audioBase64: string;
@@ -207,11 +317,17 @@ export class SpeakingService {
 
   private readonly chatCompletionsUrl =
     'https://api.openai.com/v1/chat/completions';
+  private readonly responsesUrl = 'https://api.openai.com/v1/responses';
   private readonly speechUrl = 'https://api.openai.com/v1/audio/speech';
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional() private readonly prisma?: PrismaService,
+    @Optional() private readonly fsrsService?: FsrsService,
+  ) {
     this.apiKey = this.configService.get<string>('OPENAI_API_KEY') ?? '';
     this.textModel =
+      this.configService.get<string>('COLLECTION_AGENTS_MODEL') ??
       this.configService.get<string>('OPENAI_SPEAKING_TEXT_MODEL') ??
       this.configService.get<string>('OPENAI_SPEAKING_MODEL') ??
       'gpt-4o-mini';
@@ -371,23 +487,71 @@ export class SpeakingService {
 
   async chatAssistant(
     dto: SpeakingAssistantChatDto,
+    userId?: string,
   ): Promise<SpeakingAssistantChatResult> {
     this.assertApiKey();
 
     try {
-      const data = await this.callOpenAIChat({
+      const input: Array<Record<string, unknown>> = [
+        { role: 'system', content: ASSISTANT_CHAT_SYSTEM_PROMPT },
+        ...(dto.history ?? []).map((item) => ({
+          role: item.role,
+          content: item.content,
+        })),
+        { role: 'user', content: dto.message },
+      ];
+      const tools =
+        userId && this.prisma && this.fsrsService
+          ? ASSISTANT_RESPONSES_TOOLS
+          : undefined;
+      const usedToolCalls: SpeakingAssistantToolCall[] = [];
+      const reasoningEffort = this.toOpenAiReasoningEffort(dto.effort);
+      let data = await this.callOpenAIResponses({
         model: this.textModel,
-        messages: [
-          { role: 'system', content: ASSISTANT_CHAT_SYSTEM_PROMPT },
-          ...(dto.history ?? []).map((item) => ({
-            role: item.role,
-            content: item.content,
-          })),
-          { role: 'user', content: dto.message },
-        ],
+        input,
+        ...(tools ? { tools } : {}),
+        reasoning: { effort: reasoningEffort },
       });
 
-      const reply = data.choices?.[0]?.message?.content?.trim() ?? '';
+      for (let round = 0; round < 3; round += 1) {
+        const toolCalls = data.output?.filter(
+          (item) => item.type === 'function_call' && item.name && item.call_id,
+        );
+
+        if (!toolCalls?.length || !userId) {
+          break;
+        }
+
+        input.push(
+          ...(data.output ?? []).map(
+            (item) => item as unknown as Record<string, unknown>,
+          ),
+        );
+
+        for (const toolCall of toolCalls) {
+          const toolName = toolCall.name ?? '';
+          if (toolName) usedToolCalls.push({ name: toolName });
+          const toolResult = await this.executeVocabularyTool(
+            toolName,
+            toolCall.arguments ?? '{}',
+            userId,
+          );
+          input.push({
+            type: 'function_call_output',
+            call_id: toolCall.call_id ?? `tool-${round}-${toolName}`,
+            output: toolResult,
+          });
+        }
+
+        data = await this.callOpenAIResponses({
+          model: this.textModel,
+          input,
+          ...(tools ? { tools } : {}),
+          reasoning: { effort: reasoningEffort },
+        });
+      }
+
+      const reply = this.extractResponsesText(data);
 
       if (!reply) {
         throw this.createServiceError();
@@ -396,7 +560,8 @@ export class SpeakingService {
       return {
         reply,
         model: data.model ?? this.textModel,
-        usage: this.mapUsage(data),
+        usage: this.mapResponsesUsage(data),
+        toolCalls: usedToolCalls,
       };
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
@@ -404,6 +569,317 @@ export class SpeakingService {
       }
       throw this.createServiceError();
     }
+  }
+
+  async chatAssistantStream(
+    dto: SpeakingAssistantChatDto,
+    userId: string | undefined,
+    onEvent: (event: SpeakingAssistantStreamEvent) => void,
+  ): Promise<SpeakingAssistantChatResult> {
+    this.assertApiKey();
+
+    try {
+      const input: Array<Record<string, unknown>> = [
+        { role: 'system', content: ASSISTANT_CHAT_SYSTEM_PROMPT },
+        ...(dto.history ?? []).map((item) => ({
+          role: item.role,
+          content: item.content,
+        })),
+        { role: 'user', content: dto.message },
+      ];
+      const tools =
+        userId && this.prisma && this.fsrsService
+          ? ASSISTANT_RESPONSES_TOOLS
+          : undefined;
+      const reasoningEffort = this.toOpenAiReasoningEffort(dto.effort);
+      const usedToolCalls: SpeakingAssistantToolCall[] = [];
+      let reply = '';
+      let data = await this.callOpenAIResponsesStream(
+        {
+          model: this.textModel,
+          input,
+          ...(tools ? { tools } : {}),
+          reasoning: { effort: reasoningEffort },
+        },
+        (delta) => {
+          reply += delta;
+          onEvent({ type: 'text_delta', delta });
+        },
+      );
+
+      for (let round = 0; round < 3; round += 1) {
+        const toolCalls = data.response.output?.filter(
+          (item) => item.type === 'function_call' && item.name && item.call_id,
+        );
+
+        if (!toolCalls?.length || !userId) {
+          break;
+        }
+
+        input.push(
+          ...(data.response.output ?? []).map(
+            (item) => item as unknown as Record<string, unknown>,
+          ),
+        );
+
+        for (const toolCall of toolCalls) {
+          const callId = toolCall.call_id!;
+          const toolName = toolCall.name!;
+          const rawArguments = toolCall.arguments ?? '{}';
+          const call: SpeakingAssistantToolCall = {
+            callId,
+            name: toolName,
+            arguments: rawArguments,
+          };
+          usedToolCalls.push(call);
+          onEvent({
+            type: 'tool_call',
+            callId,
+            name: toolName,
+            arguments: rawArguments,
+          });
+
+          const toolResult = await this.executeVocabularyTool(
+            toolName,
+            rawArguments,
+            userId,
+          );
+          let parsedResult: unknown = toolResult;
+          try {
+            parsedResult = JSON.parse(toolResult);
+          } catch {
+            // Keep the raw result when a tool returns non-JSON text.
+          }
+          call.result = parsedResult;
+          onEvent({
+            type: 'tool_result',
+            callId,
+            name: toolName,
+            result: parsedResult,
+          });
+          input.push({
+            type: 'function_call_output',
+            call_id: callId,
+            output: toolResult,
+          });
+        }
+
+        data = await this.callOpenAIResponsesStream(
+          {
+            model: this.textModel,
+            input,
+            ...(tools ? { tools } : {}),
+            reasoning: { effort: reasoningEffort },
+          },
+          (delta) => {
+            reply += delta;
+            onEvent({ type: 'text_delta', delta });
+          },
+        );
+      }
+
+      if (!reply) {
+        reply = this.extractResponsesText(data.response);
+        if (reply) onEvent({ type: 'text_delta', delta: reply });
+      }
+
+      if (!reply.trim()) {
+        throw this.createServiceError();
+      }
+
+      return {
+        reply: reply.trim(),
+        model: data.response.model ?? this.textModel,
+        usage: this.mapResponsesUsage(data.response),
+        toolCalls: usedToolCalls,
+      };
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw this.createServiceError();
+    }
+  }
+
+  private toOpenAiReasoningEffort(
+    effort?: SpeakingAssistantEffort,
+  ): SpeakingAssistantEffort {
+    return effort ?? 'none';
+  }
+
+  private async executeVocabularyTool(
+    name: string,
+    rawArguments: string,
+    userId: string,
+  ): Promise<string> {
+    if (!this.prisma || !this.fsrsService) {
+      return JSON.stringify({ error: 'vocabulary tools are unavailable' });
+    }
+
+    let args: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(rawArguments) as unknown;
+      args =
+        parsed && typeof parsed === 'object'
+          ? (parsed as Record<string, unknown>)
+          : {};
+    } catch {
+      return JSON.stringify({ error: 'invalid tool arguments' });
+    }
+
+    try {
+      if (name === 'search_user_vocabulary') {
+        return JSON.stringify(await this.searchUserVocabulary(userId, args));
+      }
+
+      if (name === 'get_word_proficiency') {
+        return JSON.stringify(await this.getWordProficiency(userId, args));
+      }
+
+      return JSON.stringify({ error: `unknown tool: ${name}` });
+    } catch {
+      return JSON.stringify({ error: 'vocabulary lookup failed' });
+    }
+  }
+
+  private async searchUserVocabulary(
+    userId: string,
+    args: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const query = typeof args.query === 'string' ? args.query.trim() : '';
+    if (!query) {
+      return { query, results: [], error: 'query is required' };
+    }
+
+    const requestedLimit = typeof args.limit === 'number' ? args.limit : 5;
+    const limit = Math.min(Math.max(Math.trunc(requestedLimit), 1), 10);
+    const cards = await this.prisma!.card.findMany({
+      where: {
+        deck: { userId },
+        OR: [
+          { front: { contains: query, mode: 'insensitive' } },
+          {
+            meanings: {
+              some: { zhMeaning: { contains: query, mode: 'insensitive' } },
+            },
+          },
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: {
+        deck: { select: { name: true } },
+        meanings: { orderBy: { sortOrder: 'asc' }, take: 3 },
+      },
+    });
+
+    return {
+      query,
+      results: cards.map((card) => this.serializeVocabularyCard(card)),
+    };
+  }
+
+  private async getWordProficiency(
+    userId: string,
+    args: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const word = typeof args.word === 'string' ? args.word.trim() : '';
+    if (!word) {
+      return { word, found: false, error: 'word is required' };
+    }
+
+    const cards = await this.prisma!.card.findMany({
+      where: {
+        deck: { userId },
+        front: { equals: word, mode: 'insensitive' },
+      },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        deck: { select: { name: true } },
+        meanings: { orderBy: { sortOrder: 'asc' }, take: 3 },
+      },
+    });
+
+    return {
+      word,
+      found: cards.length > 0,
+      results: cards.map((card) => this.serializeVocabularyCard(card)),
+    };
+  }
+
+  private serializeVocabularyCard(card: {
+    front: string;
+    state: CardScheduleState['state'];
+    due: Date | null;
+    stability: number | null;
+    difficulty: number | null;
+    elapsedDays: number;
+    scheduledDays: number;
+    reps: number;
+    lapses: number;
+    lastReview: Date | null;
+    learningStep: number;
+    reverseState: CardScheduleState['state'];
+    reverseDue: Date | null;
+    reverseStability: number | null;
+    reverseDifficulty: number | null;
+    reverseElapsedDays: number;
+    reverseScheduledDays: number;
+    reverseReps: number;
+    reverseLapses: number;
+    reverseLastReview: Date | null;
+    reverseLearningStep: number;
+    deck: { name: string };
+    meanings: Array<{ zhMeaning: string; enExample: string | null }>;
+  }): Record<string, unknown> {
+    return {
+      word: card.front,
+      deck: card.deck.name,
+      meanings: card.meanings.map((meaning) => meaning.zhMeaning),
+      examples: card.meanings
+        .map((meaning) => meaning.enExample)
+        .filter((example): example is string => Boolean(example)),
+      forward: this.serializeVocabularyProgress({
+        state: card.state,
+        due: card.due,
+        stability: card.stability,
+        difficulty: card.difficulty,
+        elapsedDays: card.elapsedDays,
+        scheduledDays: card.scheduledDays,
+        reps: card.reps,
+        lapses: card.lapses,
+        lastReview: card.lastReview,
+        learningStep: card.learningStep,
+      }),
+      reverse: this.serializeVocabularyProgress({
+        state: card.reverseState,
+        due: card.reverseDue,
+        stability: card.reverseStability,
+        difficulty: card.reverseDifficulty,
+        elapsedDays: card.reverseElapsedDays,
+        scheduledDays: card.reverseScheduledDays,
+        reps: card.reverseReps,
+        lapses: card.reverseLapses,
+        lastReview: card.reverseLastReview,
+        learningStep: card.reverseLearningStep,
+      }),
+    };
+  }
+
+  private serializeVocabularyProgress(
+    state: CardScheduleState,
+  ): Record<string, unknown> {
+    const retrievability = this.fsrsService!.calculateRetrievability(state);
+    return {
+      state: state.state,
+      proficiency: this.fsrsService!.calculateProficiency(state),
+      retrievabilityPercent:
+        retrievability === null ? null : Math.round(retrievability * 100),
+      due: state.due?.toISOString() ?? null,
+      reps: state.reps,
+      lapses: state.lapses,
+      lastReview: state.lastReview?.toISOString() ?? null,
+    };
   }
 
   async previewVoice(
@@ -602,6 +1078,136 @@ export class SpeakingService {
     }
 
     return (await response.json()) as OpenAIChatResponse;
+  }
+
+  private async callOpenAIResponses(
+    payload: Record<string, unknown>,
+  ): Promise<OpenAIResponsesResponse> {
+    const response = await fetch(this.responsesUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Speaking OpenAI API error:', response.status, errorText);
+      throw this.createServiceError();
+    }
+
+    return (await response.json()) as OpenAIResponsesResponse;
+  }
+
+  private async callOpenAIResponsesStream(
+    payload: Record<string, unknown>,
+    onTextDelta: (delta: string) => void,
+  ): Promise<{ response: OpenAIResponsesResponse }> {
+    const response = await fetch(this.responsesUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'text/event-stream',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({ ...payload, stream: true }),
+    });
+
+    if (!response.ok || !response.body) {
+      const errorText = await response.text();
+      console.error('Speaking OpenAI API error:', response.status, errorText);
+      throw this.createServiceError();
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let completedResponse: OpenAIResponsesResponse | undefined;
+
+    const consumeEvent = (eventText: string) => {
+      const dataLine = eventText
+        .split('\n')
+        .filter((line) => line.startsWith('data:'))
+        .map((line) => line.slice('data:'.length).trim())
+        .join('\n');
+      if (!dataLine || dataLine === '[DONE]') return;
+
+      let event: Record<string, unknown>;
+      try {
+        event = JSON.parse(dataLine) as Record<string, unknown>;
+      } catch {
+        return;
+      }
+
+      const eventType =
+        typeof event.type === 'string'
+          ? event.type
+          : eventText
+              .split('\n')
+              .find((line) => line.startsWith('event:'))
+              ?.slice('event:'.length)
+              .trim();
+
+      if (eventType === 'response.output_text.delta') {
+        const delta = typeof event.delta === 'string' ? event.delta : '';
+        if (delta) onTextDelta(delta);
+      } else if (eventType === 'response.completed') {
+        completedResponse = event.response as OpenAIResponsesResponse;
+      } else if (eventType === 'response.failed') {
+        throw this.createServiceError();
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+      for (const eventText of events) consumeEvent(eventText);
+      if (done) break;
+    }
+
+    if (buffer.trim()) consumeEvent(buffer);
+    if (!completedResponse) {
+      throw this.createServiceError();
+    }
+
+    return { response: completedResponse };
+  }
+
+  private extractResponsesText(response: OpenAIResponsesResponse): string {
+    if (typeof response.output_text === 'string') {
+      return response.output_text.trim();
+    }
+
+    return (response.output ?? [])
+      .filter((item) => item.type === 'message')
+      .flatMap((item) => item.content ?? [])
+      .filter(
+        (content) => content.type === 'output_text' || content.type === 'text',
+      )
+      .map((content) => content.text ?? '')
+      .join('\n')
+      .trim();
+  }
+
+  private mapResponsesUsage(
+    response: OpenAIResponsesResponse,
+  ): SpeakingTokenUsage {
+    const inputTokens = response.usage?.input_tokens ?? 0;
+    const outputTokens = response.usage?.output_tokens ?? 0;
+
+    return {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens: response.usage?.total_tokens ?? inputTokens + outputTokens,
+      promptTextTokens: inputTokens,
+      promptAudioTokens: 0,
+      completionTextTokens: outputTokens,
+      completionAudioTokens: 0,
+    };
   }
 
   private mapUsage(response: OpenAIChatResponse): SpeakingTokenUsage {

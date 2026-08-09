@@ -202,6 +202,13 @@ describe('AiService', () => {
         unfamiliarWords: ['convenient'],
         learningWords: [],
       });
+
+      const requestBody = JSON.parse(
+        ((global.fetch as jest.Mock).mock.calls[0][1] as RequestInit)
+          .body as string,
+      ) as { messages: { role: string; content: string }[] };
+      expect(requestBody.messages[0].content).toContain('8–12 個單字');
+      expect(requestBody.messages[0].content).toContain('最多只帶入 1–2 個');
     });
   });
 });

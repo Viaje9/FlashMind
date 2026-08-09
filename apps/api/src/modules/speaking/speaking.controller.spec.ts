@@ -15,6 +15,7 @@ describe('SpeakingController', () => {
     summarizeConversation: jest.fn(),
     translateToTraditionalChinese: jest.fn(),
     chatAssistant: jest.fn(),
+    chatAssistantStream: jest.fn(),
     previewVoice: jest.fn(),
   };
 
@@ -122,6 +123,45 @@ describe('SpeakingController', () => {
       history: [],
     });
     expect(result).toHaveProperty('data');
+  });
+
+  it('assistantChatStream 應轉發 SSE 事件與最終結果', async () => {
+    mockSpeakingService.chatAssistantStream.mockImplementation(
+      (_dto: unknown, _userId: string, onEvent: (event: unknown) => void) => {
+        onEvent({ type: 'text_delta', delta: '你好' });
+        onEvent({
+          type: 'tool_call',
+          callId: 'call-1',
+          name: 'get_word_proficiency',
+          arguments: '{"word":"hello"}',
+        });
+        return {
+          reply: '你好',
+          model: 'gpt-5.6-luna',
+          usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
+          toolCalls: [{ name: 'get_word_proficiency' }],
+        };
+      },
+    );
+    const writes: string[] = [];
+    const response = {
+      setHeader: jest.fn(),
+      flushHeaders: jest.fn(),
+      write: jest.fn((value: string) => writes.push(value)),
+      end: jest.fn(),
+    };
+
+    await controller.assistantChatStream(
+      { message: 'hello 熟練度？', history: [] },
+      { user: { id: 'user-1' } } as never,
+      response as never,
+    );
+
+    expect(writes.join('')).toContain('event: assistant_delta');
+    expect(writes.join('')).toContain('event: tool_call');
+    expect(writes.join('')).toContain('event: result');
+    expect(writes.join('')).toContain('event: done');
+    expect(response.end).toHaveBeenCalled();
   });
 
   it('previewVoice 應回傳 data wrapper', async () => {

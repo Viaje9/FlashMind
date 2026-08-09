@@ -87,9 +87,13 @@
       </div>
     </div>
   } @else if (isStudying()) {
-    @if (currentCard(); as card) {
+    @if (currentCard()) {
       @if (isFlipped()) {
         <!-- 翻牌後：可滑動的卡片 -->
+        <fm-study-assistant-panel
+          [word]="word()"
+          [meanings]="translations()"
+        ></fm-study-assistant-panel>
         <fm-swipeable-card
           class="mx-auto w-full max-w-md flex-1 flex flex-col px-4 py-4"
           (swipeComplete)="onRating($event)"
@@ -121,11 +125,12 @@
         <main
           class="mx-auto w-full max-w-md min-h-[calc(100dvh-env(safe-area-inset-top,0px)-7.25rem)] flex flex-col items-center justify-center px-4 py-4"
           data-testid="study-card-container"
-          tabindex="0"
           role="button"
+          tabindex="0"
           [class.cursor-pointer]="!isSubmitting()"
           (click)="onCardClick()"
           (keydown.enter)="onCardClick()"
+          (keydown.space)="onCardClick()"
         >
           @if (!isReverse()) {
             <button
