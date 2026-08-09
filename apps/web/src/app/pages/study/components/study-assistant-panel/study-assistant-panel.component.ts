@@ -8,14 +8,15 @@ import {
   input,
   signal,
   ViewChild,
+  ViewEncapsulation,
 } from '@angular/core';
 import { Configuration } from '@flashmind/api-client';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { marked } from 'marked';
 import {
   type SpeakingAssistantChatRequest,
   type SpeakingAssistantMessage,
 } from '@flashmind/api-client';
+import { renderStudyAssistantMarkdown } from './study-assistant-markdown.domain';
 
 const ASSISTANT_PANEL_INITIAL_TOP = 96;
 const ASSISTANT_PANEL_HEIGHT = 380;
@@ -24,6 +25,7 @@ const ASSISTANT_PANEL_SAFE_BOTTOM = 12;
 const ASSISTANT_PANEL_TOP_MARGIN = 12;
 const ASSISTANT_EFFORT_STORAGE_KEY = 'flashmind.study-assistant-effort';
 const ASSISTANT_PANEL_TOP_STORAGE_KEY = 'flashmind.study-assistant-panel-top';
+const ASSISTANT_PANEL_HEIGHT_STORAGE_KEY = 'flashmind.study-assistant-panel-height';
 const ASSISTANT_TOGGLE_TOP_STORAGE_KEY = 'flashmind.study-assistant-toggle-top';
 const ASSISTANT_EFFORT_VALUES = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 
@@ -56,6 +58,7 @@ interface StudyAssistantEffortOption {
   imports: [ReactiveFormsModule],
   templateUrl: './study-assistant-panel.component.html',
   styleUrl: './study-assistant-panel.component.css',
+  encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudyAssistantPanelComponent {
@@ -72,7 +75,10 @@ export class StudyAssistantPanelComponent {
     this.readStoredPosition(ASSISTANT_PANEL_TOP_STORAGE_KEY, ASSISTANT_PANEL_INITIAL_TOP) ??
       ASSISTANT_PANEL_INITIAL_TOP,
   );
-  readonly assistantPanelHeight = signal(ASSISTANT_PANEL_HEIGHT);
+  readonly assistantPanelHeight = signal(
+    this.readStoredPosition(ASSISTANT_PANEL_HEIGHT_STORAGE_KEY, ASSISTANT_PANEL_HEIGHT) ??
+      ASSISTANT_PANEL_HEIGHT,
+  );
   readonly assistantToggleTop = signal<number | null>(
     this.readStoredPosition(ASSISTANT_TOGGLE_TOP_STORAGE_KEY, null),
   );
@@ -606,22 +612,13 @@ export class StudyAssistantPanelComponent {
       startHeight: this.assistantPanelHeight(),
       startClientY: 0,
     };
+    this.persistPosition(ASSISTANT_PANEL_HEIGHT_STORAGE_KEY, this.assistantPanelHeight());
     const handle = event.currentTarget as HTMLElement | null;
     if (handle?.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
   }
 
   renderMarkdown(content: string): string {
-    const rendered = marked.parse(this.escapeHtml(content), {
-      async: false,
-      breaks: true,
-      gfm: true,
-    });
-
-    return rendered.replace(
-      /<table>([\s\S]*?)<\/table>/g,
-      (_match, tableContent: string) =>
-        `<div class="study-assistant-markdown-table-wrap"><table>${tableContent}</table></div>`,
-    );
+    return renderStudyAssistantMarkdown(content);
   }
 
   private buildAssistantPrompt(content: string): string {
@@ -630,14 +627,6 @@ export class StudyAssistantPanelComponent {
       ? `目前正在學習的單字是「${this.word()}」，中文意思是「${meanings}」。`
       : `目前正在學習的單字是「${this.word()}」。`;
     return `${context}\n請以這張卡片為上下文回答：${content}`;
-  }
-
-  private escapeHtml(content: string): string {
-    return content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
   }
 
   private clampAssistantPanelBounds(): void {
@@ -655,9 +644,12 @@ export class StudyAssistantPanelComponent {
       ASSISTANT_PANEL_MIN_HEIGHT,
       window.innerHeight - clampedTop - ASSISTANT_PANEL_SAFE_BOTTOM,
     );
-    this.assistantPanelHeight.set(
-      Math.min(Math.max(this.assistantPanelHeight(), ASSISTANT_PANEL_MIN_HEIGHT), maxHeight),
+    const clampedHeight = Math.min(
+      Math.max(this.assistantPanelHeight(), ASSISTANT_PANEL_MIN_HEIGHT),
+      maxHeight,
     );
+    this.assistantPanelHeight.set(clampedHeight);
+    this.persistPosition(ASSISTANT_PANEL_HEIGHT_STORAGE_KEY, clampedHeight);
     this.persistPosition(ASSISTANT_PANEL_TOP_STORAGE_KEY, clampedTop);
   }
 
