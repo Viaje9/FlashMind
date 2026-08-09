@@ -92,6 +92,8 @@ export class StudyAssistantPanelComponent {
 
   private readonly apiConfiguration = inject(Configuration);
   private assistantRequestId = 0;
+  private safeAreaInsetTop = 0;
+  private safeAreaInsetMeasured = false;
   private assistantDragState = { active: false, pointerId: -1, offsetY: 0 };
   private assistantResizeState = {
     active: false,
@@ -120,6 +122,7 @@ export class StudyAssistantPanelComponent {
 
   @HostListener('window:resize')
   onWindowResize(): void {
+    this.safeAreaInsetMeasured = false;
     this.clampAssistantPanelBounds();
   }
 
@@ -659,17 +662,27 @@ export class StudyAssistantPanelComponent {
   }
 
   private getAssistantPanelTopMargin(): number {
-    if (typeof document === 'undefined') return ASSISTANT_PANEL_TOP_MARGIN;
+    return Math.max(
+      ASSISTANT_PANEL_TOP_MARGIN,
+      Math.ceil(this.getSafeAreaInsetTop() + ASSISTANT_PANEL_TOP_MARGIN),
+    );
+  }
 
-    const basicWord = document.querySelector<HTMLElement>('[data-study-basic-word="true"]');
-    const basicWordTop = basicWord?.getBoundingClientRect().top;
-    if (typeof basicWordTop === 'number' && Number.isFinite(basicWordTop)) {
-      return Math.max(ASSISTANT_PANEL_TOP_MARGIN, basicWordTop);
-    }
+  private getSafeAreaInsetTop(): number {
+    if (this.safeAreaInsetMeasured) return this.safeAreaInsetTop;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return 0;
 
-    const header = document.querySelector<HTMLElement>('[data-study-header="true"]');
-    const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
-    return Math.max(ASSISTANT_PANEL_TOP_MARGIN, headerBottom + ASSISTANT_PANEL_TOP_MARGIN);
+    const host = document.body ?? document.documentElement;
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top);';
+    host.appendChild(probe);
+    const parsed = Number.parseFloat(window.getComputedStyle(probe).paddingTop);
+    host.removeChild(probe);
+
+    this.safeAreaInsetTop = Number.isFinite(parsed) ? parsed : 0;
+    this.safeAreaInsetMeasured = true;
+    return this.safeAreaInsetTop;
   }
 
   private createMessageId(): string {
