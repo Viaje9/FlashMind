@@ -316,8 +316,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 0.95rem;
-  height: 0.85rem;
+  width: 1.75rem;
+  height: 1.5rem;
   border-radius: 0.45rem;
   color: rgb(100 116 139 / 0.45);
   opacity: 0.55;
@@ -328,8 +328,8 @@
 .study-assistant-resize-lines {
   position: relative;
   display: block;
-  width: 0.7rem;
-  height: 0.7rem;
+  width: 1.2rem;
+  height: 1.1rem;
 }
 
 .study-assistant-resize-lines span {
@@ -343,18 +343,18 @@
 }
 
 .study-assistant-resize-lines span:nth-child(1) {
-  width: 0.68rem;
-  top: 0.08rem;
+  width: 1.15rem;
+  top: 0.1rem;
 }
 
 .study-assistant-resize-lines span:nth-child(2) {
-  width: 0.52rem;
-  top: 0.28rem;
+  width: 0.86rem;
+  top: 0.38rem;
 }
 
 .study-assistant-resize-lines span:nth-child(3) {
-  width: 0.36rem;
-  top: 0.48rem;
+  width: 0.58rem;
+  top: 0.66rem;
 }
 
 .study-assistant-textarea {

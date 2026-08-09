@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Configuration } from '@flashmind/api-client';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
@@ -103,7 +111,12 @@ export class StudyAssistantPanelComponent {
     }
 
     this.assistantPanelOpen.update((open) => !open);
-    this.clampAssistantPanelTop();
+    this.clampAssistantPanelBounds();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.clampAssistantPanelBounds();
   }
 
   onTogglePointerDown(event: PointerEvent): void {
@@ -689,16 +702,27 @@ export class StudyAssistantPanelComponent {
     );
   }
 
-  private clampAssistantPanelTop(): void {
+  private clampAssistantPanelBounds(): void {
     if (typeof window === 'undefined') return;
 
     const maxTop = Math.max(
       ASSISTANT_PANEL_TOP_MARGIN,
       window.innerHeight - this.assistantPanelHeight() - ASSISTANT_PANEL_SAFE_BOTTOM,
     );
-    this.assistantPanelTop.set(
-      Math.min(Math.max(this.assistantPanelTop(), ASSISTANT_PANEL_TOP_MARGIN), maxTop),
+    const clampedTop = Math.min(
+      Math.max(this.assistantPanelTop(), ASSISTANT_PANEL_TOP_MARGIN),
+      maxTop,
     );
+    this.assistantPanelTop.set(clampedTop);
+
+    const maxHeight = Math.max(
+      ASSISTANT_PANEL_MIN_HEIGHT,
+      window.innerHeight - clampedTop - ASSISTANT_PANEL_SAFE_BOTTOM,
+    );
+    this.assistantPanelHeight.set(
+      Math.min(Math.max(this.assistantPanelHeight(), ASSISTANT_PANEL_MIN_HEIGHT), maxHeight),
+    );
+    this.persistPosition(ASSISTANT_PANEL_TOP_STORAGE_KEY, clampedTop);
   }
 
   private createMessageId(): string {
