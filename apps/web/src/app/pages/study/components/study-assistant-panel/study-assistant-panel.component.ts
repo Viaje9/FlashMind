@@ -548,12 +548,13 @@ export class StudyAssistantPanelComponent {
     }
 
     event.preventDefault();
+    const minTop = this.getAssistantPanelTopMargin();
     const maxTop = Math.max(
-      ASSISTANT_PANEL_TOP_MARGIN,
+      minTop,
       window.innerHeight - this.assistantPanelHeight() - ASSISTANT_PANEL_SAFE_BOTTOM,
     );
     const nextTop = event.clientY - this.assistantDragState.offsetY;
-    this.assistantPanelTop.set(Math.min(Math.max(nextTop, ASSISTANT_PANEL_TOP_MARGIN), maxTop));
+    this.assistantPanelTop.set(Math.min(Math.max(nextTop, minTop), maxTop));
   }
 
   onPanelPointerEnd(event: PointerEvent): void {
@@ -639,14 +640,12 @@ export class StudyAssistantPanelComponent {
   private clampAssistantPanelBounds(): void {
     if (typeof window === 'undefined') return;
 
+    const minTop = this.getAssistantPanelTopMargin();
     const maxTop = Math.max(
-      ASSISTANT_PANEL_TOP_MARGIN,
+      minTop,
       window.innerHeight - this.assistantPanelHeight() - ASSISTANT_PANEL_SAFE_BOTTOM,
     );
-    const clampedTop = Math.min(
-      Math.max(this.assistantPanelTop(), ASSISTANT_PANEL_TOP_MARGIN),
-      maxTop,
-    );
+    const clampedTop = Math.min(Math.max(this.assistantPanelTop(), minTop), maxTop);
     this.assistantPanelTop.set(clampedTop);
 
     const maxHeight = Math.max(
@@ -657,6 +656,14 @@ export class StudyAssistantPanelComponent {
       Math.min(Math.max(this.assistantPanelHeight(), ASSISTANT_PANEL_MIN_HEIGHT), maxHeight),
     );
     this.persistPosition(ASSISTANT_PANEL_TOP_STORAGE_KEY, clampedTop);
+  }
+
+  private getAssistantPanelTopMargin(): number {
+    if (typeof document === 'undefined') return ASSISTANT_PANEL_TOP_MARGIN;
+
+    const header = document.querySelector<HTMLElement>('[data-study-header="true"]');
+    const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
+    return Math.max(ASSISTANT_PANEL_TOP_MARGIN, headerBottom + ASSISTANT_PANEL_TOP_MARGIN);
   }
 
   private createMessageId(): string {
