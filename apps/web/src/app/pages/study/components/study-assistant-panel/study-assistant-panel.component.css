@@ -272,6 +272,53 @@
   text-underline-offset: 2px;
 }
 
+.study-assistant-markdown-table-wrap {
+  width: 100%;
+  margin: 0.55rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.study-assistant-markdown :where(table) {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, rgb(203 213 225));
+  border-radius: 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.study-assistant-markdown :where(th, td) {
+  min-width: 5.5rem;
+  border-right: 1px solid color-mix(in srgb, var(--color-primary) 12%, rgb(226 232 240));
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 12%, rgb(226 232 240));
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.study-assistant-markdown :where(th:last-child, td:last-child) {
+  border-right: 0;
+}
+
+.study-assistant-markdown :where(tbody tr:last-child td) {
+  border-bottom: 0;
+}
+
+.study-assistant-markdown :where(th) {
+  background: color-mix(in srgb, var(--color-primary) 10%, rgb(241 245 249));
+  color: rgb(30 41 59);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.study-assistant-markdown :where(tbody tr:nth-child(even) td) {
+  background: color-mix(in srgb, var(--color-primary) 3%, rgb(248 250 252));
+}
+
 .study-assistant-input-wrap {
   position: relative;
   display: flex;

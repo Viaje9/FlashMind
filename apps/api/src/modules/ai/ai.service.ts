@@ -22,10 +22,17 @@ export interface GenerateRelatedExampleResult {
 @Injectable()
 export class AiService {
   private readonly apiKey: string;
+  private readonly model: string;
+  private readonly reasoningEffort: string;
   private readonly apiUrl = 'https://api.openai.com/v1/chat/completions';
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('OPENAI_API_KEY') ?? '';
+    this.model =
+      this.configService.get<string>('COLLECTION_CODEX_MODEL') ?? 'gpt-5.5';
+    this.reasoningEffort =
+      this.configService.get<string>('COLLECTION_CODEX_REASONING_EFFORT') ??
+      'low';
   }
 
   async generateCardContent(text: string): Promise<GenerateCardContentResult> {
@@ -39,7 +46,7 @@ export class AiService {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-5.2',
+          model: this.model,
           messages: [
             {
               role: 'system',
@@ -51,6 +58,7 @@ export class AiService {
             },
           ],
           temperature: 0.7,
+          reasoning_effort: this.reasoningEffort,
           response_format: { type: 'json_object' },
         }),
       });
@@ -109,12 +117,13 @@ export class AiService {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-5.2',
+          model: this.model,
           messages: [
             { role: 'system', content: prompt.system },
             { role: 'user', content: prompt.user },
           ],
           temperature: 0.7,
+          reasoning_effort: this.reasoningEffort,
           response_format: { type: 'json_object' },
         }),
       });

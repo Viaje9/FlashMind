@@ -103,8 +103,8 @@ describe('AgentsCollectionAiProvider', () => {
 
   it('可用環境設定覆蓋模型與 reasoning effort', () => {
     const provider = createProviderWithConfig({
-      COLLECTION_AGENTS_MODEL: 'gpt-5.4-mini',
-      COLLECTION_AGENTS_REASONING_EFFORT: 'minimal',
+      COLLECTION_CODEX_MODEL: 'gpt-5.4-mini',
+      COLLECTION_CODEX_REASONING_EFFORT: 'minimal',
     });
 
     expect((provider as any).createAgentConfig()).toEqual(

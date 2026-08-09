@@ -21,7 +21,14 @@ describe('AiService', () => {
     service = module.get<AiService>(AiService);
 
     jest.clearAllMocks();
-    mockConfigService.get.mockReturnValue('test-api-key');
+    mockConfigService.get.mockImplementation((key: string) => {
+      const config: Record<string, string> = {
+        OPENAI_API_KEY: 'test-api-key',
+        COLLECTION_CODEX_MODEL: 'gpt-5.6-luna',
+        COLLECTION_CODEX_REASONING_EFFORT: 'low',
+      };
+      return config[key];
+    });
   });
 
   describe('generateCardContent', () => {
@@ -87,6 +94,7 @@ describe('AiService', () => {
             'Content-Type': 'application/json',
             Authorization: 'Bearer test-api-key',
           }),
+          body: expect.stringContaining('"model":"gpt-5.6-luna"'),
         }),
       );
     });

@@ -9,6 +9,7 @@ import { FsrsService, type CardScheduleState } from '../fsrs';
 import {
   CreateSpeakingChatDto,
   SpeakingAssistantChatDto,
+  SPEAKING_ASSISTANT_EFFORTS,
   type SpeakingAssistantEffort,
   SpeakingChatHistoryItemDto,
 } from './dto';
@@ -313,6 +314,7 @@ export class SpeakingService {
   private readonly apiKey: string;
   private readonly textModel: string;
   private readonly audioModel: string;
+  private readonly defaultReasoningEffort: SpeakingAssistantEffort;
   private readonly defaultVoice: SpeakingVoice;
 
   private readonly chatCompletionsUrl =
@@ -327,10 +329,10 @@ export class SpeakingService {
   ) {
     this.apiKey = this.configService.get<string>('OPENAI_API_KEY') ?? '';
     this.textModel =
-      this.configService.get<string>('COLLECTION_AGENTS_MODEL') ??
-      this.configService.get<string>('OPENAI_SPEAKING_TEXT_MODEL') ??
-      this.configService.get<string>('OPENAI_SPEAKING_MODEL') ??
-      'gpt-4o-mini';
+      this.configService.get<string>('COLLECTION_CODEX_MODEL') ?? 'gpt-4o-mini';
+    this.defaultReasoningEffort = this.parseReasoningEffort(
+      this.configService.get<string>('COLLECTION_CODEX_REASONING_EFFORT'),
+    );
     this.audioModel =
       this.configService.get<string>('OPENAI_SPEAKING_AUDIO_MODEL') ??
       'gpt-4o-mini-audio-preview';
@@ -352,6 +354,7 @@ export class SpeakingService {
         model: this.textModel,
         messages,
         temperature: 0.7,
+        reasoning_effort: this.defaultReasoningEffort,
       });
 
       const reply = data.choices?.[0]?.message?.content?.trim() ?? '';
@@ -434,10 +437,10 @@ export class SpeakingService {
 
     try {
       const data = await this.callOpenAIChat({
-        model: this.audioModel,
-        modalities: ['text'],
+        model: this.textModel,
         messages,
         temperature: 0.2,
+        reasoning_effort: this.defaultReasoningEffort,
       });
 
       const content = data.choices?.[0]?.message?.content?.trim() ?? '';
@@ -468,6 +471,7 @@ export class SpeakingService {
           { role: 'system', content: TRANSLATE_PROMPT },
           { role: 'user', content: text },
         ],
+        reasoning_effort: this.defaultReasoningEffort,
       });
 
       const translatedText = data.choices?.[0]?.message?.content?.trim() ?? '';
@@ -704,7 +708,13 @@ export class SpeakingService {
   private toOpenAiReasoningEffort(
     effort?: SpeakingAssistantEffort,
   ): SpeakingAssistantEffort {
-    return effort ?? 'none';
+    return effort ?? this.defaultReasoningEffort;
+  }
+
+  private parseReasoningEffort(value?: string): SpeakingAssistantEffort {
+    return SPEAKING_ASSISTANT_EFFORTS.includes(value as SpeakingAssistantEffort)
+      ? (value as SpeakingAssistantEffort)
+      : 'none';
   }
 
   private async executeVocabularyTool(

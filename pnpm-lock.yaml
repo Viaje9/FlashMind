@@ -185,6 +185,9 @@ importers:
       "@flashmind/api-client":
         specifier: workspace:*
         version: link:../../packages/api-client
+      marked:
+        specifier: ^18.0.9
+        version: 18.0.9
       rxjs:
         specifier: ~7.8.0
         version: 7.8.2
@@ -10631,6 +10634,14 @@ packages:
       {
         integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==,
       }
+
+  marked@18.0.9:
+    resolution:
+      {
+        integrity: sha512-/Sa4qiiHZxf0/FQdBBowr9q4r10krCwMvpK48FUBdXdUXScDxiQGR9zCPrFgRVR5LU3iySOiIjy09ZQvADir1w==,
+      }
+    engines: { node: ">= 20" }
+    hasBin: true
 
   math-intrinsics@1.1.0:
     resolution:
@@ -22757,6 +22768,8 @@ snapshots:
       tmpl: 1.0.5
 
   markdown-table@3.0.4: {}
+
+  marked@18.0.9: {}
 
   math-intrinsics@1.1.0: {}
 

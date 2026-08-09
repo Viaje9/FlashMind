@@ -28,8 +28,8 @@ describe('SpeakingService', () => {
       get: jest.fn((key: string) => {
         const config: Record<string, string> = {
           OPENAI_API_KEY: 'test-openai-key',
-          OPENAI_SPEAKING_MODEL: 'gpt-4o-mini',
-          OPENAI_SPEAKING_TEXT_MODEL: 'gpt-4o-mini',
+          COLLECTION_CODEX_MODEL: 'gpt-5.6-luna',
+          COLLECTION_CODEX_REASONING_EFFORT: 'low',
           OPENAI_SPEAKING_AUDIO_MODEL: 'gpt-4o-mini-audio-preview',
           OPENAI_SPEAKING_DEFAULT_VOICE: 'nova',
         };
@@ -63,7 +63,7 @@ describe('SpeakingService', () => {
     expect(result.usage.totalTokens).toBe(18);
   });
 
-  it('Speaking 文字端點應優先使用 COLLECTION_AGENTS_MODEL', async () => {
+  it('Speaking 文字端點應使用 COLLECTION_CODEX_MODEL', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
@@ -78,8 +78,7 @@ describe('SpeakingService', () => {
       get: jest.fn((key: string) => {
         const config: Record<string, string> = {
           OPENAI_API_KEY: 'test-openai-key',
-          OPENAI_SPEAKING_TEXT_MODEL: 'gpt-4o-mini',
-          COLLECTION_AGENTS_MODEL: 'gpt-5.6-luna',
+          COLLECTION_CODEX_MODEL: 'gpt-5.6-luna',
         };
         return config[key];
       }),
@@ -357,8 +356,8 @@ describe('SpeakingService', () => {
       get: jest.fn((key: string) => {
         const config: Record<string, string> = {
           OPENAI_API_KEY: 'test-openai-key',
-          OPENAI_SPEAKING_TEXT_MODEL: 'gpt-4o-mini',
-          COLLECTION_AGENTS_MODEL: 'gpt-5.6-luna',
+          COLLECTION_CODEX_MODEL: 'gpt-5.6-luna',
+          COLLECTION_CODEX_REASONING_EFFORT: 'low',
         };
         return config[key];
       }),

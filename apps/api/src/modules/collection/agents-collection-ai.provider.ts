@@ -164,12 +164,12 @@ export class AgentsCollectionAiProvider extends CollectionAiProvider {
   ) {
     super();
     this.model =
-      configService.get<string>('COLLECTION_AGENTS_MODEL') ?? DEFAULT_MODEL;
+      configService.get<string>('COLLECTION_CODEX_MODEL') ?? DEFAULT_MODEL;
     this.modelReasoningEffort = this.parseModelReasoningEffort(
-      configService.get<string>('COLLECTION_AGENTS_REASONING_EFFORT'),
+      configService.get<string>('COLLECTION_CODEX_REASONING_EFFORT'),
     );
     this.timeoutMs =
-      Number(configService.get<string>('COLLECTION_AGENTS_TIMEOUT_MS')) ||
+      Number(configService.get<string>('COLLECTION_CODEX_TIMEOUT_MS')) ||
       DEFAULT_TIMEOUT_MS;
     this.debugLogEnabled =
       process.env.NODE_ENV !== 'test' &&

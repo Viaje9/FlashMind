@@ -1,14 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   HostListener,
   computed,
   inject,
   input,
   signal,
+  ViewChild,
 } from '@angular/core';
 import { Configuration } from '@flashmind/api-client';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { marked } from 'marked';
 import {
   type SpeakingAssistantChatRequest,
   type SpeakingAssistantMessage,
@@ -56,6 +59,7 @@ interface StudyAssistantEffortOption {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudyAssistantPanelComponent {
+  @ViewChild('assistantList') private assistantList?: ElementRef<HTMLDivElement>;
   readonly word = input('');
   readonly meanings = input<string[]>([]);
 
@@ -261,6 +265,7 @@ export class StudyAssistantPanelComponent {
         toolCallsExpanded: true,
       },
     ]);
+    this.scrollAssistantListToBottom();
     this.assistantInputControl.setValue('');
     this.assistantSending.set(true);
 
@@ -403,6 +408,16 @@ export class StudyAssistantPanelComponent {
     this.assistantMessages.update((messages) =>
       messages.map((message) => (message.id === assistantMessageId ? patch(message) : message)),
     );
+    this.scrollAssistantListToBottom();
+  }
+
+  private scrollAssistantListToBottom(): void {
+    if (typeof window === 'undefined') return;
+
+    window.requestAnimationFrame(() => {
+      const list = this.assistantList?.nativeElement;
+      if (list) list.scrollTop = list.scrollHeight;
+    });
   }
 
   private parseSseEvent(
@@ -592,71 +607,17 @@ export class StudyAssistantPanelComponent {
   }
 
   renderMarkdown(content: string): string {
-    const codeBlocks: string[] = [];
-    const prepared = this.escapeHtml(content).replace(
-      /```(?:[\w+-]+)?\n?([\s\S]*?)```/g,
-      (_match, code: string) => {
-        const token = `__FM_BLOCK_${codeBlocks.length}__`;
-        codeBlocks.push(`<pre><code>${code.trimEnd()}</code></pre>`);
-        return token;
-      },
+    const rendered = marked.parse(this.escapeHtml(content), {
+      async: false,
+      breaks: true,
+      gfm: true,
+    });
+
+    return rendered.replace(
+      /<table>([\s\S]*?)<\/table>/g,
+      (_match, tableContent: string) =>
+        `<div class="study-assistant-markdown-table-wrap"><table>${tableContent}</table></div>`,
     );
-    const lines = prepared.replace(/\r\n?/g, '\n').split('\n');
-    const html: string[] = [];
-    let listType: 'ul' | 'ol' | null = null;
-    const closeList = () => {
-      if (listType) {
-        html.push(`</${listType}>`);
-        listType = null;
-      }
-    };
-
-    for (const line of lines) {
-      const blockToken = line.match(/^__FM_BLOCK_(\d+)__$/);
-      if (blockToken) {
-        closeList();
-        html.push(codeBlocks[Number(blockToken[1])] ?? '');
-      } else if (!line.trim()) {
-        closeList();
-      } else {
-        const heading = line.match(/^(#{1,6})\s+(.+)$/);
-        const unordered = line.match(/^\s*[-*+]\s+(.*)$/);
-        const ordered = line.match(/^\s*\d+[.)]\s+(.*)$/);
-        const quote = line.match(/^\s*>\s?(.*)$/);
-
-        if (heading) {
-          closeList();
-          const level = heading[1].length;
-          html.push(`<h${level}>${this.renderInlineMarkdown(heading[2])}</h${level}>`);
-        } else if (unordered) {
-          if (listType !== 'ul') {
-            closeList();
-            html.push('<ul>');
-            listType = 'ul';
-          }
-          html.push(`<li>${this.renderInlineMarkdown(unordered[1])}</li>`);
-        } else if (ordered) {
-          if (listType !== 'ol') {
-            closeList();
-            html.push('<ol>');
-            listType = 'ol';
-          }
-          html.push(`<li>${this.renderInlineMarkdown(ordered[1])}</li>`);
-        } else if (quote) {
-          closeList();
-          html.push(`<blockquote>${this.renderInlineMarkdown(quote[1])}</blockquote>`);
-        } else if (/^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
-          closeList();
-          html.push('<hr>');
-        } else {
-          closeList();
-          html.push(`<p>${this.renderInlineMarkdown(line)}</p>`);
-        }
-      }
-    }
-
-    closeList();
-    return html.join('');
   }
 
   private buildAssistantPrompt(content: string): string {
@@ -673,33 +634,6 @@ export class StudyAssistantPanelComponent {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
-  }
-
-  private renderInlineMarkdown(content: string): string {
-    const codeTokens: string[] = [];
-    let rendered = content.replace(/`([^`]+)`/g, (_match, code: string) => {
-      const token = `__FM_INLINE_${codeTokens.length}__`;
-      codeTokens.push(`<code>${code}</code>`);
-      return token;
-    });
-
-    rendered = rendered
-      .replace(
-        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
-      )
-      .replace(
-        /\*\*(.+?)\*\*|__(.+?)__/g,
-        (_match, boldA: string, boldB: string) => `<strong>${boldA ?? boldB}</strong>`,
-      )
-      .replace(/~~(.+?)~~/g, '<del>$1</del>')
-      .replace(/(^|[^*])\*([^*\n]+)\*([^*]|$)/g, '$1<em>$2</em>$3')
-      .replace(/(^|[^_])_([^_\n]+)_([^_]|$)/g, '$1<em>$2</em>$3');
-
-    return rendered.replace(
-      /__FM_INLINE_(\d+)__/g,
-      (_match, index: string) => codeTokens[Number(index)] ?? '',
-    );
   }
 
   private clampAssistantPanelBounds(): void {

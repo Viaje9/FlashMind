@@ -21,6 +21,14 @@ import {
 
 const DEFAULT_MODEL = 'gpt-5.5';
 const DEFAULT_TIMEOUT_MS = 45_000;
+const MODEL_REASONING_EFFORTS = [
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+] as const;
+type ModelReasoningEffort = (typeof MODEL_REASONING_EFFORTS)[number];
 const CORRECTION_STATUSES: TopicConversationCorrectionStatus[] = [
   'correct',
   'improved',
@@ -109,6 +117,7 @@ export const HINT_INSTRUCTIONS = `你是 FlashMind 的英文對話提示教練�
 @Injectable()
 export class OpenAiTopicConversationAiProvider extends TopicConversationAiProvider {
   private readonly model: string;
+  private readonly modelReasoningEffort: ModelReasoningEffort;
   private readonly timeoutMs: number;
   private readonly apiKeyConfigured: boolean;
 
@@ -116,8 +125,11 @@ export class OpenAiTopicConversationAiProvider extends TopicConversationAiProvid
     super();
 
     this.model =
-      configService.get<string>('TOPIC_CONVERSATION_MODEL')?.trim() ||
+      configService.get<string>('COLLECTION_CODEX_MODEL')?.trim() ||
       DEFAULT_MODEL;
+    this.modelReasoningEffort = this.parseModelReasoningEffort(
+      configService.get<string>('COLLECTION_CODEX_REASONING_EFFORT'),
+    );
 
     const configuredTimeout = Number(
       configService.get<string>('TOPIC_CONVERSATION_TIMEOUT_MS'),
@@ -210,7 +222,7 @@ export class OpenAiTopicConversationAiProvider extends TopicConversationAiProvid
         model: this.model,
         modelSettings: {
           reasoning: {
-            effort: 'low',
+            effort: this.modelReasoningEffort,
           },
         },
         outputType,
@@ -385,6 +397,15 @@ export class OpenAiTopicConversationAiProvider extends TopicConversationAiProvid
       typeof value === 'string' &&
       CORRECTION_STATUSES.includes(value as TopicConversationCorrectionStatus)
     );
+  }
+
+  private parseModelReasoningEffort(
+    value: string | undefined,
+  ): ModelReasoningEffort {
+    return value &&
+      MODEL_REASONING_EFFORTS.includes(value as ModelReasoningEffort)
+      ? (value as ModelReasoningEffort)
+      : 'low';
   }
 
   private assertApiKeyReady(): void {
