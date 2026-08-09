@@ -661,6 +661,12 @@ export class StudyAssistantPanelComponent {
   private getAssistantPanelTopMargin(): number {
     if (typeof document === 'undefined') return ASSISTANT_PANEL_TOP_MARGIN;
 
+    const basicWord = document.querySelector<HTMLElement>('[data-study-basic-word="true"]');
+    const basicWordTop = basicWord?.getBoundingClientRect().top;
+    if (typeof basicWordTop === 'number' && Number.isFinite(basicWordTop)) {
+      return Math.max(ASSISTANT_PANEL_TOP_MARGIN, basicWordTop);
+    }
+
     const header = document.querySelector<HTMLElement>('[data-study-header="true"]');
     const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
     return Math.max(ASSISTANT_PANEL_TOP_MARGIN, headerBottom + ASSISTANT_PANEL_TOP_MARGIN);
