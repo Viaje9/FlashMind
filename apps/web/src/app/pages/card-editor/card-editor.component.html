@@ -34,6 +34,7 @@
         <fm-glow-textarea
           [formField]="cardForm.front"
           placeholder="輸入單字、片語或問題..."
+          minHeightClass="h-[56px] min-h-0"
           testId="card-editor-front"
         ></fm-glow-textarea>
         @if (formModel().front.trim()) {
@@ -57,10 +58,6 @@
         }
       </div>
     </section>
-
-    <div class="flex items-center justify-center py-1 opacity-60">
-      <span class="material-symbols-outlined text-[22px]">arrow_downward</span>
-    </div>
 
     <section class="flex flex-col gap-4">
       <fm-form-section-header title="背面" icon="flip_to_back"></fm-form-section-header>
