@@ -59,6 +59,7 @@ describe('CardService', () => {
   const mockCard = {
     id: mockCardId,
     front: 'Hello',
+    note: '和 hi 比較使用情境',
     deckId: mockDeckId,
     state: 'NEW',
     due: null,
@@ -184,6 +185,7 @@ describe('CardService', () => {
       expect(result).toEqual({
         id: mockCardId,
         front: 'Hello',
+        note: '和 hi 比較使用情境',
         meanings: [
           {
             id: 'meaning-123',
@@ -238,6 +240,7 @@ describe('CardService', () => {
   describe('create', () => {
     const createDto = {
       front: 'Hello',
+      note: '和 hi 比較使用情境',
       meanings: [
         {
           zhMeaning: '你好',
@@ -256,6 +259,7 @@ describe('CardService', () => {
       expect(result.data).toEqual({
         id: mockCardId,
         front: 'Hello',
+        note: '和 hi 比較使用情境',
         meanings: [
           {
             id: 'meaning-123',
@@ -269,6 +273,11 @@ describe('CardService', () => {
       });
 
       expect(mockPrismaService.card.create).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.card.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ note: '和 hi 比較使用情境' }),
+        }),
+      );
     });
 
     it('牌組不存在時應該拋出 NotFoundException', async () => {
@@ -343,6 +352,44 @@ describe('CardService', () => {
       expect(prisma.cardMeaning.deleteMany).not.toHaveBeenCalled();
     });
 
+    it('只更新備註時不應影響詞義', async () => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockCard);
+      mockPrismaService.card.update.mockResolvedValue({
+        ...mockCard,
+        note: '更新後的記憶提示',
+      });
+
+      await service.update(mockCardId, mockDeckId, mockUserId, {
+        note: '更新後的記憶提示',
+      } as unknown as Parameters<CardService['update']>[3]);
+
+      expect(prisma.cardMeaning.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.card.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { note: '更新後的記憶提示' },
+        }),
+      );
+    });
+
+    it.each([null, ''])('備註為 %p 時應清除為 null', async (note) => {
+      mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
+      mockPrismaService.card.findUnique.mockResolvedValue(mockCard);
+      mockPrismaService.card.update.mockResolvedValue({
+        ...mockCard,
+        note: null,
+      });
+
+      const result = await service.update(mockCardId, mockDeckId, mockUserId, {
+        note,
+      } as unknown as Parameters<CardService['update']>[3]);
+
+      expect(prisma.card.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { note: null } }),
+      );
+      expect(result.data.note).toBeNull();
+    });
+
     it('卡片不存在時應該拋出 NotFoundException', async () => {
       mockPrismaService.deck.findUnique.mockResolvedValue(mockDeck);
       mockPrismaService.card.findUnique.mockResolvedValue(null);
@@ -397,6 +444,7 @@ describe('CardService', () => {
       cards: [
         {
           front: 'hello',
+          note: '比 hi 稍微正式',
           meanings: [
             { zhMeaning: '你好', enExample: 'Hello!', zhExample: '你好！' },
           ],
@@ -431,6 +479,13 @@ describe('CardService', () => {
       expect(result.success).toBe(2);
       expect(result.failed).toBe(0);
       expect(result.errors).toHaveLength(0);
+      expect(mockPrismaService.card.createManyAndReturn).toHaveBeenCalledWith({
+        data: [
+          { front: 'hello', note: '比 hi 稍微正式', deckId: mockDeckId },
+          { front: 'world', note: null, deckId: mockDeckId },
+        ],
+        select: { id: true },
+      });
     });
 
     it('缺少 front 欄位時應該記錄錯誤', async () => {

@@ -82,6 +82,7 @@ describe('StudyService', () => {
   const mockNewCard = {
     id: mockCardId,
     front: 'Hello',
+    note: '記住和 hi 的語氣差異',
     deckId: mockDeckId,
     state: CardState.NEW,
     due: null,
@@ -111,6 +112,7 @@ describe('StudyService', () => {
   const mockDueCard = {
     id: 'card-due-123',
     front: 'World',
+    note: 'world 也可表示人世間',
     deckId: mockDeckId,
     state: CardState.REVIEW,
     due: new Date('2026-01-18T10:00:00Z'),
@@ -180,6 +182,9 @@ describe('StudyService', () => {
       expect(ids).toEqual([mockCardId, 'card-due-123'].sort());
       expect(result.find((c) => c.id === 'card-due-123')!.isNew).toBe(false);
       expect(result.find((c) => c.id === mockCardId)!.isNew).toBe(true);
+      expect(result.find((c) => c.id === mockCardId)!.note).toBe(
+        '記住和 hi 的語氣差異',
+      );
     });
 
     it('學習卡片應包含 direction 欄位為 FORWARD', async () => {
@@ -347,6 +352,41 @@ describe('StudyService', () => {
       expect(forwardCards.find((c) => c.isNew)).toBeDefined();
       expect(reverseCards.find((c) => !c.isNew)).toBeDefined();
       expect(reverseCards.find((c) => c.isNew)).toBeDefined();
+    });
+
+    it('同一張卡片的正向與反向 StudyCard 應共用備註', async () => {
+      const reverseDeck = {
+        ...mockDeck,
+        enableReverse: true,
+        dailyReviewCards: 0,
+        dailyNewCards: 2,
+      };
+      const sharedCard = {
+        ...mockNewCard,
+        note: '正反向都要看到這段提示',
+      };
+      mockPrismaService.deck.findUnique.mockResolvedValue(reverseDeck);
+      mockPrismaService.reviewLog.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+      mockPrismaService.card.findMany
+        .mockResolvedValueOnce([sharedCard])
+        .mockResolvedValueOnce([sharedCard]);
+
+      const result = await service.getStudyCards(
+        mockDeckId,
+        mockUserId,
+        mockTimezone,
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result.map((card) => card.direction).sort()).toEqual([
+        'FORWARD',
+        'REVERSE',
+      ]);
+      expect(
+        result.every((card) => card.note === '正反向都要看到這段提示'),
+      ).toBe(true);
     });
 
     it('enableReverse 為 true 時應在總量內盡量 1:1 混排複習卡', async () => {

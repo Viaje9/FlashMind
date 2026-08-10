@@ -321,6 +321,33 @@ export class StudyStore {
     }
   }
 
+  async saveCardNote(cardId: string, note: string | null): Promise<boolean> {
+    const state = this.state();
+    if (!state.deckId) return false;
+
+    try {
+      const response = await firstValueFrom(
+        this.cardsService.updateCard(state.deckId, cardId, { note }),
+      );
+      const savedNote = response.data.note;
+      const updateCardNote = (card: StudyCard): StudyCard =>
+        card.id === cardId ? { ...card, note: savedNote } : card;
+
+      this.state.update((current) => ({
+        ...current,
+        cards: current.cards.map(updateCardNote),
+        failedQueue: current.failedQueue.map(updateCardNote),
+        history: current.history.map((entry) => ({
+          ...entry,
+          card: updateCardNote(entry.card),
+        })),
+      }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * 重置狀態
    */

@@ -16,6 +16,7 @@ describe('study.domain', () => {
   const mockCard: StudyCard = {
     id: 'card-1',
     front: 'Hello',
+    note: null,
     meanings: [
       {
         id: 'm1',
@@ -38,6 +39,7 @@ describe('study.domain', () => {
   const mockReverseCard: StudyCard = {
     id: 'card-1',
     front: 'Hello',
+    note: null,
     meanings: [
       {
         id: 'm1',
@@ -73,6 +75,7 @@ describe('study.domain', () => {
       const cardWithoutExamples: StudyCard = {
         id: 'card-2',
         front: 'World',
+        note: null,
         meanings: [{ id: 'm1', zhMeaning: '世界', enExample: null, zhExample: null }],
         state: 'NEW',
         isNew: true,

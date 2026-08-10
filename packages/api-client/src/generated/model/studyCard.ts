@@ -22,6 +22,10 @@ export interface StudyCard {
    */
   front: string;
   /**
+   * 使用者的卡片純文字備註
+   */
+  note: string | null;
+  /**
    * 詞義列表
    */
   meanings: Array<CardMeaning>;

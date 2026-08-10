@@ -38,6 +38,7 @@ export interface CardMeaning {
 export interface CardDetail {
   id: string;
   front: string;
+  note: string | null;
   meanings: CardMeaning[];
   createdAt: string;
   updatedAt: string;
@@ -49,6 +50,14 @@ export class CardService {
     private readonly prisma: PrismaService,
     private readonly fsrsService: FsrsService,
   ) {}
+
+  private normalizeNote(
+    note: string | null | undefined,
+  ): string | null | undefined {
+    if (note === undefined) return undefined;
+    if (note === null || note.trim() === '') return null;
+    return note;
+  }
 
   private async validateDeckAccess(
     deckId: string,
@@ -179,6 +188,7 @@ export class CardService {
     return {
       id: card.id,
       front: card.front,
+      note: card.note,
       meanings: card.meanings.map((m) => ({
         id: m.id,
         zhMeaning: m.zhMeaning,
@@ -200,6 +210,7 @@ export class CardService {
     const card = await this.prisma.card.create({
       data: {
         front: dto.front,
+        note: this.normalizeNote(dto.note) ?? null,
         deckId,
         meanings: {
           create: dto.meanings.map((m, index) => ({
@@ -217,6 +228,7 @@ export class CardService {
       data: {
         id: card.id,
         front: card.front,
+        note: card.note,
         meanings: card.meanings.map((m) => ({
           id: m.id,
           zhMeaning: m.zhMeaning,
@@ -262,6 +274,7 @@ export class CardService {
       where: { id: cardId },
       data: {
         ...(dto.front !== undefined && { front: dto.front }),
+        ...(dto.note !== undefined && { note: this.normalizeNote(dto.note) }),
         ...(dto.meanings && {
           meanings: {
             create: dto.meanings.map((m, index) => ({
@@ -280,6 +293,7 @@ export class CardService {
       data: {
         id: card.id,
         front: card.front,
+        note: card.note,
         meanings: card.meanings.map((m) => ({
           id: m.id,
           zhMeaning: m.zhMeaning,
@@ -324,6 +338,7 @@ export class CardService {
     const validCards: {
       index: number;
       front: string;
+      note: string | null;
       meanings: (typeof dto.cards)[number]['meanings'];
     }[] = [];
 
@@ -355,6 +370,7 @@ export class CardService {
       validCards.push({
         index: i,
         front: cardData.front.trim(),
+        note: this.normalizeNote(cardData.note) ?? null,
         meanings: cardData.meanings,
       });
     }
@@ -374,6 +390,7 @@ export class CardService {
         const createdCards = await tx.card.createManyAndReturn({
           data: validCards.map((c) => ({
             front: c.front,
+            note: c.note,
             deckId,
           })),
           select: { id: true },

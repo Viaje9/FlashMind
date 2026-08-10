@@ -39,6 +39,10 @@ class ImportDeckCardDto {
   @IsNotEmpty()
   front: string;
 
+  @IsOptional()
+  @IsString()
+  note?: string | null;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ImportDeckMeaningDto)

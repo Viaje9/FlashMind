@@ -18,6 +18,10 @@ export interface UpdateCardRequest {
    */
   front?: string;
   /**
+   * 卡片純文字備註；null 或空字串會清除備註
+   */
+  note?: string | null;
+  /**
    * 詞義列表（整包替換）
    */
   meanings?: Array<UpdateCardMeaningRequest>;

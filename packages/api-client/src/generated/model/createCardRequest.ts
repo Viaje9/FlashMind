@@ -18,6 +18,10 @@ export interface CreateCardRequest {
    */
   front: string;
   /**
+   * 卡片純文字備註
+   */
+  note?: string | null;
+  /**
    * 詞義列表（至少一筆）
    */
   meanings: Array<CreateCardMeaningRequest>;

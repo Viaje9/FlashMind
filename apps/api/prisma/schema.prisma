@@ -92,6 +92,7 @@ enum CardState {
 model Card {
   id        String        @id @default(cuid())
   front     String
+  note      String?       @db.Text
   deckId    String
   deck      Deck          @relation(fields: [deckId], references: [id], onDelete: Cascade)
   meanings  CardMeaning[]

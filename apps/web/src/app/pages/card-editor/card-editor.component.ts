@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { form, FormField, required, submit } from '@angular/forms/signals';
 import {
@@ -7,11 +14,18 @@ import {
   FmButtonComponent,
   FmFormSectionHeaderComponent,
   FmGlowTextareaComponent,
-  FmPageHeaderComponent
+  FmPageHeaderComponent,
 } from '@flashmind/ui';
-import { FmMeaningEditorCardComponent, MeaningDraft } from './components/meaning-editor-card/meaning-editor-card.component';
+import {
+  FmMeaningEditorCardComponent,
+  MeaningDraft,
+} from './components/meaning-editor-card/meaning-editor-card.component';
 import { CardStore } from '../../components/card/card.store';
-import { CardMeaningDraft, canDeleteMeaning, createEmptyMeaning } from '../../components/card/card.domain';
+import {
+  CardMeaningDraft,
+  canDeleteMeaning,
+  createEmptyMeaning,
+} from '../../components/card/card.domain';
 import { validateMeaningsForSubmit } from '../../components/card/card.form';
 import { AiStore } from '../../components/ai/ai.store';
 import { canGenerateContent } from '../../components/ai/ai.domain';
@@ -33,10 +47,10 @@ interface MeaningBlock {
     FmMeaningEditorCardComponent,
     FmAddItemButtonComponent,
     FmAlertComponent,
-    FormField
+    FormField,
   ],
   templateUrl: './card-editor.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CardEditorComponent implements OnInit {
   private readonly router = inject(Router);
@@ -48,10 +62,10 @@ export class CardEditorComponent implements OnInit {
   readonly deckId = signal('');
   readonly cardId = signal<string | null>(null);
   readonly isEditMode = computed(() => !!this.cardId());
-  readonly pageTitle = computed(() => this.isEditMode() ? '編輯快閃卡' : '新增快閃卡');
+  readonly pageTitle = computed(() => (this.isEditMode() ? '編輯快閃卡' : '新增快閃卡'));
 
   // Signal Forms model
-  readonly formModel = signal({ front: '' });
+  readonly formModel = signal({ front: '', note: '' });
   readonly cardForm = form(this.formModel, (f) => {
     required(f.front, { message: '請輸入正面內容' });
   });
@@ -63,7 +77,7 @@ export class CardEditorComponent implements OnInit {
     return this.meanings().map((m, i) => ({
       id: `meaning-${i}`,
       label: m.zhMeaning || `詞義 ${i + 1}`,
-      data: m
+      data: m,
     }));
   });
 
@@ -95,13 +109,13 @@ export class CardEditorComponent implements OnInit {
     await this.cardStore.loadCard(deckId, cardId);
     const card = this.cardStore.currentCard();
     if (card) {
-      this.formModel.set({ front: card.front });
+      this.formModel.set({ front: card.front, note: card.note ?? '' });
       this.meanings.set(
         card.meanings.map((m) => ({
           zhMeaning: m.zhMeaning,
           enExample: m.enExample ?? '',
-          zhExample: m.zhExample ?? ''
-        }))
+          zhExample: m.zhExample ?? '',
+        })),
       );
     }
   }
@@ -164,11 +178,12 @@ export class CardEditorComponent implements OnInit {
 
       const requestData = {
         front: this.formModel().front.trim(),
+        note: this.formModel().note,
         meanings: this.meanings().map((m) => ({
           zhMeaning: m.zhMeaning,
           enExample: m.enExample || undefined,
-          zhExample: m.zhExample || undefined
-        }))
+          zhExample: m.zhExample || undefined,
+        })),
       };
 
       if (this.isEditMode()) {

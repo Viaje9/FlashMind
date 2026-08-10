@@ -4,14 +4,16 @@ import { CardMeaningDraft, validateCardMeaning } from './card.domain';
 
 export interface CardFormData {
   front: string;
+  note: string;
   meanings: CardMeaningDraft[];
 }
 
 export function createCardFormData(
   front = '',
   meanings: CardMeaningDraft[] = [{ zhMeaning: '', enExample: '', zhExample: '' }],
+  note = '',
 ): CardFormData {
-  return { front, meanings };
+  return { front, note, meanings };
 }
 
 export function createCardForm(model: ReturnType<typeof signal<CardFormData>>) {

@@ -2900,6 +2900,10 @@ components:
         front:
           type: string
           description: 卡片正面內容
+        note:
+          type: string
+          nullable: true
+          description: 卡片備註；舊版匯入資料可省略
         meanings:
           type: array
           items:
@@ -3007,6 +3011,7 @@ components:
       required:
         - id
         - front
+        - note
         - meanings
         - createdAt
         - updatedAt
@@ -3019,6 +3024,11 @@ components:
           type: string
           description: 正面內容（單字/片語/問題）
           example: Hello
+        note:
+          type: string
+          nullable: true
+          description: 使用者的卡片純文字備註
+          example: 和 hi 比較使用情境
         meanings:
           type: array
           description: 詞義列表
@@ -3116,6 +3126,11 @@ components:
           type: string
           description: 正面內容（必填）
           example: Hello
+        note:
+          type: string
+          nullable: true
+          description: 卡片純文字備註
+          example: 和 hi 比較使用情境
         meanings:
           type: array
           description: 詞義列表（至少一筆）
@@ -3153,6 +3168,11 @@ components:
           type: string
           description: 正面內容
           example: Hello
+        note:
+          type: string
+          nullable: true
+          description: 卡片純文字備註；空字串或 null 代表清除
+          example: 和 hi 比較使用情境
         meanings:
           type: array
           description: 詞義列表（整包替換）
@@ -4396,6 +4416,7 @@ components:
       required:
         - id
         - front
+        - note
         - meanings
         - state
         - isNew
@@ -4409,6 +4430,11 @@ components:
           type: string
           description: 正面內容（單字/片語）
           example: Hello
+        note:
+          type: string
+          nullable: true
+          description: 使用者的卡片純文字備註
+          example: 和 hi 比較使用情境
         meanings:
           type: array
           description: 詞義列表

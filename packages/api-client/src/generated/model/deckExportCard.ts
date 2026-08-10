@@ -14,5 +14,9 @@ export interface DeckExportCard {
    * 卡片正面內容
    */
   front: string;
+  /**
+   * 卡片備註；舊版匯入資料可省略
+   */
+  note?: string | null;
   meanings: Array<DeckExportMeaning>;
 }

@@ -28,6 +28,7 @@ export interface StudyCardMeaning {
 export interface StudyCard {
   id: string;
   front: string;
+  note: string | null;
   meanings: StudyCardMeaning[];
   state: CardState;
   isNew: boolean;
@@ -271,6 +272,7 @@ export class StudyService {
     card: {
       id: string;
       front: string;
+      note: string | null;
       state: CardState;
       reverseState: CardState;
       meanings: {
@@ -286,6 +288,7 @@ export class StudyService {
     return {
       id: card.id,
       front: card.front,
+      note: card.note,
       meanings: card.meanings.map((m) => ({
         id: m.id,
         zhMeaning: m.zhMeaning,

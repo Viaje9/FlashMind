@@ -1,0 +1,197 @@
+:host {
+  display: contents;
+}
+
+.study-note-toggle {
+  position: fixed;
+  top: 12px;
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 60;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(245 158 11 / 0.34);
+  border-radius: 9999px;
+  background: rgb(255 251 235 / 0.96);
+  color: rgb(180 83 9);
+  box-shadow: 0 10px 24px rgb(120 53 15 / 0.16);
+  transition: transform 0.15s ease;
+  cursor: grab;
+  touch-action: none;
+}
+
+.study-note-toggle:active {
+  transform: scale(0.96);
+  cursor: grabbing;
+}
+
+.study-note-toggle-open {
+  border-color: rgb(245 158 11 / 0.5);
+  background: rgb(254 243 199 / 0.98);
+  color: rgb(146 64 14);
+}
+
+.study-note-panel {
+  position: fixed;
+  right: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  width: min(32rem, calc(100vw - 1.5rem));
+  margin-inline: auto;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(245 158 11 / 0.32);
+  border-radius: 1rem;
+  background: rgb(255 253 245 / 0.985);
+  box-shadow: 0 22px 44px rgb(69 26 3 / 0.22);
+}
+
+.study-note-header {
+  position: relative;
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgb(245 158 11 / 0.2);
+  background:
+    linear-gradient(110deg, rgb(255 251 235 / 0.98), rgb(254 243 199 / 0.72)),
+    repeating-linear-gradient(90deg, transparent 0 18px, rgb(245 158 11 / 0.045) 18px 19px);
+  padding: 0.62rem 0.72rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.study-note-title-icon {
+  font-size: 1.15rem;
+  color: rgb(217 119 6);
+}
+
+.study-note-current-word {
+  position: absolute;
+  left: 50%;
+  max-width: 42%;
+  transform: translateX(-50%);
+}
+
+.study-note-action {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: rgb(146 64 14 / 0.72);
+}
+
+.study-note-textarea {
+  min-height: 0;
+  flex: 1;
+  resize: none;
+  border: 0;
+  background:
+    linear-gradient(rgb(255 253 245 / 0.94), rgb(255 253 245 / 0.94)),
+    repeating-linear-gradient(180deg, transparent 0 30px, rgb(217 119 6 / 0.12) 30px 31px);
+  padding: 1rem 1rem 0.8rem;
+  color: rgb(51 65 85);
+  font-size: 0.95rem;
+  line-height: 1.95rem;
+  outline: none;
+}
+
+.study-note-textarea::placeholder {
+  color: rgb(146 64 14 / 0.36);
+}
+
+.study-note-footer {
+  display: flex;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgb(245 158 11 / 0.16);
+  background: rgb(255 251 235 / 0.9);
+  padding: 0.38rem 0.72rem 0.38rem 2rem;
+}
+
+.study-note-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: rgb(120 53 15 / 0.54);
+  font-size: 0.68rem;
+  line-height: 1rem;
+}
+
+.study-note-status .material-symbols-outlined {
+  font-size: 0.86rem;
+}
+
+.study-note-status-saving {
+  color: rgb(180 83 9);
+}
+
+.study-note-status-saved {
+  color: rgb(21 128 61);
+}
+
+.study-note-status-error {
+  color: rgb(220 38 38);
+}
+
+.study-note-retry {
+  border-radius: 9999px;
+  background: rgb(254 226 226);
+  padding: 0.2rem 0.58rem;
+  color: rgb(185 28 28);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.study-note-resize {
+  position: absolute;
+  bottom: 0.15rem;
+  left: 0.15rem;
+  z-index: 2;
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  color: rgb(146 64 14 / 0.42);
+  touch-action: none;
+}
+
+.study-note-resize-lines {
+  position: relative;
+  display: block;
+  width: 1.2rem;
+  height: 1.1rem;
+}
+
+.study-note-resize-lines span {
+  position: absolute;
+  left: 0;
+  height: 1px;
+  border-radius: 9999px;
+  background: currentColor;
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.study-note-resize-lines span:nth-child(1) {
+  top: 0.1rem;
+  width: 1.15rem;
+}
+
+.study-note-resize-lines span:nth-child(2) {
+  top: 0.38rem;
+  width: 0.86rem;
+}
+
+.study-note-resize-lines span:nth-child(3) {
+  top: 0.66rem;
+  width: 0.58rem;
+}

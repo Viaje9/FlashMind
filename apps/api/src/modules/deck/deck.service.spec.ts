@@ -206,6 +206,7 @@ describe('DeckService', () => {
       mockPrismaService.card.findMany.mockResolvedValue([
         {
           front: 'Where are they?',
+          note: '提醒：they 是複數代名詞',
           meanings: [
             {
               zhMeaning: '他們在哪裡？',
@@ -224,6 +225,7 @@ describe('DeckService', () => {
         orderBy: { createdAt: 'asc' },
         select: {
           front: true,
+          note: true,
           meanings: {
             orderBy: { sortOrder: 'asc' },
             select: {
@@ -250,6 +252,7 @@ describe('DeckService', () => {
           cards: [
             {
               front: 'Where are they?',
+              note: '提醒：they 是複數代名詞',
               meanings: [
                 {
                   zhMeaning: '他們在哪裡？',
@@ -293,6 +296,7 @@ describe('DeckService', () => {
         cards: [
           {
             front: 'Hello',
+            note: '比 hi 稍微正式',
             meanings: [
               {
                 zhMeaning: '你好',
@@ -321,6 +325,7 @@ describe('DeckService', () => {
             create: [
               {
                 front: 'Hello',
+                note: '比 hi 稍微正式',
                 meanings: {
                   create: [
                     {
@@ -339,6 +344,49 @@ describe('DeckService', () => {
       expect(result).toEqual({
         data: { id: 'imported-deck', name: '英文單字（匯入）' },
       });
+    });
+
+    it('匯入舊版不含 note 的卡片時應將備註設為 null', async () => {
+      mockPrismaService.deck.findMany.mockResolvedValue([]);
+      mockPrismaService.deck.create.mockResolvedValue({ id: 'imported-deck' });
+
+      await service.importDeck(mockUserId, {
+        version: 1,
+        name: '舊版牌組',
+        dailyNewCards: 20,
+        dailyReviewCards: 100,
+        dailyResetHour: 4,
+        learningSteps: '1m,10m',
+        relearningSteps: '10m',
+        requestRetention: 0.9,
+        maximumInterval: 36500,
+        enableReverse: false,
+        cards: [
+          {
+            front: 'Legacy',
+            meanings: [
+              {
+                zhMeaning: '舊版',
+                enExample: null,
+                zhExample: null,
+                sortOrder: 0,
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(prisma.deck.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            cards: {
+              create: [
+                expect.objectContaining({ front: 'Legacy', note: null }),
+              ],
+            },
+          }),
+        }),
+      );
     });
 
     it('應遞增匯入後綴直到名稱不衝突', async () => {

@@ -27,6 +27,10 @@ export class CreateCardDto {
   @IsNotEmpty()
   front: string;
 
+  @IsString()
+  @IsOptional()
+  note?: string | null;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

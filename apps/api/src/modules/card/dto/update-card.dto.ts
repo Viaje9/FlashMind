@@ -24,6 +24,10 @@ export class UpdateCardDto {
   @IsOptional()
   front?: string;
 
+  @IsString()
+  @IsOptional()
+  note?: string | null;
+
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })

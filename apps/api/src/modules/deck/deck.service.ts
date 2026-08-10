@@ -65,6 +65,7 @@ export interface DeckExport {
   enableReverse: boolean;
   cards: Array<{
     front: string;
+    note: string | null;
     meanings: Array<{
       zhMeaning: string;
       enExample: string | null;
@@ -293,6 +294,7 @@ export class DeckService {
       orderBy: { createdAt: 'asc' },
       select: {
         front: true,
+        note: true,
         meanings: {
           orderBy: { sortOrder: 'asc' },
           select: {
@@ -352,6 +354,7 @@ export class DeckService {
         cards: {
           create: dto.cards.map((card) => ({
             front: card.front,
+            note: card.note?.trim() ? card.note : null,
             meanings: {
               create: card.meanings.map((meaning) => ({
                 zhMeaning: meaning.zhMeaning,
