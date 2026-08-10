@@ -45,6 +45,14 @@ describe('study-assistant-markdown.domain', () => {
     expect(html).toContain('<td>occur</td>');
   });
 
+  it('應將大於符號開頭的內容解析為引用區塊', () => {
+    const html = renderStudyAssistantMarkdown('> **conference** = 會議；研討會');
+
+    expect(html).toContain('<blockquote>');
+    expect(html).toContain('<strong>conference</strong> = 會議；研討會');
+    expect(html).not.toContain('&gt;');
+  });
+
   it('不應把程式碼中的 Markdown 標記轉成 HTML', () => {
     const html = renderStudyAssistantMarkdown(
       ['`**結論：**文字`', '', '```md', '**結論：**文字', '```'].join('\n'),

@@ -1,4 +1,4 @@
-import { marked } from 'marked';
+import { marked, Renderer } from 'marked';
 
 const FENCE_PATTERN = /^\s*(`{3,}|~{3,})/;
 const TABLE_DELIMITER_PATTERN = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/;
@@ -9,6 +9,9 @@ const STRONG_OPENING_SPACE_AFTER_ENGLISH_WORD_PATTERN =
   /\b([A-Za-z0-9]+)\*\*[ \t]+([^*\n]*?\S)\*\*/g;
 const STRONG_TRAILING_SPACE_PATTERN = /\*\*([^*\n]*?\S)[ \t]+\*\*/g;
 const STRONG_TRAILING_PUNCTUATION_PATTERN = /\*\*([^*\n]*?)([：:；;，,。！？!?])\*\*(?=\S)/g;
+const safeRenderer = new Renderer();
+
+safeRenderer.html = ({ text }) => escapeHtml(text);
 
 /**
  * 將 AI 常見但不完全符合 CommonMark 的輸出正規化。
@@ -60,10 +63,11 @@ export function normalizeStudyAssistantMarkdown(content: string): string {
 }
 
 export function renderStudyAssistantMarkdown(content: string): string {
-  const rendered = marked.parse(escapeHtml(normalizeStudyAssistantMarkdown(content)), {
+  const rendered = marked.parse(normalizeStudyAssistantMarkdown(content), {
     async: false,
     breaks: true,
     gfm: true,
+    renderer: safeRenderer,
   });
 
   return rendered.replace(
