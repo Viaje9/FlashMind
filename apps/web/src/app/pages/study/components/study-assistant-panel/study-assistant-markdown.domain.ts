@@ -5,6 +5,8 @@ const TABLE_DELIMITER_PATTERN = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?
 const INLINE_CODE_PATTERN = /(`+)([^`]*?)\1/g;
 const INLINE_CODE_PLACEHOLDER_START = '\uE000';
 const INLINE_CODE_PLACEHOLDER_END = '\uE001';
+const STRONG_OPENING_SPACE_AFTER_ENGLISH_WORD_PATTERN =
+  /\b([A-Za-z0-9]+)\*\*[ \t]+([^*\n]*?\S)\*\*/g;
 const STRONG_TRAILING_SPACE_PATTERN = /\*\*([^*\n]*?\S)[ \t]+\*\*/g;
 const STRONG_TRAILING_PUNCTUATION_PATTERN = /\*\*([^*\n]*?)([：:；;，,。！？!?])\*\*(?=\S)/g;
 
@@ -89,7 +91,8 @@ function normalizeStrongMarkersOutsideInlineCode(line: string): string {
 
   const normalized = protectedLine
     .replace(STRONG_TRAILING_SPACE_PATTERN, '**$1** ')
-    .replace(STRONG_TRAILING_PUNCTUATION_PATTERN, '**$1**$2');
+    .replace(STRONG_TRAILING_PUNCTUATION_PATTERN, '**$1**$2')
+    .replace(STRONG_OPENING_SPACE_AFTER_ENGLISH_WORD_PATTERN, '$1 **$2**');
 
   return codeSpans.reduce(
     (result, codeSpan, index) =>

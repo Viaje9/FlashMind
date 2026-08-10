@@ -8,6 +8,7 @@ import {
   isUnknownRating,
   getStudyWord,
   getStudyTranslations,
+  getStudyAutoPlayKey,
   StudyStats,
 } from './study.domain';
 import { StudyCard } from '@flashmind/api-client';
@@ -58,6 +59,26 @@ describe('study.domain', () => {
     isNew: true,
     direction: 'REVERSE',
   };
+
+  describe('getStudyAutoPlayKey', () => {
+    it('同一張反向卡只更新備註時應維持相同播放 key', () => {
+      const originalKey = getStudyAutoPlayKey(true, true, false, mockReverseCard);
+      const updatedKey = getStudyAutoPlayKey(true, true, false, {
+        ...mockReverseCard,
+        note: '新的備註',
+      });
+
+      expect(originalKey).toBe('card-1:reverse-back');
+      expect(updatedKey).toBe(originalKey);
+    });
+
+    it('切換卡片或尚未翻開反向卡時應產生不同結果', () => {
+      expect(getStudyAutoPlayKey(true, true, false, { ...mockReverseCard, id: 'card-2' })).toBe(
+        'card-2:reverse-back',
+      );
+      expect(getStudyAutoPlayKey(true, false, false, mockReverseCard)).toBeNull();
+    });
+  });
 
   describe('mapMeaningsToExamples', () => {
     it('should convert card meanings to study examples', () => {

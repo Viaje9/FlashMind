@@ -5,6 +5,22 @@ import { StudyCard } from '@flashmind/api-client';
  */
 export type StudyRating = 'known' | 'unfamiliar' | 'unknown';
 
+export function getStudyAutoPlayKey(
+  isStudying: boolean,
+  flipped: boolean,
+  submitting: boolean,
+  card: StudyCard | null,
+): string | null {
+  if (!isStudying || !card) return null;
+  if (card.direction === 'FORWARD' && !flipped && !submitting) {
+    return `${card.id}:forward-front`;
+  }
+  if (card.direction === 'REVERSE' && flipped) {
+    return `${card.id}:reverse-back`;
+  }
+  return null;
+}
+
 /**
  * 學習統計
  */

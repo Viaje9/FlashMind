@@ -21,6 +21,7 @@ import { StudyStore } from '../../components/study/study.store';
 import { TtsStore } from '../../components/tts/tts.store';
 import {
   mapMeaningsToExamples,
+  getStudyAutoPlayKey,
   getStudyWord,
   getStudyTranslations,
   StudyRating,
@@ -72,6 +73,19 @@ export class StudyComponent implements OnInit, OnDestroy {
     return card ? getStudyTranslations(card) : [];
   });
   readonly audioText = computed(() => this.currentCard()?.front ?? '');
+  private readonly autoPlayKey = computed(() =>
+    getStudyAutoPlayKey(
+      this.phase() === 'studying',
+      this.isFlipped(),
+      this.isSubmitting(),
+      this.currentCard(),
+    ),
+  );
+  private readonly autoPlayText = computed(() => {
+    const card = this.currentCard();
+    if (!card) return '';
+    return card.direction === 'REVERSE' ? card.front : getStudyWord(card);
+  });
   readonly examples = computed((): StudyExample[] => {
     const card = this.currentCard();
     return card ? mapMeaningsToExamples(card) : [];
@@ -85,30 +99,14 @@ export class StudyComponent implements OnInit, OnDestroy {
   readonly hasError = computed(() => this.phase() === 'error');
   readonly showDecisionBar = computed(() => this.isStudying() && this.isFlipped());
 
-  // 正向卡：正面顯示時自動播放單字發音
-  private readonly forwardAutoPlayEffect = effect(() => {
-    const phase = this.phase();
-    const flipped = this.isFlipped();
-    const submitting = this.isSubmitting();
-    const card = this.currentCard();
-    const word = this.word();
+  // 只在卡片或翻面狀態形成新的播放 key 時自動播放，內容更新不重播。
+  private readonly autoPlayEffect = effect(() => {
+    const autoPlayKey = this.autoPlayKey();
+    const autoPlayText = this.autoPlayText();
 
-    if (phase === 'studying' && !flipped && !submitting && word && card?.direction === 'FORWARD') {
+    if (autoPlayKey && autoPlayText) {
       untracked(() => {
-        void this.ttsStore.playWord(word);
-      });
-    }
-  });
-
-  // 反向卡：翻開時自動播放英文單字發音
-  private readonly reverseAutoPlayEffect = effect(() => {
-    const phase = this.phase();
-    const flipped = this.isFlipped();
-    const card = this.currentCard();
-
-    if (phase === 'studying' && flipped && card?.direction === 'REVERSE') {
-      untracked(() => {
-        void this.ttsStore.playWord(card.front);
+        void this.ttsStore.playWord(autoPlayText);
       });
     }
   });

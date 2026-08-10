@@ -9,6 +9,21 @@ describe('study-assistant-markdown.domain', () => {
     expect(html).not.toContain('**');
   });
 
+  it('應修正 AI 將粗體起始標記黏在前字且在標記後多留空白的格式', () => {
+    const html = renderStudyAssistantMarkdown(
+      [
+        '**正面的態度** → a** positive** attitude',
+        '**物品的正面** → the** front** of the object',
+      ].join('\n'),
+    );
+
+    expect(html).toContain('<strong>正面的態度</strong> → a <strong>positive</strong> attitude');
+    expect(html).toContain(
+      '<strong>物品的正面</strong> → the <strong>front</strong> of the object',
+    );
+    expect(html).not.toContain('**');
+  });
+
   it('表格後缺少空行時仍應將結論解析成表格外的段落', () => {
     const html = renderStudyAssistantMarkdown(
       ['| 單字 | 用法 |', '| --- | --- |', '| happen | 日常口語 |', '**結論**：依語境選字。'].join(
