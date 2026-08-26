@@ -12,6 +12,7 @@ import { StudyModule } from './modules/study/study.module';
 import { SpeakingModule } from './modules/speaking/speaking.module';
 import { CollectionModule } from './modules/collection/collection.module';
 import { TopicConversationModule } from './modules/topic-conversation/topic-conversation.module';
+import { TargetVocabularyModule } from './modules/target-vocabulary/target-vocabulary.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { TopicConversationModule } from './modules/topic-conversation/topic-conv
     SpeakingModule,
     CollectionModule,
     TopicConversationModule,
+    TargetVocabularyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

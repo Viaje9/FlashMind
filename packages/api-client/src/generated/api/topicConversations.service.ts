@@ -22,9 +22,13 @@ import { Observable } from "rxjs";
 import { OpenApiHttpParams, QueryParamStyle } from "../query.params";
 
 // @ts-ignore
+import { CreateTopicConversationDraft200Response } from "../model/createTopicConversationDraft200Response";
+// @ts-ignore
 import { CreateTopicConversationMessageRequest } from "../model/createTopicConversationMessageRequest";
 // @ts-ignore
 import { ErrorResponse } from "../model/errorResponse";
+// @ts-ignore
+import { TopicConversationDraft } from "../model/topicConversationDraft";
 // @ts-ignore
 import { TopicConversationHintResponse } from "../model/topicConversationHintResponse";
 // @ts-ignore
@@ -53,13 +57,15 @@ export class TopicConversationsService extends BaseService {
 
   /**
    * 建立新的主題對話
-   * 產生盡量不與歷史重複的新主題，建立場次並保存 AI 的英文開場訊息。
+   * 使用先前產生的草稿建立場次並保存 AI 的英文開場訊息。只應在使用者送出第一則訊息時呼叫。
    * @endpoint post /topic-conversations
+   * @param topicConversationDraft
    * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
    * @param reportProgress flag to report request and response progress.
    * @param options additional options
    */
   public createTopicConversation(
+    topicConversationDraft: TopicConversationDraft,
     observe?: "body",
     reportProgress?: boolean,
     options?: {
@@ -69,6 +75,7 @@ export class TopicConversationsService extends BaseService {
     },
   ): Observable<TopicConversationSessionDetailResponse>;
   public createTopicConversation(
+    topicConversationDraft: TopicConversationDraft,
     observe?: "response",
     reportProgress?: boolean,
     options?: {
@@ -78,6 +85,7 @@ export class TopicConversationsService extends BaseService {
     },
   ): Observable<HttpResponse<TopicConversationSessionDetailResponse>>;
   public createTopicConversation(
+    topicConversationDraft: TopicConversationDraft,
     observe?: "events",
     reportProgress?: boolean,
     options?: {
@@ -87,6 +95,123 @@ export class TopicConversationsService extends BaseService {
     },
   ): Observable<HttpEvent<TopicConversationSessionDetailResponse>>;
   public createTopicConversation(
+    topicConversationDraft: TopicConversationDraft,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (
+      topicConversationDraft === null ||
+      topicConversationDraft === undefined
+    ) {
+      throw new Error(
+        "Required parameter topicConversationDraft was null or undefined when calling createTopicConversation.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    // to determine the Content-Type header
+    const consumes: string[] = ["application/json"];
+    const httpContentTypeSelected: string | undefined =
+      this.configuration.selectHeaderContentType(consumes);
+    if (httpContentTypeSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Content-Type",
+        httpContentTypeSelected,
+      );
+    }
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/topic-conversations`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<TopicConversationSessionDetailResponse>(
+      "post",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        body: topicConversationDraft,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 產生未持久化的主題草稿
+   * 產生盡量不與歷史重複的新主題與 AI 英文開場訊息，但不建立 Topic、Session 或 Message。
+   * @endpoint post /topic-conversations/draft
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public createTopicConversationDraft(
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<CreateTopicConversationDraft200Response>;
+  public createTopicConversationDraft(
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<CreateTopicConversationDraft200Response>>;
+  public createTopicConversationDraft(
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<CreateTopicConversationDraft200Response>>;
+  public createTopicConversationDraft(
     observe: any = "body",
     reportProgress: boolean = false,
     options?: {
@@ -127,13 +252,133 @@ export class TopicConversationsService extends BaseService {
       }
     }
 
-    let localVarPath = `/topic-conversations`;
+    let localVarPath = `/topic-conversations/draft`;
     const { basePath, withCredentials } = this.configuration;
-    return this.httpClient.request<TopicConversationSessionDetailResponse>(
+    return this.httpClient.request<CreateTopicConversationDraft200Response>(
       "post",
       `${basePath}${localVarPath}`,
       {
         context: localVarHttpContext,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 為未持久化的主題草稿產生提示
+   * @endpoint post /topic-conversations/draft/hint
+   * @param topicConversationDraft
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public createTopicConversationDraftHint(
+    topicConversationDraft: TopicConversationDraft,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<TopicConversationHintResponse>;
+  public createTopicConversationDraftHint(
+    topicConversationDraft: TopicConversationDraft,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<TopicConversationHintResponse>>;
+  public createTopicConversationDraftHint(
+    topicConversationDraft: TopicConversationDraft,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<TopicConversationHintResponse>>;
+  public createTopicConversationDraftHint(
+    topicConversationDraft: TopicConversationDraft,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (
+      topicConversationDraft === null ||
+      topicConversationDraft === undefined
+    ) {
+      throw new Error(
+        "Required parameter topicConversationDraft was null or undefined when calling createTopicConversationDraftHint.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    // to determine the Content-Type header
+    const consumes: string[] = ["application/json"];
+    const httpContentTypeSelected: string | undefined =
+      this.configuration.selectHeaderContentType(consumes);
+    if (httpContentTypeSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Content-Type",
+        httpContentTypeSelected,
+      );
+    }
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/topic-conversations/draft/hint`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<TopicConversationHintResponse>(
+      "post",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        body: topicConversationDraft,
         responseType: <any>responseType_,
         ...(withCredentials ? { withCredentials } : {}),
         headers: localVarHeaders,
@@ -371,6 +616,112 @@ export class TopicConversationsService extends BaseService {
       {
         context: localVarHttpContext,
         body: createTopicConversationMessageRequest,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
+   * 刪除主題對話
+   * 刪除目前使用者指定的對話場次與其所有訊息。
+   * @endpoint delete /topic-conversations/{id}
+   * @param id 主題對話場次 ID
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public deleteTopicConversation(
+    id: string,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any>;
+  public deleteTopicConversation(
+    id: string,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<any>>;
+  public deleteTopicConversation(
+    id: string,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<any>>;
+  public deleteTopicConversation(
+    id: string,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (id === null || id === undefined) {
+      throw new Error(
+        "Required parameter id was null or undefined when calling deleteTopicConversation.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept(["application/json"]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/topic-conversations/${this.configuration.encodeParam({ name: "id", value: id, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: undefined })}`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<any>(
+      "delete",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
         responseType: <any>responseType_,
         ...(withCredentials ? { withCredentials } : {}),
         headers: localVarHeaders,

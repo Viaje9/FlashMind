@@ -64,7 +64,7 @@ describe('SpeakingController', () => {
     const mockResult = {
       transcript: 'Hello there',
       audioBase64: 'AUDIO',
-      model: 'gpt-4o-mini-audio-preview',
+      model: 'gpt-realtime-2.1-mini',
       usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
     };
     mockSpeakingService.createAudioReply.mockResolvedValue(mockResult);
@@ -73,7 +73,7 @@ describe('SpeakingController', () => {
       { buffer: Buffer.from('audio') } as Express.Multer.File,
       {
         history: JSON.stringify([{ role: 'assistant', text: 'Hi!' }]),
-        voice: 'nova',
+        voice: 'marin',
         autoMemoryEnabled: 'true',
       },
     );
@@ -98,7 +98,13 @@ describe('SpeakingController', () => {
       usage: { promptTokens: 1, completionTokens: 2, totalTokens: 3 },
     });
 
-    const result = await controller.summarize({ history: [] });
+    const result = await controller.summarize({ history: [] }, {
+      user: { id: 'user-1' },
+    } as never);
+    expect(speakingService.summarizeConversation).toHaveBeenCalledWith(
+      [],
+      'user-1',
+    );
     expect(result).toHaveProperty('data');
   });
 
@@ -169,7 +175,7 @@ describe('SpeakingController', () => {
       audioBase64: 'AUDIO',
     });
 
-    const result = await controller.previewVoice({ voice: 'nova' });
+    const result = await controller.previewVoice({ voice: 'marin' });
     expect(result).toEqual({ data: { audioBase64: 'AUDIO' } });
   });
 });

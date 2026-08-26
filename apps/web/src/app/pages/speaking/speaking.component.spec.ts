@@ -70,6 +70,113 @@ describe('speaking.component selection actions', () => {
     document.body.innerHTML = '';
   });
 
+  it('應分別使用 Realtime 2.1 mini 與 Luna 價格估算語音及摘要花費', () => {
+    storeMock.messages.set([
+      {
+        id: 'assistant-cost',
+        conversationId: 'conversation-1',
+        role: 'assistant',
+        createdAt: '2026-08-26T01:00:00.000Z',
+        usage: {
+          promptTokens: 2_000_000,
+          completionTokens: 2_000_000,
+          totalTokens: 4_000_000,
+          promptTextTokens: 1_000_000,
+          promptAudioTokens: 1_000_000,
+          completionTextTokens: 1_000_000,
+          completionAudioTokens: 1_000_000,
+        },
+      },
+      {
+        id: 'summary-cost',
+        conversationId: 'conversation-1',
+        role: 'summary',
+        createdAt: '2026-08-26T01:01:00.000Z',
+        usage: {
+          promptTokens: 1_000_000,
+          completionTokens: 1_000_000,
+          totalTokens: 2_000_000,
+          promptTextTokens: 1_000_000,
+          promptAudioTokens: 0,
+          completionTextTokens: 1_000_000,
+          completionAudioTokens: 0,
+        },
+      },
+    ]);
+
+    expect(component.spending().totalCostTwd).toBeCloseTo(1126.4);
+    expect(component.spending().lastRequestCostTwd).toBeCloseTo(70.4);
+  });
+
+  it('目標單字連結應保留目前 Speaking 對話來源', () => {
+    storeMock.conversationId.set('conversation-1');
+    storeMock.messages.set([
+      {
+        id: 'user-1',
+        conversationId: 'conversation-1',
+        role: 'user',
+        text: 'Hello.',
+        createdAt: '2026-08-26T01:00:00.000Z',
+      },
+    ]);
+    expect(component.targetVocabularyQueryParams()).toEqual({
+      from: 'speaking',
+      conversationId: 'conversation-1',
+    });
+
+    storeMock.messages.set([]);
+    expect(component.targetVocabularyQueryParams()).toEqual({ from: 'speaking' });
+  });
+
+  it('使用者語音逐字稿應預設收合，並可獨立展開與收起', async () => {
+    storeMock.messages.set([
+      {
+        id: 'user-transcript-1',
+        conversationId: 'conversation-1',
+        role: 'user',
+        text: 'I practiced speaking today.',
+        audioBlobKey: 'user-transcript-1:audio',
+        createdAt: '2026-08-26T01:00:00.000Z',
+      },
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-user-transcript-toggle-user-transcript-1"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toggle).toBeTruthy();
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="speaking-user-transcript-user-transcript-1"]',
+      ),
+    ).toBeNull();
+
+    toggle?.click();
+    fixture.detectChanges();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="speaking-user-transcript-user-transcript-1"]',
+      )?.textContent,
+    ).toContain('I practiced speaking today.');
+
+    toggle?.click();
+    fixture.detectChanges();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="speaking-user-transcript-user-transcript-1"]',
+      ),
+    ).toBeNull();
+  });
+
   it('assistant 文字選取時應顯示翻譯按鈕，清除選取時應隱藏', async () => {
     const assistantMessage: SpeakingMessage = {
       id: 'assistant-1',
@@ -295,7 +402,7 @@ describe('speaking.component selection actions', () => {
       '[data-testid="speaking-summary-copy"]',
     ) as HTMLButtonElement | null;
     expect(copyButton).toBeTruthy();
-    expect(copyButton?.classList.contains('text-primary')).toBe(true);
+    expect(copyButton?.classList.contains('text-orange-600')).toBe(true);
     expect(copyButton?.classList.contains('text-emerald-600')).toBe(false);
 
     copyButton?.click();
@@ -303,9 +410,56 @@ describe('speaking.component selection actions', () => {
     fixture.detectChanges();
 
     expect(writeText).toHaveBeenCalledWith(summaryMessage.text);
-    expect(copyButton?.classList.contains('text-primary')).toBe(false);
+    expect(copyButton?.classList.contains('text-orange-600')).toBe(false);
     expect(copyButton?.classList.contains('text-emerald-600')).toBe(true);
     expect(copyButton?.getAttribute('aria-label')).toBe('摘要已複製');
+  });
+
+  it('對話整理應將摘要、回顧、單字與下次主題分區呈現', async () => {
+    storeMock.messages.set([
+      {
+        id: 'summary-sections-1',
+        conversationId: 'conversation-1',
+        role: 'summary',
+        text: `I explained my learning plan.
+
+練習回顧
+你有清楚說明自己的目標。
+
+這次實際使用
+• practice（練習）
+
+下次可以試試
+• confidence（信心）
+
+下次主題
+My English-learning website`,
+        createdAt: '2026-02-22T11:20:00.000Z',
+      },
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="speaking-summary-main"]')?.textContent,
+    ).toContain('I explained my learning plan.');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="speaking-summary-review"]')?.textContent,
+    ).toContain('你有清楚說明自己的目標。');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="speaking-summary-actual-uses"]')
+        ?.textContent,
+    ).toContain('practice（練習）');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="speaking-summary-recommendations"]')
+        ?.textContent,
+    ).toContain('confidence（信心）');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="speaking-summary-next-topic"]')
+        ?.textContent,
+    ).toContain('My English-learning website');
   });
 
   it('assistant 輸入框按 Ctrl/Cmd + Enter 應送出訊息', () => {
@@ -550,10 +704,12 @@ function createSpeakingStoreMock() {
     assistantMessages: signal<SpeakingAssistantMessage[]>([]),
     assistantSending: signal(false),
     error: signal<string | null>(null),
-    conversationId: signal('conversation-1'),
+    conversationId: signal<string | null>('conversation-1'),
     playingAudioKey: signal<string | null>(null),
     refreshSpeakingSettings: vi.fn(),
     activateSharedAudioTrack: vi.fn(async () => undefined),
+    prepareRealtimeSession: vi.fn(async () => undefined),
+    disconnectRealtimeSession: vi.fn(),
     deactivateSharedAudioTrack: vi.fn(),
     setAudioPlaybackMuted: vi.fn(),
     startNewConversation: vi.fn(async () => undefined),

@@ -20,9 +20,11 @@ import { SpeakingRecorderService } from '../../components/speaking/speaking-reco
 import { SpeakingStore } from '../../components/speaking/speaking.store';
 import { TtsStore } from '../../components/tts/tts.store';
 import {
+  type SpeakingReviewSummaryView,
   type SpeakingAssistantMessage,
   type SpeakingMessage,
   isSelectionTranslationResultStale,
+  parseSpeakingReviewSummary,
 } from '../../components/speaking/speaking.domain';
 
 interface DragState {
@@ -84,10 +86,14 @@ const ASSISTANT_MESSAGES_STORAGE_KEY = 'flashmind.speaking.assistant.messages';
 const ASSISTANT_TOP_STORAGE_KEY = 'flashmind.speaking.assistant.top';
 const ASSISTANT_HEIGHT_STORAGE_KEY = 'flashmind.speaking.assistant.height';
 const USD_TO_TWD = 32;
-const AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION = 0.15;
-const AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION = 0.6;
-const AUDIO_MODEL_AUDIO_INPUT_USD_PER_MILLION = 10;
-const AUDIO_MODEL_AUDIO_OUTPUT_USD_PER_MILLION = 20;
+const REALTIME_MINI_TEXT_INPUT_USD_PER_MILLION = 0.6;
+const REALTIME_MINI_TEXT_OUTPUT_USD_PER_MILLION = 2.4;
+const REALTIME_MINI_AUDIO_INPUT_USD_PER_MILLION = 10;
+const REALTIME_MINI_AUDIO_OUTPUT_USD_PER_MILLION = 20;
+const GPT_TRANSCRIBE_USD_PER_MINUTE = 0.0045;
+const LUNA_TEXT_INPUT_USD_PER_MILLION = 0.2;
+const LUNA_TEXT_OUTPUT_USD_PER_MILLION = 1.2;
+const LUNA_LONG_CONTEXT_THRESHOLD = 272_000;
 const SELECTION_ACTION_WIDTH = 64;
 const SELECTION_ACTION_HEIGHT = 36;
 const SELECTION_OVERLAY_GAP = 10;
@@ -123,6 +129,12 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
   readonly settings = this.speakingStore.speakingSettings;
   readonly messages = this.speakingStore.messages;
+  readonly targetVocabularyQueryParams = computed(() => {
+    const conversationId = this.speakingStore.conversationId();
+    return conversationId && this.messages().length > 0
+      ? { from: 'speaking', conversationId }
+      : { from: 'speaking' };
+  });
   readonly sending = this.speakingStore.sending;
   readonly summarizing = this.speakingStore.summarizing;
   readonly translatingMessageId = this.speakingStore.translatingMessageId;
@@ -137,6 +149,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly assistantPanelTop = signal(this.loadAssistantPanelTop());
   readonly assistantPanelHeight = signal(this.loadAssistantPanelHeight());
   readonly translationVisibleIds = signal<Set<string>>(new Set());
+  readonly expandedUserTranscriptIds = signal<Set<string>>(new Set());
   readonly selectionTranslateTarget = signal<SelectionTranslateTarget | null>(null);
   readonly selectionActionPosition = signal<SelectionOverlayPosition>({ left: 0, top: 0 });
   readonly selectionTooltipStatus = signal<SelectionTooltipStatus>('idle');
@@ -217,7 +230,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     let lastRequestCostTwd = 0;
 
     for (const message of this.messages()) {
-      const costUsd = this.calculateUsageCostUsd(message.usage);
+      const costUsd = this.calculateUsageCostUsd(message);
       if (costUsd <= 0) {
         continue;
       }
@@ -326,6 +339,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       clearTimeout(this.copySummaryResetTimer);
       this.copySummaryResetTimer = null;
     }
+    this.speakingStore.disconnectRealtimeSession();
     this.speakingStore.deactivateSharedAudioTrack();
   }
 
@@ -452,7 +466,13 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     }
 
     await this.speakingStore.activateSharedAudioTrack();
-    await this.recorder.start();
+    try {
+      await this.speakingStore.prepareRealtimeSession();
+      await this.recorder.start();
+    } catch {
+      // Store 已顯示 Realtime 連線錯誤。
+      this.speakingStore.deactivateSharedAudioTrack();
+    }
   }
 
   onPauseRecording(): void {
@@ -506,6 +526,22 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     return !!message.audioBlobKey && this.speakingStore.playingAudioKey() === message.audioBlobKey;
   }
 
+  toggleUserTranscript(messageId: string): void {
+    this.expandedUserTranscriptIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }
+
+  isUserTranscriptExpanded(messageId: string): boolean {
+    return this.expandedUserTranscriptIds().has(messageId);
+  }
+
   async onToggleTranslate(message: SpeakingMessage): Promise<void> {
     if (!message.id) {
       return;
@@ -551,6 +587,10 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     }
 
     return this.getTokensWithCache(`${MAIN_TRANSCRIPT_CONTEXT}:${message.id}`, transcript);
+  }
+
+  getReviewSummaryView(message: SpeakingMessage): SpeakingReviewSummaryView {
+    return parseSpeakingReviewSummary(message.text ?? '');
   }
 
   getAssistantMessageTokens(message: SpeakingAssistantMessage): string[] {
@@ -1606,17 +1646,20 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     return window.isSecureContext;
   }
 
-  private calculateUsageCostUsd(usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-    promptTextTokens: number;
-    promptAudioTokens: number;
-    completionTextTokens: number;
-    completionAudioTokens: number;
-  }): number {
+  private calculateUsageCostUsd(message: SpeakingMessage): number {
+    const usage = message.usage;
     if (!usage) {
       return 0;
+    }
+
+    if (message.role === 'summary') {
+      const longContext = usage.promptTokens > LUNA_LONG_CONTEXT_THRESHOLD;
+      const inputRate = LUNA_TEXT_INPUT_USD_PER_MILLION * (longContext ? 2 : 1);
+      const outputRate = LUNA_TEXT_OUTPUT_USD_PER_MILLION * (longContext ? 1.5 : 1);
+      return (
+        (usage.promptTokens / 1_000_000) * inputRate +
+        (usage.completionTokens / 1_000_000) * outputRate
+      );
     }
 
     const hasDetailedTokenBreakdown =
@@ -1626,22 +1669,34 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       usage.completionAudioTokens > 0;
 
     if (!hasDetailedTokenBreakdown) {
+      const transcriptionCost =
+        ((message.transcriptionDurationSeconds ?? 0) / 60) * GPT_TRANSCRIBE_USD_PER_MINUTE;
       return (
-        (usage.promptTokens / 1_000_000) * AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION +
-        (usage.completionTokens / 1_000_000) * AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION
+        (usage.promptTokens / 1_000_000) * REALTIME_MINI_TEXT_INPUT_USD_PER_MILLION +
+        (usage.completionTokens / 1_000_000) * REALTIME_MINI_TEXT_OUTPUT_USD_PER_MILLION +
+        transcriptionCost
       );
     }
 
     const promptTextCost =
-      (usage.promptTextTokens / 1_000_000) * AUDIO_MODEL_TEXT_INPUT_USD_PER_MILLION;
+      (usage.promptTextTokens / 1_000_000) * REALTIME_MINI_TEXT_INPUT_USD_PER_MILLION;
     const promptAudioCost =
-      (usage.promptAudioTokens / 1_000_000) * AUDIO_MODEL_AUDIO_INPUT_USD_PER_MILLION;
+      (usage.promptAudioTokens / 1_000_000) * REALTIME_MINI_AUDIO_INPUT_USD_PER_MILLION;
     const completionTextCost =
-      (usage.completionTextTokens / 1_000_000) * AUDIO_MODEL_TEXT_OUTPUT_USD_PER_MILLION;
+      (usage.completionTextTokens / 1_000_000) * REALTIME_MINI_TEXT_OUTPUT_USD_PER_MILLION;
     const completionAudioCost =
-      (usage.completionAudioTokens / 1_000_000) * AUDIO_MODEL_AUDIO_OUTPUT_USD_PER_MILLION;
+      (usage.completionAudioTokens / 1_000_000) * REALTIME_MINI_AUDIO_OUTPUT_USD_PER_MILLION;
 
-    return promptTextCost + promptAudioCost + completionTextCost + completionAudioCost;
+    const transcriptionCost =
+      ((message.transcriptionDurationSeconds ?? 0) / 60) * GPT_TRANSCRIBE_USD_PER_MINUTE;
+
+    return (
+      promptTextCost +
+      promptAudioCost +
+      completionTextCost +
+      completionAudioCost +
+      transcriptionCost
+    );
   }
 
   private async tryLoadConversation(conversationId: string): Promise<void> {

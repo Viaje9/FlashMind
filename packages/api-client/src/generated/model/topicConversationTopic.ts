@@ -28,8 +28,5 @@ export interface TopicConversationTopic {
    * 主題建立時間
    */
   createdAt: string;
-  /**
-   * 主題更新時間
-   */
   updatedAt: string;
 }

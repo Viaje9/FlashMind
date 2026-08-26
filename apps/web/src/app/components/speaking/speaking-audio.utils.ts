@@ -51,7 +51,7 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 
 export async function blobToWavBlob(blob: Blob): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
-  const audioContext = new AudioContext({ sampleRate: 16000 });
+  const audioContext = new AudioContext({ sampleRate: 24000 });
 
   try {
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);

@@ -5,13 +5,15 @@ import {
   type SpeakingAssistantMessage,
 } from '@flashmind/api-client';
 import { firstValueFrom } from 'rxjs';
-import { base64ToBlob, blobToWavBlob } from './speaking-audio.utils';
+import { blobToWavBlob } from './speaking-audio.utils';
 import { SpeakingAudioPlayerService } from './speaking-audio-player.service';
+import { SpeakingRealtimeService } from './speaking-realtime.service';
 import {
   SPEAKING_HISTORY_LIMIT_BYTES,
   createSelectionTranslationCacheKey,
   createConversationRecord,
   createSpeakingId,
+  formatSpeakingReviewSummary,
   normalizeSelectionTranslationText,
   toSpeakingHistory,
   updateConversationFromMessages,
@@ -39,6 +41,7 @@ export class SpeakingStore {
   private readonly speakingApi = inject(SpeakingApiService);
   private readonly repository = inject(SpeakingRepository);
   private readonly audioPlayer = inject(SpeakingAudioPlayerService);
+  private readonly realtime = inject(SpeakingRealtimeService);
   private readonly skipLoadingContext = new HttpContext().set(SKIP_LOADING, true);
 
   private readonly state = signal<SpeakingStoreState>({
@@ -87,6 +90,7 @@ export class SpeakingStore {
   async startNewConversation(): Promise<void> {
     const assistantMessages = this.state().assistantMessages;
     this.audioPlayer.stop();
+    this.realtime.disconnect();
     this.retryPayload = null;
     this.state.set({
       conversationId: createSpeakingId(),
@@ -103,6 +107,7 @@ export class SpeakingStore {
   }
 
   async loadConversation(conversationId: string): Promise<boolean> {
+    this.realtime.disconnect();
     this.state.update((state) => ({ ...state, loadingConversation: true, error: null }));
 
     try {
@@ -130,6 +135,35 @@ export class SpeakingStore {
       }));
       return false;
     }
+  }
+
+  async prepareRealtimeSession(): Promise<void> {
+    const current = this.state();
+    const conversationId = current.conversationId ?? createSpeakingId();
+    if (!current.conversationId) {
+      this.state.update((state) => ({ ...state, conversationId }));
+    }
+
+    const settings = this.repository.loadSettings();
+    this.speakingSettingsState.set(settings);
+    try {
+      await this.realtime.connect({
+        conversationId,
+        settings,
+        history: current.messages,
+      });
+    } catch (error) {
+      console.error('[Speaking] Realtime request failed', error);
+      this.state.update((state) => ({
+        ...state,
+        error: this.resolveSpeakingErrorMessage(error),
+      }));
+      throw error;
+    }
+  }
+
+  disconnectRealtimeSession(): void {
+    this.realtime.disconnect();
   }
 
   async sendAudioMessage(audioBlob: Blob): Promise<void> {
@@ -228,7 +262,7 @@ export class SpeakingStore {
       const response = await firstValueFrom(
         this.speakingApi.summarizeSpeakingConversation({ history }),
       );
-      const summaryText = response.data.summary.trim();
+      const summaryText = formatSpeakingReviewSummary(response.data).trim();
 
       if (!summaryText) {
         throw new Error('summary empty');
@@ -254,6 +288,12 @@ export class SpeakingStore {
       }));
 
       await this.repository.saveMessage(summaryMessage);
+      const updatedSettings: SpeakingSettings = {
+        ...this.repository.loadSettings(),
+        nextPractice: response.data.nextPractice,
+      };
+      this.repository.saveSettings(updatedSettings);
+      this.speakingSettingsState.set(updatedSettings);
       await this.persistConversation(conversationId, nextMessages, {
         title: response.data.title,
         summary: response.data.summary,
@@ -523,32 +563,20 @@ export class SpeakingStore {
     this.speakingSettingsState.set(settings);
 
     try {
-      const history = await toSpeakingHistory(
-        payload.historyBefore,
-        this.repository.getAudioBase64.bind(this.repository),
-      );
+      await this.realtime.connect({
+        conversationId: payload.conversationId,
+        settings,
+        history: payload.historyBefore,
+      });
+      const response = await this.realtime.sendTurn(payload.audioBlob);
 
-      const response = await firstValueFrom(
-        this.speakingApi.createSpeakingAudioReply(
-          payload.audioBlob,
-          JSON.stringify(history),
-          settings.voice,
-          settings.systemPrompt.trim() || undefined,
-          settings.memory.trim() || undefined,
-          settings.autoMemoryEnabled ? 'true' : 'false',
-          undefined,
-          undefined,
-          { context: this.skipLoadingContext },
-        ),
-      );
-
-      const transcript = response.data.transcript.trim();
+      const transcript = response.assistantTranscript.trim();
       if (!transcript) {
         throw new Error('assistant transcript empty');
       }
 
       const assistantMessageId = createSpeakingId();
-      const assistantAudioBlob = base64ToBlob(response.data.audioBase64);
+      const assistantAudioBlob = response.assistantAudio;
       const assistantAudioKey = await this.repository.saveAudioBlob({
         conversationId: payload.conversationId,
         messageId: assistantMessageId,
@@ -571,20 +599,31 @@ export class SpeakingStore {
         audioBlobKey: assistantAudioKey,
         audioMimeType: assistantAudioBlob.type || 'audio/wav',
         createdAt: new Date().toISOString(),
-        usage: response.data.usage,
+        usage: response.usage,
+        transcriptionDurationSeconds: response.transcriptionDurationSeconds,
       };
+
+      if (response.memoryUpdate?.memory) {
+        const updatedSettings = { ...settings, memory: response.memoryUpdate.memory };
+        this.repository.saveSettings(updatedSettings);
+        this.speakingSettingsState.set(updatedSettings);
+      }
 
       const stateMessages = this.state().messages;
       const userExists = stateMessages.some((item) => item.id === payload.userMessageId);
       const ensuredMessages = userExists
-        ? stateMessages
+        ? stateMessages.map((item) =>
+            item.id === payload.userMessageId
+              ? { ...item, text: response.userTranscript.trim() }
+              : item,
+          )
         : [
             ...stateMessages,
             {
               id: payload.userMessageId,
               conversationId: payload.conversationId,
               role: 'user' as const,
-              text: '',
+              text: response.userTranscript.trim(),
               audioBlobKey: payload.userAudioKey,
               audioMimeType: payload.audioBlob.type || 'audio/webm',
               createdAt: new Date().toISOString(),
@@ -603,20 +642,15 @@ export class SpeakingStore {
       }));
 
       await this.repository.saveMessage(assistantMessage);
+      const updatedUserMessage = nextMessages.find((item) => item.id === payload.userMessageId);
+      if (updatedUserMessage) {
+        await this.repository.saveMessage(updatedUserMessage);
+      }
       await this.persistConversation(payload.conversationId, nextMessages);
       await this.repository.enforceConversationStorageLimit(
         SPEAKING_HISTORY_LIMIT_BYTES,
         payload.conversationId,
       );
-
-      if (response.data.memoryUpdate?.memory?.trim()) {
-        const nextSettings: SpeakingSettings = {
-          ...settings,
-          memory: response.data.memoryUpdate.memory.trim(),
-        };
-        this.repository.saveSettings(nextSettings);
-        this.speakingSettingsState.set(nextSettings);
-      }
 
       this.retryPayload = null;
 
@@ -690,6 +724,15 @@ export class SpeakingStore {
   }
 
   private resolveSpeakingErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      if (error.message.includes('WAV PCM16') || error.message.includes('WAV 找不到')) {
+        return '錄音轉換失敗，請重新錄音後再送出。';
+      }
+      if (error.message.includes('WebSocket') || error.message.includes('Realtime')) {
+        return error.message;
+      }
+    }
+
     const httpError = error as HttpErrorResponse | undefined;
     const status = httpError?.status;
 

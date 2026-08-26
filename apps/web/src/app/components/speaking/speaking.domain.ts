@@ -1,6 +1,8 @@
 import {
   SpeakingVoice,
   SpeakingChatHistoryItem,
+  type SpeakingNextPractice,
+  type SpeakingSummaryResult,
   type SpeakingTokenUsage,
 } from '@flashmind/api-client';
 
@@ -18,6 +20,7 @@ export interface SpeakingMessage {
   audioBase64?: string;
   createdAt: string;
   usage?: SpeakingTokenUsage;
+  transcriptionDurationSeconds?: number;
 }
 
 export interface SpeakingConversation {
@@ -45,6 +48,7 @@ export interface SpeakingSettings {
   voice: SpeakingVoice;
   memory: string;
   autoMemoryEnabled: boolean;
+  nextPractice?: SpeakingNextPractice;
 }
 
 export interface SpeakingStoreState {
@@ -85,29 +89,115 @@ export type SpeakingSelectionTranslationResult =
 
 export const SPEAKING_HISTORY_LIMIT_BYTES = 200 * 1024 * 1024;
 
-export const SPEAKING_DEFAULT_SYSTEM_PROMPT = `You are a friendly and patient English conversation partner for a CEFR A2 learner.
-Your job is to help the user practice speaking English with simple, clear language.
+export const SPEAKING_DEFAULT_SYSTEM_PROMPT = `You are a natural, friendly English conversation partner for a CEFR B1 learner.
+The live session is a real conversation, not a lesson, correction drill, or vocabulary test.
 
 Guidelines:
-- Respond naturally, as in a real conversation (do not sound like a textbook)
-- Keep your reply short: 1-3 sentences total
-- Use A2-level words and grammar (present simple, present continuous, past simple, "be going to")
-- Prefer common daily topics: work, family, food, hobbies, travel, routines
-- Avoid idioms, slang, phrasal verbs with rare meanings, and complex clauses
-- Keep each sentence short and clear (about 6-12 words when possible)
-- If the user makes a mistake, give one gentle correction first, then continue naturally
-- After your reply, ask one simple follow-up question to keep the conversation going
-- Be warm and encouraging, but do not use long explanations unless the user asks`;
+- Respond to the user's meaning first, like a thoughtful friend
+- Keep replies concise and natural, usually 1-3 sentences
+- Do not ask a question on every turn; ask at most one when it naturally moves the conversation forward
+- If the user's English is understandable, do not interrupt with corrections
+- Give language help only when the user explicitly asks for it
+- If the meaning is unclear, clarify it as part of the conversation without turning into a teacher
+- Any target or recall vocabulary is private background context: never quiz the user, list the words, or force them into the conversation
+- If the user changes topic, follow their topic naturally`;
 
 export const SPEAKING_DEFAULT_SETTINGS: SpeakingSettings = {
   autoPlayVoice: true,
   showTranscript: true,
   autoTranslate: false,
   systemPrompt: '',
-  voice: SpeakingVoice.Nova,
+  voice: SpeakingVoice.Marin,
   memory: '',
   autoMemoryEnabled: true,
+  nextPractice: undefined,
 };
+
+export function formatSpeakingReviewSummary(
+  result: Pick<
+    SpeakingSummaryResult,
+    'summary' | 'review' | 'actualUses' | 'recommendations' | 'nextPractice'
+  >,
+): string {
+  const sections: string[] = [];
+  const summary = result.summary.trim();
+  const review = result.review.trim();
+
+  if (summary) sections.push(summary);
+  if (review) sections.push(`練習回顧\n${review}`);
+  if (result.actualUses.length > 0) {
+    sections.push(
+      `這次實際使用\n${result.actualUses
+        .map((item) => `• ${item.term}（${item.zhMeaning}）`)
+        .join('\n')}`,
+    );
+  }
+  if (result.recommendations.length > 0) {
+    sections.push(
+      `下次可以試試\n${result.recommendations
+        .map((item) => `• ${item.term}（${item.zhMeaning}）`)
+        .join('\n')}`,
+    );
+  }
+  if (result.nextPractice.topic.trim()) {
+    sections.push(`下次主題\n${result.nextPractice.topic.trim()}`);
+  }
+
+  return sections.join('\n\n');
+}
+
+export interface SpeakingReviewSummaryView {
+  summary: string;
+  review: string;
+  actualUses: string[];
+  recommendations: string[];
+  nextTopic: string;
+}
+
+export function parseSpeakingReviewSummary(text: string): SpeakingReviewSummaryView {
+  type Section = 'summary' | 'review' | 'actualUses' | 'recommendations' | 'nextTopic';
+
+  const view: SpeakingReviewSummaryView = {
+    summary: '',
+    review: '',
+    actualUses: [],
+    recommendations: [],
+    nextTopic: '',
+  };
+  const textSections: Record<'summary' | 'review' | 'nextTopic', string[]> = {
+    summary: [],
+    review: [],
+    nextTopic: [],
+  };
+  const headingSections: Record<string, Section> = {
+    練習回顧: 'review',
+    這次實際使用: 'actualUses',
+    下次可以試試: 'recommendations',
+    下次主題: 'nextTopic',
+  };
+  let section: Section = 'summary';
+
+  for (const line of text.replaceAll('\r\n', '\n').split('\n')) {
+    const trimmed = line.trim();
+    const nextSection = headingSections[trimmed];
+    if (nextSection) {
+      section = nextSection;
+      continue;
+    }
+
+    if (section === 'actualUses' || section === 'recommendations') {
+      if (trimmed) view[section].push(trimmed.replace(/^•\s*/, ''));
+      continue;
+    }
+
+    textSections[section].push(line);
+  }
+
+  view.summary = textSections.summary.join('\n').trim();
+  view.review = textSections.review.join('\n').trim();
+  view.nextTopic = textSections.nextTopic.join('\n').trim();
+  return view;
+}
 
 export function createSpeakingId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -204,6 +294,15 @@ export async function toSpeakingHistory(
       continue;
     }
 
+    const text = message.text?.trim();
+    if (text) {
+      history.push({
+        role: SpeakingChatHistoryItem.RoleEnum.User,
+        text,
+      });
+      continue;
+    }
+
     let audioBase64 = message.audioBase64?.trim() || '';
     if (!audioBase64 && message.audioBlobKey) {
       audioBase64 = (await resolveAudioBase64(message.audioBlobKey)) ?? '';
@@ -215,14 +314,6 @@ export async function toSpeakingHistory(
         audioBase64,
       });
       continue;
-    }
-
-    const text = message.text?.trim();
-    if (text) {
-      history.push({
-        role: SpeakingChatHistoryItem.RoleEnum.User,
-        text,
-      });
     }
   }
 

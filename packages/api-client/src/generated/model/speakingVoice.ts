@@ -16,11 +16,11 @@ export const SpeakingVoice = {
   Ash: "ash",
   Ballad: "ballad",
   Coral: "coral",
+  Cedar: "cedar",
   Echo: "echo",
-  Fable: "fable",
-  Nova: "nova",
-  Onyx: "onyx",
+  Marin: "marin",
   Sage: "sage",
   Shimmer: "shimmer",
+  Verse: "verse",
 } as const;
 export type SpeakingVoice = (typeof SpeakingVoice)[keyof typeof SpeakingVoice];

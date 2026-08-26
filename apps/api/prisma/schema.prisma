@@ -26,6 +26,7 @@ model User {
   collectionItems         CollectionItem[]
   collectionChatSessions  CollectionChatSession[]
   topicConversationTopics TopicConversationTopic[]
+  targetVocabulary        TargetVocabulary[]
 }
 
 model OAuthAccount {
@@ -123,8 +124,41 @@ model Card {
   reverseLastReview    DateTime?
   reverseLearningStep  Int       @default(0)
 
-  reviewLogs      ReviewLog[]
-  collectionLinks CollectionItemCard[]
+  reviewLogs            ReviewLog[]
+  collectionLinks       CollectionItemCard[]
+  targetVocabularyLinks TargetVocabulary[]
+}
+
+enum TargetVocabularyStatus {
+  UNSEEN
+  PRACTICING
+  USED
+  ADDED
+}
+
+model TargetVocabulary {
+  id                   String                 @id @default(cuid())
+  userId               String
+  term                 String
+  normalizedTerm       String
+  zhMeaning            String
+  status               TargetVocabularyStatus @default(UNSEEN)
+  recommendationCount  Int                    @default(0)
+  useCount             Int                    @default(0)
+  expressionContext    String?                @db.Text
+  naturalSentence      String?                @db.Text
+  recommendationReason String?                @db.Text
+  addedCardId          String?
+  addedAt              DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addedCard Card? @relation(fields: [addedCardId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, normalizedTerm])
+  @@index([userId, status, createdAt])
+  @@index([addedCardId])
 }
 
 model CardMeaning {

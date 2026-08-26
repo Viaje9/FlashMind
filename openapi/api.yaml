@@ -819,6 +819,128 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ============================================================
+  # Target vocabulary
+  # ============================================================
+  /target-vocabulary:
+    get:
+      operationId: listTargetVocabulary
+      tags: [TargetVocabulary]
+      summary: 取得目標單字
+      description: 取得目前使用者的目標單字，支援狀態與關鍵字篩選。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TargetVocabularyStatus"
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetVocabularyListResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /target-vocabulary/import:
+    post:
+      operationId: importTargetVocabulary
+      tags: [TargetVocabulary]
+      summary: 匯入目標單字
+      description: 批次匯入目標單字，略過目標庫或使用者牌組中已存在的內容。
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportTargetVocabularyRequest"
+      responses:
+        "201":
+          description: 匯入完成
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportTargetVocabularyResponse"
+        "400":
+          description: 輸入資料格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /target-vocabulary/{id}/add-to-deck:
+    post:
+      operationId: addTargetVocabularyToDeck
+      tags: [TargetVocabulary]
+      summary: 將已使用的目標單字加入牌組
+      description: 建立或連結使用者既有的同字卡，成功後將目標單字標記為已加入。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTargetVocabularyToDeckRequest"
+      responses:
+        "201":
+          description: 已建立或連結單字卡
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddTargetVocabularyToDeckResponse"
+        "400":
+          description: 輸入資料格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到目標單字或牌組
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 目標單字尚未在 Speaking 實際使用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ============================================================
   # Collections
   # ============================================================
   /collections:
@@ -2874,6 +2996,8 @@ components:
         - zhMeaning
         - enExample
         - zhExample
+        - unfamiliarWords
+        - learningWords
         - sortOrder
       properties:
         zhMeaning:
@@ -3262,6 +3386,139 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/ImportCardsResult"
+
+    # ============================================================
+    # Target vocabulary
+    # ============================================================
+    TargetVocabularyStatus:
+      type: string
+      enum: [UNSEEN, PRACTICING, USED, ADDED]
+
+    TargetVocabularyItem:
+      type: object
+      required:
+        - id
+        - term
+        - normalizedTerm
+        - zhMeaning
+        - status
+        - recommendationCount
+        - useCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        term:
+          type: string
+          example: cooperation
+        normalizedTerm:
+          type: string
+          example: cooperation
+        zhMeaning:
+          type: string
+          example: 合作；協作
+        status:
+          $ref: "#/components/schemas/TargetVocabularyStatus"
+        recommendationCount:
+          type: integer
+          minimum: 0
+        useCount:
+          type: integer
+          minimum: 0
+        expressionContext:
+          type: string
+          nullable: true
+        naturalSentence:
+          type: string
+          nullable: true
+        recommendationReason:
+          type: string
+          nullable: true
+        addedCardId:
+          type: string
+          nullable: true
+        addedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TargetVocabularyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TargetVocabularyItem"
+
+    ImportTargetVocabularyWord:
+      type: object
+      required: [term, zhMeaning]
+      properties:
+        term:
+          type: string
+        zhMeaning:
+          type: string
+
+    ImportTargetVocabularyRequest:
+      type: object
+      required: [words]
+      properties:
+        words:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ImportTargetVocabularyWord"
+
+    ImportTargetVocabularyResult:
+      type: object
+      required: [total, added, alreadyInTargets, alreadyInCards]
+      properties:
+        total:
+          type: integer
+        added:
+          type: integer
+        alreadyInTargets:
+          type: integer
+        alreadyInCards:
+          type: integer
+
+    ImportTargetVocabularyResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/ImportTargetVocabularyResult"
+
+    AddTargetVocabularyToDeckRequest:
+      type: object
+      required: [deckId, term, zhMeaning]
+      properties:
+        deckId:
+          type: string
+        term:
+          type: string
+          maxLength: 200
+        zhMeaning:
+          type: string
+          maxLength: 1000
+        naturalSentence:
+          type: string
+          maxLength: 2000
+
+    AddTargetVocabularyToDeckResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/TargetVocabularyItem"
 
     # ============================================================
     # Collections
@@ -4022,9 +4279,10 @@ components:
     # ============================================================
     SpeakingVoice:
       type: string
-      enum: [alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer]
+      enum:
+        [alloy, ash, ballad, coral, cedar, echo, marin, sage, shimmer, verse]
       description: OpenAI 語音角色
-      example: nova
+      example: marin
 
     SpeakingChatMessage:
       type: object
@@ -4254,6 +4512,10 @@ components:
       required:
         - title
         - summary
+        - review
+        - actualUses
+        - recommendations
+        - nextPractice
         - usage
       properties:
         title:
@@ -4264,8 +4526,64 @@ components:
           type: string
           description: 對話摘要（英文第一人稱）
           example: I jogged in the morning and then went to work.
+        review:
+          type: string
+          description: 本次口說練習回顧（繁中）
+        actualUses:
+          type: array
+          description: 使用者在本次對話中實際使用的目標單字
+          items:
+            $ref: "#/components/schemas/SpeakingReviewUse"
+        recommendations:
+          type: array
+          description: 依本次對話推薦下次可嘗試使用的目標單字
+          items:
+            $ref: "#/components/schemas/SpeakingReviewRecommendation"
+        nextPractice:
+          $ref: "#/components/schemas/SpeakingNextPractice"
         usage:
           $ref: "#/components/schemas/SpeakingTokenUsage"
+
+    SpeakingReviewUse:
+      type: object
+      required: [term, zhMeaning, expressionContext, naturalSentence]
+      properties:
+        term:
+          type: string
+        zhMeaning:
+          type: string
+        expressionContext:
+          type: string
+        naturalSentence:
+          type: string
+
+    SpeakingReviewRecommendation:
+      allOf:
+        - $ref: "#/components/schemas/SpeakingReviewUse"
+        - type: object
+          required: [recommendationReason]
+          properties:
+            recommendationReason:
+              type: string
+
+    SpeakingNextPractice:
+      type: object
+      required: [topic, speakingGoal, guidingQuestions, recallTargets]
+      properties:
+        topic:
+          type: string
+        speakingGoal:
+          type: string
+        guidingQuestions:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        recallTargets:
+          type: array
+          maxItems: 5
+          items:
+            type: string
 
     SpeakingSummarizeResponse:
       type: object

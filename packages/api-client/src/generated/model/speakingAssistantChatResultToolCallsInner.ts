@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+
 export interface SpeakingAssistantChatResultToolCallsInner {
   /**
    * 工具名稱
@@ -23,5 +24,5 @@ export interface SpeakingAssistantChatResultToolCallsInner {
   /**
    * 工具執行結果
    */
-  result?: object;
+  result?: any | null;
 }

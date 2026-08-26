@@ -1,0 +1,291 @@
+<div class="target-page min-h-screen pb-28">
+  <fm-page-header title="目標單字">
+    <fm-icon-button
+      class="fm-header-left"
+      variant="ghost"
+      [ariaLabel]="backNavigation.route === '/speaking' ? '返回語音練習' : '返回首頁'"
+      (click)="onBack()"
+      testId="target-vocabulary-back"
+    >
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </fm-icon-button>
+    <fm-icon-button
+      class="fm-header-right"
+      variant="ghost"
+      ariaLabel="匯入目標單字"
+      routerLink="/target-vocabulary/import"
+      testId="target-vocabulary-import-header"
+    >
+      <span class="material-symbols-outlined text-[22px]">upload_file</span>
+    </fm-icon-button>
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md px-4 pt-5">
+    @if (notice()) {
+      <div class="success-notice" role="status" data-testid="target-vocabulary-notice">
+        <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+        <span>{{ notice() }}</span>
+      </div>
+    }
+
+    <section class="mb-5 flex items-end justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">尚未進入每日複習</p>
+        <p class="mt-1 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
+          {{ counts().ALL }} <span class="text-base font-semibold text-slate-500">個目標</span>
+        </p>
+      </div>
+      <div class="target-orbit" aria-hidden="true"><span></span><i></i></div>
+    </section>
+
+    <nav class="status-tabs" aria-label="目標單字狀態">
+      @for (filter of filters; track filter.value) {
+        <button
+          type="button"
+          [class.is-active]="activeFilter() === filter.value"
+          (click)="setFilter(filter.value)"
+          [attr.data-testid]="'target-vocabulary-filter-' + filter.value.toLowerCase()"
+        >
+          <span>{{ filter.label }}</span
+          ><small>{{ counts()[filter.value] }}</small>
+        </button>
+      }
+    </nav>
+
+    <label class="search-box mt-4">
+      <span class="material-symbols-outlined" aria-hidden="true">search</span>
+      <span class="sr-only">搜尋目標單字</span>
+      <input
+        type="search"
+        placeholder="搜尋單字或中文意思"
+        [value]="query()"
+        (input)="onSearch($event)"
+        data-testid="target-vocabulary-search"
+      />
+    </label>
+
+    @if (ttsError()) {
+      <div class="audio-error" role="alert" data-testid="target-vocabulary-audio-error">
+        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <span>{{ ttsError() }}</span>
+        <button type="button" (click)="clearTtsError()" aria-label="關閉語音播放錯誤">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="empty-state" data-testid="target-vocabulary-loading">
+        <span class="material-symbols-outlined animate-pulse">hourglass_top</span>
+        <p>正在整理目標單字...</p>
+      </div>
+    } @else if (error()) {
+      <div class="empty-state text-red-400" data-testid="target-vocabulary-error">
+        <span class="material-symbols-outlined">error</span>
+        <p>{{ error() }}</p>
+      </div>
+    } @else if (visibleItems().length === 0) {
+      <div class="empty-state" data-testid="target-vocabulary-empty">
+        <span class="material-symbols-outlined">explore</span>
+        <h2>這裡還沒有單字</h2>
+        <p>
+          @if (counts().ALL === 0) {
+            匯入想學的單字，先從對話中和它們混熟。
+          } @else {
+            目前沒有符合這個狀態或搜尋條件的單字。
+          }
+        </p>
+        @if (counts().ALL === 0) {
+          <a routerLink="/target-vocabulary/import">匯入第一批目標單字</a>
+        }
+      </div>
+    } @else {
+      <section
+        class="mt-4 space-y-3"
+        aria-label="目標單字清單"
+        data-testid="target-vocabulary-list"
+      >
+        @for (item of visibleItems(); track item.id) {
+          <article class="word-card" [attr.data-testid]="'target-vocabulary-item-' + item.id">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="term-heading">
+                  <h2>{{ item.term }}</h2>
+                  <button
+                    type="button"
+                    class="audio-button"
+                    (click)="onPlayWordAudio(item.term)"
+                    [disabled]="isAudioLoading(item.term)"
+                    [class.is-playing]="isAudioPlaying(item.term)"
+                    [attr.aria-label]="
+                      isAudioPlaying(item.term)
+                        ? '暫停 ' + item.term + ' 單字發音'
+                        : '播放 ' + item.term + ' 單字發音'
+                    "
+                    [attr.title]="'Google 播放單字：' + item.term"
+                    [attr.data-testid]="'target-vocabulary-play-word-' + item.id"
+                  >
+                    <span
+                      class="material-symbols-outlined"
+                      [class.animate-spin]="isAudioLoading(item.term)"
+                      aria-hidden="true"
+                    >
+                      @if (isAudioLoading(item.term)) {
+                        progress_activity
+                      } @else if (isAudioPlaying(item.term)) {
+                        pause
+                      } @else {
+                        volume_up
+                      }
+                    </span>
+                  </button>
+                </div>
+                <p class="meaning">{{ item.zhMeaning }}</p>
+              </div>
+              <span class="status-chip" [attr.data-status]="item.status">
+                @switch (item.status) {
+                  @case ('UNSEEN') {
+                    待接觸
+                  }
+                  @case ('PRACTICING') {
+                    待練習
+                  }
+                  @case ('USED') {
+                    已使用
+                  }
+                  @case ('ADDED') {
+                    已加入
+                  }
+                }
+              </span>
+            </div>
+
+            @if (item.status === 'PRACTICING') {
+              <div class="word-details">
+                @if (item.expressionContext) {
+                  <div>
+                    <span>可以表達</span>
+                    <p>{{ item.expressionContext }}</p>
+                  </div>
+                }
+                @if (item.naturalSentence) {
+                  <div>
+                    <div class="detail-heading">
+                      <span>自然句子</span>
+                      <button
+                        type="button"
+                        class="sentence-audio-button"
+                        (click)="onPlaySentenceAudio(item.naturalSentence)"
+                        [disabled]="isAudioLoading(item.naturalSentence)"
+                        [class.is-playing]="isAudioPlaying(item.naturalSentence)"
+                        [attr.aria-label]="
+                          isAudioPlaying(item.naturalSentence)
+                            ? '暫停自然句子發音'
+                            : '播放自然句子發音'
+                        "
+                        title="Microsoft 播放句子"
+                        [attr.data-testid]="'target-vocabulary-play-sentence-' + item.id"
+                      >
+                        <span
+                          class="material-symbols-outlined"
+                          [class.animate-spin]="isAudioLoading(item.naturalSentence)"
+                          aria-hidden="true"
+                        >
+                          @if (isAudioLoading(item.naturalSentence)) {
+                            progress_activity
+                          } @else if (isAudioPlaying(item.naturalSentence)) {
+                            pause
+                          } @else {
+                            volume_up
+                          }
+                        </span>
+                      </button>
+                    </div>
+                    <p class="english">{{ item.naturalSentence }}</p>
+                  </div>
+                }
+                @if (item.recommendationReason) {
+                  <div>
+                    <span>推薦原因</span>
+                    <p>{{ item.recommendationReason }}</p>
+                  </div>
+                }
+              </div>
+            }
+            @if (item.status === 'USED') {
+              <div class="word-details">
+                @if (item.expressionContext) {
+                  <div>
+                    <span>當時想表達</span>
+                    <p>{{ item.expressionContext }}</p>
+                  </div>
+                }
+                @if (item.naturalSentence) {
+                  <div>
+                    <div class="detail-heading">
+                      <span>更自然的說法</span>
+                      <button
+                        type="button"
+                        class="sentence-audio-button"
+                        (click)="onPlaySentenceAudio(item.naturalSentence)"
+                        [disabled]="isAudioLoading(item.naturalSentence)"
+                        [class.is-playing]="isAudioPlaying(item.naturalSentence)"
+                        [attr.aria-label]="
+                          isAudioPlaying(item.naturalSentence)
+                            ? '暫停自然句子發音'
+                            : '播放自然句子發音'
+                        "
+                        title="Microsoft 播放句子"
+                        [attr.data-testid]="'target-vocabulary-play-sentence-' + item.id"
+                      >
+                        <span
+                          class="material-symbols-outlined"
+                          [class.animate-spin]="isAudioLoading(item.naturalSentence)"
+                          aria-hidden="true"
+                        >
+                          @if (isAudioLoading(item.naturalSentence)) {
+                            progress_activity
+                          } @else if (isAudioPlaying(item.naturalSentence)) {
+                            pause
+                          } @else {
+                            volume_up
+                          }
+                        </span>
+                      </button>
+                    </div>
+                    <p class="english">{{ item.naturalSentence }}</p>
+                  </div>
+                }
+              </div>
+              <div class="word-actions">
+                <button
+                  type="button"
+                  (click)="openAddToDeck(item)"
+                  [attr.aria-label]="'將 ' + item.term + ' 加入牌組'"
+                  [attr.data-testid]="'target-vocabulary-add-to-deck-' + item.id"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">library_add</span>
+                  加入牌組
+                </button>
+              </div>
+            }
+            @if (item.status === 'USED' || item.status === 'ADDED') {
+              <footer>
+                <span>AI 推薦 {{ item.recommendationCount }} 次</span
+                ><span>Speaking 使用 {{ item.useCount }} 次</span>
+              </footer>
+            }
+          </article>
+        }
+      </section>
+    }
+  </main>
+
+  <a
+    class="import-fab"
+    routerLink="/target-vocabulary/import"
+    aria-label="匯入目標單字"
+    data-testid="target-vocabulary-import-fab"
+    ><span class="material-symbols-outlined">add</span></a
+  >
+</div>

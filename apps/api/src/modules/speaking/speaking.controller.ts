@@ -37,12 +37,12 @@ const SPEAKING_VOICES: readonly SpeakingVoice[] = [
   'ash',
   'ballad',
   'coral',
+  'cedar',
   'echo',
-  'fable',
-  'nova',
-  'onyx',
+  'marin',
   'sage',
   'shimmer',
+  'verse',
 ] as const;
 
 @Catch(BadRequestException)
@@ -144,9 +144,13 @@ export class SpeakingController {
   }
 
   @Post('summarize')
-  async summarize(@Body() dto: SpeakingSummarizeDto) {
+  async summarize(
+    @Body() dto: SpeakingSummarizeDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const result = await this.speakingService.summarizeConversation(
       dto.history ?? [],
+      req.user.id,
     );
     return { data: result };
   }

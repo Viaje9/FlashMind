@@ -7,22 +7,22 @@ export class SpeakingVoicePreviewDto {
     'ash',
     'ballad',
     'coral',
+    'cedar',
     'echo',
-    'fable',
-    'nova',
-    'onyx',
+    'marin',
     'sage',
     'shimmer',
+    'verse',
   ])
   voice?:
     | 'alloy'
     | 'ash'
     | 'ballad'
     | 'coral'
+    | 'cedar'
     | 'echo'
-    | 'fable'
-    | 'nova'
-    | 'onyx'
+    | 'marin'
     | 'sage'
-    | 'shimmer';
+    | 'shimmer'
+    | 'verse';
 }

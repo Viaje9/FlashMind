@@ -1,0 +1,177 @@
+<div class="min-h-screen pb-20">
+  <fm-page-header title="匯入目標單字" layout="center">
+    <fm-icon-button
+      class="fm-header-left"
+      variant="ghost"
+      ariaLabel="返回目標單字"
+      routerLink="/target-vocabulary"
+      testId="target-vocabulary-import-back"
+      ><span class="material-symbols-outlined text-[22px]">arrow_back</span></fm-icon-button
+    >
+  </fm-page-header>
+
+  <main class="mx-auto w-full max-w-md space-y-5 px-4 pt-5">
+    <ol class="stepper" aria-label="匯入進度">
+      <li [class.active]="step() === 'input'" [class.done]="step() !== 'input'">
+        <b>
+          @if (step() === 'input') {
+            1
+          } @else {
+            ✓
+          }</b
+        ><span>輸入</span>
+      </li>
+      <i></i>
+      <li [class.active]="step() === 'preview'" [class.done]="step() === 'result'">
+        <b>
+          @if (step() === 'result') {
+            ✓
+          } @else {
+            2
+          }</b
+        ><span>預覽</span>
+      </li>
+      <i></i>
+      <li [class.active]="step() === 'result'"><b>3</b><span>完成</span></li>
+    </ol>
+
+    @if (step() === 'input') {
+      <section class="space-y-4">
+        <div class="intro-card">
+          <span class="material-symbols-outlined">route</span>
+          <div>
+            <h1>先放進目標清單</h1>
+            <p>這些單字不會進入牌組或每日複習；之後可以在對話中慢慢熟悉。</p>
+          </div>
+        </div>
+        <div class="example-card">
+          <div class="mb-2 flex items-center justify-between">
+            <span>JSON 格式範例</span
+            ><button
+              type="button"
+              (click)="copyExample()"
+              data-testid="target-vocabulary-import-copy"
+            >
+              複製
+            </button>
+          </div>
+          <pre>{{ exampleJson }}</pre>
+        </div>
+        <label class="block space-y-2"
+          ><span class="text-sm font-bold text-slate-800 dark:text-slate-100">貼上 JSON</span
+          ><textarea
+            [value]="jsonInput()"
+            (input)="onJsonInput($event)"
+            placeholder="在此貼上目標單字 JSON..."
+            data-testid="target-vocabulary-import-json"
+          ></textarea>
+        </label>
+        @if (parseError()) {
+          <p class="message error" data-testid="target-vocabulary-import-parse-error">
+            <span class="material-symbols-outlined">error</span>{{ parseError() }}
+          </p>
+        }
+        @if (canPreview()) {
+          <p class="message success">
+            <span class="material-symbols-outlined">check_circle</span>已解析
+            {{ words().length }} 個項目
+          </p>
+        }
+        <div class="flex items-center justify-between gap-3 pt-2">
+          <label class="file-button"
+            ><span class="material-symbols-outlined">upload_file</span>選擇檔案<input
+              class="sr-only"
+              type="file"
+              accept=".json,application/json"
+              (change)="onFileSelect($event)"
+              data-testid="target-vocabulary-import-file"
+          /></label>
+          <fm-button
+            variant="primary"
+            [disabled]="!canPreview()"
+            (click)="showPreview()"
+            testId="target-vocabulary-import-preview"
+            >預覽內容</fm-button
+          >
+        </div>
+      </section>
+    }
+
+    @if (step() === 'preview') {
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            {{ validWords().length }} 個可匯入
+            @if (invalidWords().length) {
+              ，{{ invalidWords().length }} 個需修正
+            }
+          </p>
+          <button class="link-button" type="button" (click)="backToInput()">重新輸入</button>
+        </div>
+        <div
+          class="max-h-[55vh] space-y-2 overflow-y-auto pr-1"
+          data-testid="target-vocabulary-import-preview-list"
+        >
+          @for (word of words(); track $index) {
+            <article class="preview-word" [class.invalid]="word.error">
+              <div>
+                <h2>{{ word.term }}</h2>
+                <p>{{ word.zhMeaning || '—' }}</p>
+              </div>
+              @if (word.error) {
+                <span>{{ word.error }}</span>
+              } @else {
+                <span class="material-symbols-outlined valid">check_circle</span>
+              }
+            </article>
+          }
+        </div>
+        @if (importError()) {
+          <p class="message error">{{ importError() }}</p>
+        }
+        <fm-button
+          class="block w-full"
+          variant="primary"
+          [disabled]="!canImport()"
+          (click)="importWords()"
+          testId="target-vocabulary-import-confirm"
+        >
+          @if (importing()) {
+            匯入中...
+          } @else {
+            匯入 {{ validWords().length }} 個目標單字
+          }
+        </fm-button>
+      </section>
+    }
+
+    @if (step() === 'result' && result(); as summary) {
+      <section class="result-panel" data-testid="target-vocabulary-import-result">
+        <div class="result-check"><span class="material-symbols-outlined">check</span></div>
+        <h1>目標清單已更新</h1>
+        <p>新的單字已放進「待接觸」，不會影響每日牌組複習。</p>
+        <dl>
+          <div>
+            <dt>{{ summary.added }}</dt>
+            <dd>成功新增</dd>
+          </div>
+          <div>
+            <dt>{{ summary.alreadyInTargets }}</dt>
+            <dd>目標庫已有</dd>
+          </div>
+          <div>
+            <dt>{{ summary.alreadyInCards }}</dt>
+            <dd>牌組已有</dd>
+          </div>
+        </dl>
+        <fm-button
+          class="mt-6 block w-full"
+          variant="primary"
+          (click)="finish()"
+          testId="target-vocabulary-import-finish"
+          >查看目標單字</fm-button
+        >
+      </section>
+    }
+  </main>
+</div>

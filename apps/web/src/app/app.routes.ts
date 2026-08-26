@@ -95,6 +95,22 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'target-vocabulary/import',
+    loadComponent: () =>
+      import('./pages/target-vocabulary-import/target-vocabulary-import.component').then(
+        (module) => module.TargetVocabularyImportComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'target-vocabulary',
+    loadComponent: () =>
+      import('./pages/target-vocabulary/target-vocabulary.component').then(
+        (module) => module.TargetVocabularyComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'decks/:id/settings',
     loadComponent: () =>
       import('./pages/deck-settings/deck-settings.component').then(

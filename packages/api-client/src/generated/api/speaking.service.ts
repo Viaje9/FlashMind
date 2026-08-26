@@ -601,6 +601,130 @@ export class SpeakingService extends BaseService {
   }
 
   /**
+   * 串流口說 AI 助手對話
+   * 以 Server-Sent Events 串流回傳文字與工具調用事件。
+   * @endpoint post /speaking/assistant/chat/stream
+   * @param speakingAssistantChatRequest
+   * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+   * @param reportProgress flag to report request and response progress.
+   * @param options additional options
+   */
+  public streamSpeakingAssistant(
+    speakingAssistantChatRequest: SpeakingAssistantChatRequest,
+    observe?: "body",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "text/event-stream" | "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<string>;
+  public streamSpeakingAssistant(
+    speakingAssistantChatRequest: SpeakingAssistantChatRequest,
+    observe?: "response",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "text/event-stream" | "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpResponse<string>>;
+  public streamSpeakingAssistant(
+    speakingAssistantChatRequest: SpeakingAssistantChatRequest,
+    observe?: "events",
+    reportProgress?: boolean,
+    options?: {
+      httpHeaderAccept?: "text/event-stream" | "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<HttpEvent<string>>;
+  public streamSpeakingAssistant(
+    speakingAssistantChatRequest: SpeakingAssistantChatRequest,
+    observe: any = "body",
+    reportProgress: boolean = false,
+    options?: {
+      httpHeaderAccept?: "text/event-stream" | "application/json";
+      context?: HttpContext;
+      transferCache?: boolean;
+    },
+  ): Observable<any> {
+    if (
+      speakingAssistantChatRequest === null ||
+      speakingAssistantChatRequest === undefined
+    ) {
+      throw new Error(
+        "Required parameter speakingAssistantChatRequest was null or undefined when calling streamSpeakingAssistant.",
+      );
+    }
+
+    let localVarHeaders = this.defaultHeaders;
+
+    // authentication (cookieAuth) required
+
+    const localVarHttpHeaderAcceptSelected: string | undefined =
+      options?.httpHeaderAccept ??
+      this.configuration.selectHeaderAccept([
+        "text/event-stream",
+        "application/json",
+      ]);
+    if (localVarHttpHeaderAcceptSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Accept",
+        localVarHttpHeaderAcceptSelected,
+      );
+    }
+
+    const localVarHttpContext: HttpContext =
+      options?.context ?? new HttpContext();
+
+    const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+    // to determine the Content-Type header
+    const consumes: string[] = ["application/json"];
+    const httpContentTypeSelected: string | undefined =
+      this.configuration.selectHeaderContentType(consumes);
+    if (httpContentTypeSelected !== undefined) {
+      localVarHeaders = localVarHeaders.set(
+        "Content-Type",
+        httpContentTypeSelected,
+      );
+    }
+
+    let responseType_: "text" | "json" | "blob" = "json";
+    if (localVarHttpHeaderAcceptSelected) {
+      if (localVarHttpHeaderAcceptSelected.startsWith("text")) {
+        responseType_ = "text";
+      } else if (
+        this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)
+      ) {
+        responseType_ = "json";
+      } else {
+        responseType_ = "blob";
+      }
+    }
+
+    let localVarPath = `/speaking/assistant/chat/stream`;
+    const { basePath, withCredentials } = this.configuration;
+    return this.httpClient.request<string>(
+      "post",
+      `${basePath}${localVarPath}`,
+      {
+        context: localVarHttpContext,
+        body: speakingAssistantChatRequest,
+        responseType: <any>responseType_,
+        ...(withCredentials ? { withCredentials } : {}),
+        headers: localVarHeaders,
+        observe: observe,
+        ...(localVarTransferCache !== undefined
+          ? { transferCache: localVarTransferCache }
+          : {}),
+        reportProgress: reportProgress,
+      },
+    );
+  }
+
+  /**
    * 產生口說對話摘要
    * 依據對話歷史生成摘要與標題。
    * @endpoint post /speaking/summarize

@@ -93,11 +93,7 @@
 }
 
 .ai-avatar-playing {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-primary) 40%, white 60%),
-    var(--color-primary)
-  );
+  background: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
 }
@@ -121,11 +117,7 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 14%, rgb(241 245 249));
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--color-primary) 11%, rgb(255 255 255)),
-    color-mix(in srgb, var(--color-primary) 4%, rgb(255 255 255))
-  );
+  background: color-mix(in srgb, var(--color-primary) 7%, rgb(255 255 255));
   padding: 0.65rem 0.75rem;
   cursor: grab;
   touch-action: none;
@@ -258,11 +250,7 @@
   min-width: 4rem;
   border-radius: 9999px;
   border: 1px solid color-mix(in srgb, var(--color-primary) 42%, rgb(59 130 246));
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-primary) 95%, rgb(30 64 175)),
-    color-mix(in srgb, var(--color-primary) 80%, rgb(37 99 235))
-  );
+  background: color-mix(in srgb, var(--color-primary) 88%, rgb(30 64 175));
   padding: 0.38rem 0.9rem;
   font-size: 0.88rem;
   font-weight: 600;

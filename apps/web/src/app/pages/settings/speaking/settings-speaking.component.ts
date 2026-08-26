@@ -48,16 +48,16 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   private readonly router = inject(Router);
 
   readonly voiceOptions: ReadonlyArray<{ label: string; value: SpeakingVoice }> = [
-    { label: 'Nova', value: SpeakingVoice.Nova },
+    { label: 'Marin', value: SpeakingVoice.Marin },
     { label: 'Alloy', value: SpeakingVoice.Alloy },
     { label: 'Ash', value: SpeakingVoice.Ash },
     { label: 'Ballad', value: SpeakingVoice.Ballad },
     { label: 'Coral', value: SpeakingVoice.Coral },
     { label: 'Echo', value: SpeakingVoice.Echo },
-    { label: 'Fable', value: SpeakingVoice.Fable },
-    { label: 'Onyx', value: SpeakingVoice.Onyx },
+    { label: 'Cedar', value: SpeakingVoice.Cedar },
     { label: 'Sage', value: SpeakingVoice.Sage },
     { label: 'Shimmer', value: SpeakingVoice.Shimmer },
+    { label: 'Verse', value: SpeakingVoice.Verse },
   ];
 
   readonly autoPlayVoiceControl = new FormControl(true, { nonNullable: true });
@@ -66,7 +66,9 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   readonly autoMemoryEnabledControl = new FormControl(true, { nonNullable: true });
   readonly systemPromptControl = new FormControl('', { nonNullable: true });
   readonly memoryControl = new FormControl('', { nonNullable: true });
-  readonly voiceControl = new FormControl<SpeakingVoice>(SpeakingVoice.Nova, { nonNullable: true });
+  readonly voiceControl = new FormControl<SpeakingVoice>(SpeakingVoice.Marin, {
+    nonNullable: true,
+  });
 
   readonly previewLoading = signal(false);
   readonly previewError = signal<string | null>(null);
@@ -214,6 +216,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
       systemPrompt: normalizedPrompt,
       memory: this.memoryControl.value,
       voice: this.voiceControl.value,
+      nextPractice: this.repository.loadSettings().nextPractice,
     };
   }
 

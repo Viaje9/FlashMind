@@ -14,7 +14,9 @@ export class HomeComponent {
   private readonly router = inject(Router);
   private readonly homeEntryPreferenceService = inject(HomeEntryPreferenceService);
 
-  onEntryClick(path: '/decks' | '/speaking' | '/collections' | '/topic-conversations'): void {
+  onEntryClick(
+    path: '/decks' | '/speaking' | '/target-vocabulary' | '/collections' | '/topic-conversations',
+  ): void {
     this.homeEntryPreferenceService.save(path);
     void this.router.navigate([path]);
   }

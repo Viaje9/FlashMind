@@ -24,4 +24,4 @@ node_modules/
 
 # Test auth
 e2e/.auth/
-
+artifacts

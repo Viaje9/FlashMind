@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FsrsService, type CardScheduleState } from '../fsrs';
+import { TargetVocabularyService } from '../target-vocabulary/target-vocabulary.service';
 import {
   CreateSpeakingChatDto,
   SpeakingAssistantChatDto,
@@ -14,28 +15,31 @@ import {
   SpeakingChatHistoryItemDto,
 } from './dto';
 
-const DEFAULT_SPEAKING_PROMPT = `You are a friendly and patient English conversation partner for a CEFR A2 learner.
-Your job is to help the user practice speaking English with simple, clear language.
+const DEFAULT_SPEAKING_PROMPT = `You are a natural, friendly English conversation partner for a CEFR B1 learner.
+The live session is a real conversation, not a lesson, correction drill, or vocabulary test.
 
 Guidelines:
-- Respond naturally, as in a real conversation (do not sound like a textbook)
-- Keep your reply short: 1-3 sentences total
-- Use A2-level words and grammar (present simple, present continuous, past simple, "be going to")
-- Prefer common daily topics: work, family, food, hobbies, travel, routines
-- Avoid idioms, slang, phrasal verbs with rare meanings, and complex clauses
-- Keep each sentence short and clear (about 6-12 words when possible)
-- If the user makes a mistake, give one gentle correction first, then continue naturally
-- After your reply, ask one simple follow-up question to keep the conversation going
-- Be warm and encouraging, but do not use long explanations unless the user asks`;
+- Respond to the user's meaning first, like a thoughtful friend
+- Keep replies concise and natural, usually 1-3 sentences
+- Do not ask a question on every turn; ask at most one when it naturally moves the conversation forward
+- If the user's English is understandable, do not interrupt with corrections
+- Give language help only when the user explicitly asks for it
+- If the meaning is unclear, clarify it as part of the conversation without turning into a teacher
+- Any target or recall vocabulary is private background context: never quiz the user, list the words, or force them into the conversation
+- If the user changes topic, follow their topic naturally`;
 
-const SUMMARIZE_SYSTEM_PROMPT = `You are a precise conversation summarizer.
-Your task is to summarize only what the USER said in the previous conversation turns.
+const SUMMARIZE_SYSTEM_PROMPT = `You are reviewing an English speaking practice session for a Traditional Chinese user.
+Analyze only what the USER actually said. Assistant messages are context only and can never be evidence that the user used a word.
 
 Hard output constraints:
-- Return ONLY valid JSON with this exact shape: {"title":"...", "summary":"..."}
-- "summary" must be English only, written in first person ("I"), and must not contain Chinese characters
-- "title" must be Traditional Chinese (繁體中文), concise and specific (about 8-20 Chinese characters)
-- Do not include markdown, code fences, or extra keys`;
+- Return ONLY valid JSON; no markdown or code fences
+- Use this exact top-level shape:
+  {"title":"...","summary":"...","review":"...","actualUses":[],"recommendations":[],"nextPractice":{"topic":"...","speakingGoal":"...","guidingQuestions":[],"recallTargets":[]}}
+- "title" and "review" must be Traditional Chinese (繁體中文)
+- "summary" must be English only, first person ("I"), and preserve the user's meaning
+- "actualUses" items must use: {"term":"canonical catalog term","expressionContext":"繁體中文","naturalSentence":"English"}
+- "recommendations" items must use: {"term":"canonical catalog term","expressionContext":"繁體中文","naturalSentence":"English","recommendationReason":"繁體中文"}
+- "nextPractice" values must be concise English suitable as private guidance for the next conversation`;
 
 const SUMMARIZE_PROMPT = `Based on the conversation above, summarize everything the USER said in first person.
 - Preserve completeness: include all meaningful details, examples, preferences, plans, feelings, and constraints mentioned by the user
@@ -51,8 +55,13 @@ const SUMMARIZE_PROMPT = `Based on the conversation above, summarize everything 
 - Do not include anything the assistant said
 - Also create a concise conversation title in Traditional Chinese that best represents the user's topic
 - The title should be specific and clear (roughly 8-20 Chinese characters), no quotes, no punctuation-only title
-- Return ONLY valid JSON with this exact shape:
-  {"title":"...", "summary":"..."}`;
+- Review vocabulary with strict evidence. A word counts as actual use only when the USER genuinely produced it to express their own meaning.
+- An assistant saying, repeating, or explaining a word does not count. The user asking what a word means or merely repeating it as a quoted item does not count.
+- Select recommendations only from the target vocabulary catalog below and only when they fit this conversation.
+- Prefer UNSEEN or PRACTICING words for recommendations. Do not recommend a word merely to fill a quota; zero recommendations is valid.
+- Create a useful next speaking topic, one goal, up to three gentle guiding questions, and up to five recall targets from the catalog.
+- Recall targets are private background for the next assistant, never a quiz or a requirement.
+- Return only the required JSON object.`;
 
 const ASSISTANT_CHAT_SYSTEM_PROMPT = `You are a helpful English learning assistant for a Traditional Chinese (繁體中文) speaking user.
 
@@ -159,12 +168,12 @@ const SPEAKING_VOICES = [
   'ash',
   'ballad',
   'coral',
+  'cedar',
   'echo',
-  'fable',
-  'nova',
-  'onyx',
+  'marin',
   'sage',
   'shimmer',
+  'verse',
 ] as const;
 
 export type SpeakingVoice = (typeof SPEAKING_VOICES)[number];
@@ -274,7 +283,45 @@ export interface SpeakingAudioChatResult {
 export interface SpeakingSummaryResult {
   title: string;
   summary: string;
+  review: string;
+  actualUses: SpeakingReviewUse[];
+  recommendations: SpeakingReviewRecommendation[];
+  nextPractice: SpeakingNextPractice;
   usage: SpeakingTokenUsage;
+}
+
+export interface SpeakingReviewUse {
+  term: string;
+  zhMeaning: string;
+  expressionContext: string;
+  naturalSentence: string;
+}
+
+export interface SpeakingReviewRecommendation extends SpeakingReviewUse {
+  recommendationReason: string;
+}
+
+export interface SpeakingNextPractice {
+  topic: string;
+  speakingGoal: string;
+  guidingQuestions: string[];
+  recallTargets: string[];
+}
+
+interface ParsedSpeakingSummary {
+  title: string;
+  summary: string;
+  review: string;
+  actualUses: Array<Omit<SpeakingReviewUse, 'zhMeaning'>>;
+  recommendations: Array<Omit<SpeakingReviewRecommendation, 'zhMeaning'>>;
+  nextPractice: SpeakingNextPractice;
+}
+
+interface TargetVocabularyReviewCandidate {
+  term: string;
+  normalizedTerm: string;
+  zhMeaning: string;
+  status: string;
 }
 
 export interface SpeakingTranslateResult {
@@ -326,6 +373,8 @@ export class SpeakingService {
     private readonly configService: ConfigService,
     @Optional() private readonly prisma?: PrismaService,
     @Optional() private readonly fsrsService?: FsrsService,
+    @Optional()
+    private readonly targetVocabularyService?: TargetVocabularyService,
   ) {
     this.apiKey = this.configService.get<string>('OPENAI_API_KEY') ?? '';
     this.textModel =
@@ -335,13 +384,14 @@ export class SpeakingService {
     );
     this.audioModel =
       this.configService.get<string>('OPENAI_SPEAKING_AUDIO_MODEL') ??
-      'gpt-4o-mini-audio-preview';
+      'gpt-realtime-2.1-mini';
 
     const configuredVoice =
-      this.configService.get<string>('OPENAI_SPEAKING_DEFAULT_VOICE') ?? 'nova';
+      this.configService.get<string>('OPENAI_SPEAKING_DEFAULT_VOICE') ??
+      'marin';
     this.defaultVoice = this.isSpeakingVoice(configuredVoice)
       ? configuredVoice
-      : 'nova';
+      : 'marin';
   }
 
   async createReply(dto: CreateSpeakingChatDto): Promise<SpeakingChatResult> {
@@ -353,7 +403,6 @@ export class SpeakingService {
       const data = await this.callOpenAIChat({
         model: this.textModel,
         messages,
-        temperature: 0.7,
         reasoning_effort: this.defaultReasoningEffort,
       });
 
@@ -426,29 +475,57 @@ export class SpeakingService {
 
   async summarizeConversation(
     history: SpeakingChatHistoryItemDto[],
+    userId?: string,
   ): Promise<SpeakingSummaryResult> {
     this.assertApiKey();
 
-    const messages = this.buildAudioMessages({
-      history,
-      systemPrompt: SUMMARIZE_SYSTEM_PROMPT,
-      currentTextInput: SUMMARIZE_PROMPT,
-    });
-
     try {
+      const candidates =
+        userId && this.targetVocabularyService
+          ? await this.targetVocabularyService.listReviewCandidates(userId)
+          : [];
+      const messages = this.buildSummaryMessages(history, candidates);
       const data = await this.callOpenAIChat({
         model: this.textModel,
         messages,
-        temperature: 0.2,
         reasoning_effort: this.defaultReasoningEffort,
       });
 
       const content = data.choices?.[0]?.message?.content?.trim() ?? '';
       const parsed = this.parseSummaryPayload(content);
+      const candidateMap = new Map(
+        candidates.map((candidate) => [candidate.normalizedTerm, candidate]),
+      );
+      const actualUses = this.reconcileReviewUses(
+        parsed.actualUses,
+        candidateMap,
+      );
+      const recommendations = this.reconcileReviewRecommendations(
+        parsed.recommendations,
+        candidateMap,
+      );
+      const nextPractice = {
+        ...parsed.nextPractice,
+        recallTargets: this.reconcileRecallTargets(
+          parsed.nextPractice.recallTargets,
+          candidateMap,
+        ),
+      };
+
+      if (userId && this.targetVocabularyService) {
+        await this.targetVocabularyService.applyReview(userId, {
+          actualUses,
+          recommendations,
+        });
+      }
 
       return {
         title: parsed.title,
         summary: parsed.summary,
+        review: parsed.review,
+        actualUses,
+        recommendations,
+        nextPractice,
         usage: this.mapUsage(data),
       };
     } catch (error) {
@@ -1028,6 +1105,34 @@ export class SpeakingService {
     ];
   }
 
+  private buildSummaryMessages(
+    history: SpeakingChatHistoryItemDto[],
+    candidates: TargetVocabularyReviewCandidate[],
+  ): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
+    const textHistory = history.flatMap((item) => {
+      const content = item.text?.trim();
+      return content ? [{ role: item.role, content }] : [];
+    });
+
+    const catalog = candidates.length
+      ? candidates
+          .map(
+            (candidate) =>
+              `${candidate.term} | ${candidate.zhMeaning} | ${candidate.status}`,
+          )
+          .join('\n')
+      : '(No target vocabulary is currently available.)';
+
+    return [
+      { role: 'system', content: SUMMARIZE_SYSTEM_PROMPT },
+      ...textHistory,
+      {
+        role: 'system',
+        content: `${SUMMARIZE_PROMPT}\n\nTarget vocabulary catalog:\n${catalog}`,
+      },
+    ];
+  }
+
   private createWavInputAudioContent(rawAudioBase64: string): {
     type: 'input_audio';
     input_audio: { data: string; format: 'wav' };
@@ -1270,10 +1375,10 @@ export class SpeakingService {
     return undefined;
   }
 
-  private parseSummaryPayload(raw: string): { title: string; summary: string } {
+  private parseSummaryPayload(raw: string): ParsedSpeakingSummary {
     const text = raw.trim();
     if (!text) {
-      return { title: '本次英語練習', summary: '' };
+      return this.createEmptyParsedSummary('');
     }
 
     const match = text.match(/\{[\s\S]*\}/);
@@ -1282,6 +1387,10 @@ export class SpeakingService {
         const parsed = JSON.parse(match[0]) as {
           title?: string;
           summary?: string;
+          review?: string;
+          actualUses?: unknown;
+          recommendations?: unknown;
+          nextPractice?: unknown;
         };
         const summary = parsed.summary?.trim() || '';
         const title =
@@ -1291,16 +1400,183 @@ export class SpeakingService {
         return {
           title,
           summary: summary || text,
+          review: parsed.review?.trim() || '',
+          actualUses: this.parseReviewUses(parsed.actualUses),
+          recommendations: this.parseReviewRecommendations(
+            parsed.recommendations,
+          ),
+          nextPractice: this.parseNextPractice(parsed.nextPractice),
         };
       } catch {
         // fallback below
       }
     }
 
+    return this.createEmptyParsedSummary(text);
+  }
+
+  private createEmptyParsedSummary(summary: string): ParsedSpeakingSummary {
     return {
-      title: this.deriveSummaryTitle(text),
-      summary: text,
+      title: this.deriveSummaryTitle(summary),
+      summary,
+      review: '',
+      actualUses: [],
+      recommendations: [],
+      nextPractice: {
+        topic: 'Continue the conversation',
+        speakingGoal: 'Talk naturally about one recent experience.',
+        guidingQuestions: [],
+        recallTargets: [],
+      },
     };
+  }
+
+  private parseReviewUses(
+    value: unknown,
+  ): Array<Omit<SpeakingReviewUse, 'zhMeaning'>> {
+    if (!Array.isArray(value)) return [];
+
+    return value.flatMap((rawItem) => {
+      if (!rawItem || typeof rawItem !== 'object') return [];
+      const item = rawItem as Record<string, unknown>;
+      const term = this.readString(item['term']);
+      const expressionContext = this.readString(item['expressionContext']);
+      const naturalSentence = this.readString(item['naturalSentence']);
+      return term && expressionContext && naturalSentence
+        ? [{ term, expressionContext, naturalSentence }]
+        : [];
+    });
+  }
+
+  private parseReviewRecommendations(
+    value: unknown,
+  ): Array<Omit<SpeakingReviewRecommendation, 'zhMeaning'>> {
+    if (!Array.isArray(value)) return [];
+
+    return value.flatMap((rawItem) => {
+      if (!rawItem || typeof rawItem !== 'object') return [];
+      const item = rawItem as Record<string, unknown>;
+      const term = this.readString(item['term']);
+      const expressionContext = this.readString(item['expressionContext']);
+      const naturalSentence = this.readString(item['naturalSentence']);
+      const recommendationReason = this.readString(
+        item['recommendationReason'],
+      );
+      return term &&
+        expressionContext &&
+        naturalSentence &&
+        recommendationReason
+        ? [
+            {
+              term,
+              expressionContext,
+              naturalSentence,
+              recommendationReason,
+            },
+          ]
+        : [];
+    });
+  }
+
+  private parseNextPractice(value: unknown): SpeakingNextPractice {
+    if (!value || typeof value !== 'object') {
+      return this.createEmptyParsedSummary('').nextPractice;
+    }
+
+    const item = value as Record<string, unknown>;
+    return {
+      topic: this.readString(item['topic']) || 'Continue the conversation',
+      speakingGoal:
+        this.readString(item['speakingGoal']) ||
+        'Talk naturally about one recent experience.',
+      guidingQuestions: this.readStringArray(item['guidingQuestions']).slice(
+        0,
+        3,
+      ),
+      recallTargets: this.readStringArray(item['recallTargets']).slice(0, 5),
+    };
+  }
+
+  private reconcileReviewUses(
+    uses: Array<Omit<SpeakingReviewUse, 'zhMeaning'>>,
+    candidates: Map<string, TargetVocabularyReviewCandidate>,
+  ): SpeakingReviewUse[] {
+    return this.uniqueByNormalizedTerm(uses).flatMap((use) => {
+      const candidate = candidates.get(this.normalizeTargetTerm(use.term));
+      return candidate
+        ? [
+            {
+              ...use,
+              term: candidate.term,
+              zhMeaning: candidate.zhMeaning,
+            },
+          ]
+        : [];
+    });
+  }
+
+  private reconcileReviewRecommendations(
+    recommendations: Array<Omit<SpeakingReviewRecommendation, 'zhMeaning'>>,
+    candidates: Map<string, TargetVocabularyReviewCandidate>,
+  ): SpeakingReviewRecommendation[] {
+    return this.uniqueByNormalizedTerm(recommendations).flatMap(
+      (recommendation) => {
+        const candidate = candidates.get(
+          this.normalizeTargetTerm(recommendation.term),
+        );
+        return candidate
+          ? [
+              {
+                ...recommendation,
+                term: candidate.term,
+                zhMeaning: candidate.zhMeaning,
+              },
+            ]
+          : [];
+      },
+    );
+  }
+
+  private reconcileRecallTargets(
+    recallTargets: string[],
+    candidates: Map<string, TargetVocabularyReviewCandidate>,
+  ): string[] {
+    const result = new Map<string, string>();
+    for (const rawTerm of recallTargets) {
+      const normalizedTerm = this.normalizeTargetTerm(rawTerm);
+      const candidate = candidates.get(normalizedTerm);
+      if (candidate) result.set(normalizedTerm, candidate.term);
+    }
+    return [...result.values()].slice(0, 5);
+  }
+
+  private uniqueByNormalizedTerm<T extends { term: string }>(items: T[]): T[] {
+    return [
+      ...new Map(
+        items.map((item) => [this.normalizeTargetTerm(item.term), item]),
+      ).values(),
+    ];
+  }
+
+  private normalizeTargetTerm(term: string): string {
+    return term
+      .normalize('NFKC')
+      .replace(/[’‘]/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLocaleLowerCase();
+  }
+
+  private readString(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  private readStringArray(value: unknown): string[] {
+    return Array.isArray(value)
+      ? value
+          .map((item) => this.readString(item))
+          .filter((item): item is string => Boolean(item))
+      : [];
   }
 
   private cleanSummaryTitle(raw: string): string {

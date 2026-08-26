@@ -8,6 +8,9 @@
  * Do not edit the class manually.
  */
 import { SpeakingTokenUsage } from "./speakingTokenUsage";
+import { SpeakingReviewRecommendation } from "./speakingReviewRecommendation";
+import { SpeakingNextPractice } from "./speakingNextPractice";
+import { SpeakingReviewUse } from "./speakingReviewUse";
 
 /**
  * 口說摘要結果
@@ -21,5 +24,18 @@ export interface SpeakingSummaryResult {
    * 對話摘要（英文第一人稱）
    */
   summary: string;
+  /**
+   * 本次口說練習回顧（繁中）
+   */
+  review: string;
+  /**
+   * 使用者在本次對話中實際使用的目標單字
+   */
+  actualUses: Array<SpeakingReviewUse>;
+  /**
+   * 依本次對話推薦下次可嘗試使用的目標單字
+   */
+  recommendations: Array<SpeakingReviewRecommendation>;
+  nextPractice: SpeakingNextPractice;
   usage: SpeakingTokenUsage;
 }

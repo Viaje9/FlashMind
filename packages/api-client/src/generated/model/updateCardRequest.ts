@@ -18,7 +18,7 @@ export interface UpdateCardRequest {
    */
   front?: string;
   /**
-   * 卡片純文字備註；null 或空字串會清除備註
+   * 卡片純文字備註；空字串或 null 代表清除
    */
   note?: string | null;
   /**

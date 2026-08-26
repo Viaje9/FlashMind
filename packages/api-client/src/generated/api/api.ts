@@ -16,6 +16,8 @@ export * from "./study.service";
 import { StudyService } from "./study.service";
 export * from "./tTS.service";
 import { TTSService } from "./tTS.service";
+export * from "./targetVocabulary.service";
+import { TargetVocabularyService } from "./targetVocabulary.service";
 export * from "./topicConversations.service";
 import { TopicConversationsService } from "./topicConversations.service";
 export const APIS = [
@@ -28,5 +30,6 @@ export const APIS = [
   SpeakingService,
   StudyService,
   TTSService,
+  TargetVocabularyService,
   TopicConversationsService,
 ];

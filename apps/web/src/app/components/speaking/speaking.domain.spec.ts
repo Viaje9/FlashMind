@@ -6,8 +6,10 @@ import {
   createConversationRecord,
   createConversationTitle,
   createSpeakingId,
+  formatSpeakingReviewSummary,
   isSelectionTranslationResultStale,
   normalizeSelectionTranslationText,
+  parseSpeakingReviewSummary,
   toSpeakingHistory,
   updateConversationFromMessages,
   type SpeakingMessage,
@@ -20,9 +22,80 @@ describe('speaking.domain', () => {
       showTranscript: true,
       autoTranslate: false,
       systemPrompt: '',
-      voice: 'nova',
+      voice: 'marin',
       memory: '',
       autoMemoryEnabled: true,
+      nextPractice: undefined,
+    });
+  });
+
+  it('應把 Review、實際使用、推薦與下次主題整理成可閱讀內容', () => {
+    const text = formatSpeakingReviewSummary({
+      summary: 'I explained how I work with an AI agent.',
+      review: '你有把先產生初稿、再檢查調整的流程說清楚。',
+      actualUses: [
+        {
+          term: 'function',
+          zhMeaning: '功能',
+          expressionContext: '描述 node tree 的需求。',
+          naturalSentence: 'It depends on what kind of function the node tree needs.',
+        },
+      ],
+      recommendations: [
+        {
+          term: 'cooperation',
+          zhMeaning: '合作；協作',
+          expressionContext: '描述與 AI 一起工作。',
+          naturalSentence: 'This is cooperation between me and the AI agent.',
+          recommendationReason: '符合本次對話。',
+        },
+      ],
+      nextPractice: {
+        topic: 'How I collaborate with AI',
+        speakingGoal: 'Explain one workflow.',
+        guidingQuestions: [],
+        recallTargets: ['cooperation'],
+      },
+    });
+
+    expect(text).toContain('練習回顧');
+    expect(text).toContain('function（功能）');
+    expect(text).toContain('cooperation（合作；協作）');
+    expect(text).toContain('How I collaborate with AI');
+  });
+
+  it('應把既有對話整理文字拆成可視覺化的固定區塊', () => {
+    expect(
+      parseSpeakingReviewSummary(`I explained my English-learning plan.
+
+練習回顧
+你有清楚說明目前的學習方向。
+
+這次實際使用
+• practice（練習）
+• website（網站）
+
+下次可以試試
+• confidence（信心）
+
+下次主題
+My English-learning website`),
+    ).toEqual({
+      summary: 'I explained my English-learning plan.',
+      review: '你有清楚說明目前的學習方向。',
+      actualUses: ['practice（練習）', 'website（網站）'],
+      recommendations: ['confidence（信心）'],
+      nextTopic: 'My English-learning website',
+    });
+  });
+
+  it('舊的非結構化摘要應完整保留為主摘要', () => {
+    expect(parseSpeakingReviewSummary('A legacy summary without headings.')).toEqual({
+      summary: 'A legacy summary without headings.',
+      review: '',
+      actualUses: [],
+      recommendations: [],
+      nextTopic: '',
     });
   });
 

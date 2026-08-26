@@ -30,8 +30,8 @@ describe('SpeakingService', () => {
           OPENAI_API_KEY: 'test-openai-key',
           COLLECTION_CODEX_MODEL: 'gpt-5.6-luna',
           COLLECTION_CODEX_REASONING_EFFORT: 'low',
-          OPENAI_SPEAKING_AUDIO_MODEL: 'gpt-4o-mini-audio-preview',
-          OPENAI_SPEAKING_DEFAULT_VOICE: 'nova',
+          OPENAI_SPEAKING_AUDIO_MODEL: 'gpt-realtime-2.1-mini',
+          OPENAI_SPEAKING_DEFAULT_VOICE: 'marin',
         };
         return config[key];
       }),
@@ -91,8 +91,10 @@ describe('SpeakingService', () => {
       fetchMock.mock.calls[0][1].body as string,
     ) as {
       model: string;
+      temperature?: number;
     };
     expect(requestBody.model).toBe('gpt-5.6-luna');
+    expect(requestBody.temperature).toBeUndefined();
   });
 
   it('createAudioReply 應回傳 transcript、audio 與 memoryUpdate', async () => {
@@ -100,7 +102,7 @@ describe('SpeakingService', () => {
       ok: true,
       json: () =>
         Promise.resolve({
-          model: 'gpt-4o-mini-audio-preview',
+          model: 'gpt-realtime-2.1-mini',
           choices: [
             {
               message: {
@@ -150,7 +152,7 @@ describe('SpeakingService', () => {
       ok: true,
       json: () =>
         Promise.resolve({
-          model: 'gpt-4o-mini-audio-preview',
+          model: 'gpt-realtime-2.1-mini',
           choices: [
             {
               message: {
@@ -189,7 +191,40 @@ describe('SpeakingService', () => {
     expect(userHistory?.content).toBe('fallback text');
   });
 
-  it('summarizeConversation 應回傳 title 與 summary', async () => {
+  it('summarizeConversation 應只套用目標清單內的實際使用與推薦，並產生下次練習', async () => {
+    const targetVocabularyService = {
+      listReviewCandidates: jest.fn().mockResolvedValue([
+        {
+          term: 'function',
+          normalizedTerm: 'function',
+          zhMeaning: '功能',
+          status: 'UNSEEN',
+        },
+        {
+          term: 'cooperation',
+          normalizedTerm: 'cooperation',
+          zhMeaning: '合作；協作',
+          status: 'UNSEEN',
+        },
+      ]),
+      applyReview: jest.fn().mockResolvedValue(undefined),
+    };
+    const configService = {
+      get: jest.fn((key: string) => {
+        const config: Record<string, string> = {
+          OPENAI_API_KEY: 'test-openai-key',
+          COLLECTION_CODEX_MODEL: 'gpt-5.6-luna',
+          COLLECTION_CODEX_REASONING_EFFORT: 'low',
+        };
+        return config[key];
+      }),
+    } as unknown as ConfigService;
+    service = new SpeakingService(
+      configService,
+      undefined,
+      undefined,
+      targetVocabularyService as never,
+    );
     fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
@@ -200,6 +235,38 @@ describe('SpeakingService', () => {
                 content: JSON.stringify({
                   title: '晨跑與工作日常',
                   summary: 'I jogged in the morning and then went to work.',
+                  review: '你有清楚說明先運動再工作的順序。',
+                  actualUses: [
+                    {
+                      term: 'function',
+                      expressionContext: '描述 node tree 所需的功能。',
+                      naturalSentence:
+                        'It depends on what kind of function the node tree needs.',
+                    },
+                    {
+                      term: 'hallucinated',
+                      expressionContext: '不在目標清單。',
+                      naturalSentence: 'This should be ignored.',
+                    },
+                  ],
+                  recommendations: [
+                    {
+                      term: 'cooperation',
+                      expressionContext: '描述與 AI 一起工作的方式。',
+                      naturalSentence:
+                        'This is cooperation between me and the AI agent.',
+                      recommendationReason: '適合本次談到的 AI 協作情境。',
+                    },
+                  ],
+                  nextPractice: {
+                    topic: 'How I work with an AI agent',
+                    speakingGoal: 'Explain one real collaboration workflow.',
+                    guidingQuestions: [
+                      'What do you ask the AI to do first?',
+                      'How do you check the first draft?',
+                    ],
+                    recallTargets: ['cooperation', 'function'],
+                  },
                 }),
               },
             },
@@ -208,13 +275,34 @@ describe('SpeakingService', () => {
         }),
     });
 
-    const result = await service.summarizeConversation([
-      { role: 'user', audioBase64: 'abc' },
-      { role: 'assistant', text: 'Nice job' },
-    ]);
+    const result = await service.summarizeConversation(
+      [
+        {
+          role: 'user',
+          text: 'It depends on what kind of function the node tree needs.',
+          audioBase64: 'abc',
+        },
+        { role: 'assistant', text: 'Nice job' },
+      ],
+      'user-1',
+    );
 
     expect(result.title).toBe('晨跑與工作日常');
     expect(result.summary).toContain('jogged');
+    expect(result.actualUses).toEqual([
+      expect.objectContaining({ term: 'function', zhMeaning: '功能' }),
+    ]);
+    expect(result.recommendations).toEqual([
+      expect.objectContaining({
+        term: 'cooperation',
+        zhMeaning: '合作；協作',
+      }),
+    ]);
+    expect(result.nextPractice.topic).toBe('How I work with an AI agent');
+    expect(targetVocabularyService.applyReview).toHaveBeenCalledWith('user-1', {
+      actualUses: [expect.objectContaining({ term: 'function' })],
+      recommendations: [expect.objectContaining({ term: 'cooperation' })],
+    });
 
     const requestBody = JSON.parse(
       fetchMock.mock.calls[0][1].body as string,
@@ -229,14 +317,13 @@ describe('SpeakingService', () => {
     const summarizePrompt =
       requestBody.messages[requestBody.messages.length - 1]?.content;
 
-    expect(requestBody.temperature).toBe(0.2);
-    expect(systemPrompt).toContain('"summary" must be English only');
-    expect(systemPrompt).toContain(
-      '"title" must be Traditional Chinese (繁體中文)',
-    );
+    expect(requestBody.temperature).toBeUndefined();
+    expect(systemPrompt).toContain('Analyze only what the USER actually said');
+    expect(summarizePrompt).toContain('function | 功能 | UNSEEN');
     expect(summarizePrompt).toContain(
-      'Write the "summary" field in English only',
+      'An assistant saying, repeating, or explaining a word does not count',
     );
+    expect(JSON.stringify(requestBody.messages)).not.toContain('input_audio');
   });
 
   it('translateToTraditionalChinese 應回傳翻譯', async () => {
@@ -433,7 +520,7 @@ describe('SpeakingService', () => {
       arrayBuffer: () => Promise.resolve(audioBytes.buffer),
     });
 
-    const result = await service.previewVoice('nova');
+    const result = await service.previewVoice('marin');
 
     expect(result.audioBase64).toBe(Buffer.from(audioBytes).toString('base64'));
   });

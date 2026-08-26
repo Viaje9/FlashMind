@@ -48,9 +48,11 @@ export class FmStudyCardComponent {
     if (!example) return [];
 
     const unfamiliarWords = new Set(
-      example.unfamiliarWords.map((word) => this.normalizeWord(word)),
+      (example.unfamiliarWords ?? []).map((word) => this.normalizeWord(word)),
     );
-    const learningWords = new Set(example.learningWords.map((word) => this.normalizeWord(word)));
+    const learningWords = new Set(
+      (example.learningWords ?? []).map((word) => this.normalizeWord(word)),
+    );
     return example.enExample.split(/([A-Za-z]+(?:[-'][A-Za-z]+)*)/g).map((text) => ({
       text,
       status: /^[A-Za-z]+(?:[-'][A-Za-z]+)*$/.test(text)
