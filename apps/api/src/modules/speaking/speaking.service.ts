@@ -57,6 +57,10 @@ const SUMMARIZE_PROMPT = `Based on the conversation above, summarize everything 
 - The title should be specific and clear (roughly 8-20 Chinese characters), no quotes, no punctuation-only title
 - Review vocabulary with strict evidence. A word counts as actual use only when the USER genuinely produced it to express their own meaning.
 - An assistant saying, repeating, or explaining a word does not count. The user asking what a word means or merely repeating it as a quoted item does not count.
+- Actual-use evidence must be lexical, not merely semantic: the exact catalog term must appear explicitly in the USER's transcript as the same standalone word or phrase.
+- Do not count synonyms, paraphrases, related words, compounds, or longer words that merely contain the catalog term. For example, "website" does NOT count as "site", and "cooperative" does NOT count as "cooperation".
+- Never rewrite what the user said in order to manufacture evidence for actualUses. A corrected or more natural sentence can improve grammar, but it must retain the exact catalog term that the user actually produced.
+- Before adding an actualUses item, quote-check the USER transcript silently. If the exact standalone term is absent, omit it from actualUses; when useful, place it in recommendations instead.
 - Select recommendations only from the target vocabulary catalog below and only when they fit this conversation.
 - Prefer UNSEEN or PRACTICING words for recommendations. Do not recommend a word merely to fill a quota; zero recommendations is valid.
 - Create a useful next speaking topic, one goal, up to three gentle guiding questions, and up to five recall targets from the catalog.
