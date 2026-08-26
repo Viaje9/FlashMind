@@ -35,6 +35,36 @@ const TARGET_VOCABULARY_FILTERS: readonly TargetVocabularyFilter[] = [
   'USED',
   'ADDED',
 ];
+const TARGET_VOCABULARY_LAST_DECK_STORAGE_KEY = 'flashmind.target-vocabulary.last-deck-id';
+
+export function resolveStoredTargetVocabularyDeckId(
+  storedDeckId: string | null | undefined,
+  decks: ReadonlyArray<{ id: string }>,
+): string | null {
+  if (!storedDeckId) return null;
+  return decks.some((deck) => deck.id === storedDeckId) ? storedDeckId : null;
+}
+
+export function readStoredTargetVocabularyDeckId(
+  storage: Pick<Storage, 'getItem'> | undefined,
+): string | null {
+  try {
+    return storage?.getItem(TARGET_VOCABULARY_LAST_DECK_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredTargetVocabularyDeckId(
+  storage: Pick<Storage, 'setItem'> | undefined,
+  deckId: string,
+): void {
+  try {
+    storage?.setItem(TARGET_VOCABULARY_LAST_DECK_STORAGE_KEY, deckId);
+  } catch {
+    // localStorage 在私密瀏覽或容量受限時可能不可用。
+  }
+}
 
 export function parseTargetVocabularyFilterPreference(
   value: string | null,

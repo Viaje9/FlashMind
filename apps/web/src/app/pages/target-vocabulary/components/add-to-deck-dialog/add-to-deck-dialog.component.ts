@@ -18,6 +18,11 @@ import {
   FmLabeledInputComponent,
   type DialogConfig,
 } from '@flashmind/ui';
+import {
+  readStoredTargetVocabularyDeckId,
+  resolveStoredTargetVocabularyDeckId,
+  writeStoredTargetVocabularyDeckId,
+} from '../../../../components/target-vocabulary/target-vocabulary.domain';
 
 export interface AddToDeckDialogData {
   item: TargetVocabularyItem;
@@ -165,7 +170,13 @@ export class AddToDeckDialogComponent implements OnInit {
     this.decksApi.listDecks().subscribe({
       next: ({ data }) => {
         this.decks.set(data);
-        if (data.length > 0) this.form.controls.deckId.setValue(data[0].id);
+        const storedDeckId = resolveStoredTargetVocabularyDeckId(
+          readStoredTargetVocabularyDeckId(this.getLocalStorage()),
+          data,
+        );
+        if (data.length > 0) {
+          this.form.controls.deckId.setValue(storedDeckId ?? data[0].id);
+        }
         this.loadingDecks.set(false);
       },
       error: () => {
@@ -192,7 +203,10 @@ export class AddToDeckDialogComponent implements OnInit {
         naturalSentence: value.naturalSentence.trim() || undefined,
       })
       .subscribe({
-        next: ({ data }) => this.dialogRef.close(data),
+        next: ({ data }) => {
+          writeStoredTargetVocabularyDeckId(this.getLocalStorage(), value.deckId);
+          this.dialogRef.close(data);
+        },
         error: () => {
           this.error.set('加入牌組失敗，請稍後再試');
           this.submitting.set(false);
@@ -202,5 +216,9 @@ export class AddToDeckDialogComponent implements OnInit {
 
   onCancel(): void {
     this.dialogRef.close();
+  }
+
+  private getLocalStorage(): Storage | undefined {
+    return typeof localStorage === 'undefined' ? undefined : localStorage;
   }
 }

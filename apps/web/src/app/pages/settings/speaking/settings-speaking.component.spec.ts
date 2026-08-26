@@ -68,6 +68,13 @@ describe('SettingsSpeakingComponent', () => {
     expect(component.hasUnsavedChanges()).toBe(false);
   });
 
+  it('設定頁不應顯示 AI 聲音選擇與試聽介面', () => {
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="speaking-settings-voice"]'),
+    ).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('試聽語音');
+  });
+
   it('使用放棄變更彈窗確認後，不應再觸發第二個離開 alert', async () => {
     component.autoTranslateControl.setValue(!loadedSettings.autoTranslate);
     expect(component.hasUnsavedChanges()).toBe(true);

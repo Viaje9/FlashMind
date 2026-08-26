@@ -169,21 +169,23 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly stoppingAndSending = signal(false);
   readonly copiedSummaryMessageId = signal<string | null>(null);
 
-  readonly canSummarize = computed(
-    () =>
-      this.messages().length > 0 &&
-      !this.summarizing() &&
-      !this.sending() &&
-      !this.loadingConversation(),
-  );
-
   readonly hasUserMessages = computed(() =>
     this.messages().some((message) => message.role === 'user'),
   );
   readonly hasConversationSummary = computed(() =>
     this.messages().some((message) => message.role === 'summary' && !!message.text?.trim()),
   );
-  readonly canShowSummarizeAction = computed(() => this.hasUserMessages());
+  readonly canSummarize = computed(
+    () =>
+      this.messages().length > 0 &&
+      !this.hasConversationSummary() &&
+      !this.summarizing() &&
+      !this.sending() &&
+      !this.loadingConversation(),
+  );
+  readonly canShowSummarizeAction = computed(
+    () => this.hasUserMessages() && !this.hasConversationSummary(),
+  );
 
   readonly recorderStatus = this.recorder.status;
   readonly recorderDurationMs = this.recorder.durationMs;
@@ -959,6 +961,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   async onSummarize(): Promise<void> {
+    if (this.hasConversationSummary()) return;
     await this.speakingStore.summarizeCurrentConversation();
   }
 

@@ -6,6 +6,9 @@ import {
   parseTargetVocabularyFilterPreference,
   getTargetVocabularyStatusCounts,
   parseTargetVocabularyImportJson,
+  readStoredTargetVocabularyDeckId,
+  resolveStoredTargetVocabularyDeckId,
+  writeStoredTargetVocabularyDeckId,
 } from './target-vocabulary.domain';
 
 describe('target-vocabulary domain', () => {
@@ -87,5 +90,24 @@ describe('target-vocabulary domain', () => {
     expect(parseTargetVocabularyFilterPreference('ADDED')).toBe('ADDED');
     expect(parseTargetVocabularyFilterPreference('ALL')).toBe('UNSEEN');
     expect(parseTargetVocabularyFilterPreference(null)).toBe('UNSEEN');
+  });
+
+  it('加入牌組時應記住有效的上次選擇，並忽略已不存在的牌組', () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    };
+
+    writeStoredTargetVocabularyDeckId(storage, 'deck-2');
+
+    expect(readStoredTargetVocabularyDeckId(storage)).toBe('deck-2');
+    expect(
+      resolveStoredTargetVocabularyDeckId(readStoredTargetVocabularyDeckId(storage), [
+        { id: 'deck-1' },
+        { id: 'deck-2' },
+      ]),
+    ).toBe('deck-2');
+    expect(resolveStoredTargetVocabularyDeckId('missing', [{ id: 'deck-1' }])).toBeNull();
   });
 });

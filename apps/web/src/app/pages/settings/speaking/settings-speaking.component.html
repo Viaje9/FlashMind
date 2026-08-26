@@ -61,44 +61,6 @@
     </section>
 
     <section>
-      <fm-section-heading text="語音角色"></fm-section-heading>
-      <div class="space-y-3 rounded-2xl bg-surface-light p-4 shadow-sm dark:bg-surface-dark">
-        <label
-          for="speaking-settings-voice"
-          class="block text-sm text-slate-500 dark:text-slate-300"
-          >選擇 AI 聲音</label
-        >
-        <select
-          id="speaking-settings-voice"
-          [formControl]="voiceControl"
-          class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-white/10 dark:bg-slate-900"
-          data-testid="speaking-settings-voice"
-        >
-          @for (voice of voiceOptions; track voice.value) {
-            <option [value]="voice.value">{{ voice.label }}</option>
-          }
-        </select>
-
-        <fm-button
-          size="sm"
-          variant="secondary"
-          [disabled]="previewLoading()"
-          (click)="onPreviewVoice()"
-        >
-          @if (previewLoading()) {
-            試聽中...
-          } @else {
-            試聽語音
-          }
-        </fm-button>
-
-        @if (previewError()) {
-          <p class="text-xs text-rose-600">{{ previewError() }}</p>
-        }
-      </div>
-    </section>
-
-    <section>
       <fm-section-heading text="AI 對話提示詞"></fm-section-heading>
       <div class="rounded-2xl bg-surface-light p-4 shadow-sm dark:bg-surface-dark">
         <p class="mb-2 text-sm text-slate-500 dark:text-slate-300">
