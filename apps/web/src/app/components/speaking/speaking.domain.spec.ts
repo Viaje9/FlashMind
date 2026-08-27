@@ -2,6 +2,7 @@ import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import {
   SPEAKING_DEFAULT_SETTINGS,
+  SPEAKING_DEFAULT_SYSTEM_PROMPT,
   createSelectionTranslationCacheKey,
   createConversationRecord,
   createConversationTitle,
@@ -16,6 +17,21 @@ import {
 } from './speaking.domain';
 
 describe('speaking.domain', () => {
+  it('預設口說 prompt 應維持朋友式對話並將教學留給使用者明確請求', () => {
+    expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
+      'Respond to what the user is talking about, not to the quality of their English',
+    );
+    expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
+      'Avoid consecutive follow-up questions or turning the conversation into an interview',
+    );
+    expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
+      'Never ask the user to repeat, make another sentence, try again, or deliberately use a word',
+    );
+    expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
+      'After helping, return directly to the original conversation',
+    );
+  });
+
   it('預設設定應包含 voice 與 memory 欄位', () => {
     expect(SPEAKING_DEFAULT_SETTINGS).toMatchObject({
       autoPlayVoice: true,

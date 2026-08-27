@@ -61,6 +61,17 @@ describe('SpeakingService', () => {
     expect(result.reply).toBe('Nice to meet you. What do you do?');
     expect(result.model).toBe('gpt-4o-mini');
     expect(result.usage.totalTokens).toBe(18);
+    const requestBody = JSON.parse(
+      fetchMock.mock.calls[0][1].body as string,
+    ) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(requestBody.messages[0].content).toContain(
+      'Respond to what the user is talking about, not to the quality of their English',
+    );
+    expect(requestBody.messages[0].content).toContain(
+      'After helping, return directly to the original conversation',
+    );
   });
 
   it('Speaking 文字端點應使用 COLLECTION_CODEX_MODEL', async () => {
