@@ -220,7 +220,9 @@
 }
 .word-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
   margin-top: 1rem;
 }
 .word-actions button {
@@ -241,12 +243,41 @@
   border-color: rgb(56 189 248 / 0.65);
   background: rgb(14 165 233 / 0.22);
 }
+.word-actions button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+.word-actions .reject-use-button {
+  border-color: rgb(251 113 133 / 0.28);
+  background: rgb(190 18 60 / 0.08);
+  color: #fda4af;
+}
+.word-actions .reject-use-button:hover:not(:disabled) {
+  border-color: rgb(251 113 133 / 0.55);
+  background: rgb(190 18 60 / 0.16);
+}
+.word-actions .reject-use-button:focus-visible {
+  outline-color: rgb(251 113 133 / 0.35);
+}
 .word-actions button:focus-visible {
   outline: 3px solid rgb(125 211 252 / 0.35);
   outline-offset: 2px;
 }
 .word-actions .material-symbols-outlined {
   font-size: 1.1rem;
+}
+.word-actions .reject-use-button .material-symbols-outlined {
+  font-size: 1rem;
+}
+@media (max-width: 380px) {
+  .word-actions {
+    gap: 0.4rem;
+  }
+  .word-actions button {
+    padding-inline: 0.55rem;
+    white-space: nowrap;
+    font-size: 0.7rem;
+  }
 }
 .success-notice {
   display: flex;

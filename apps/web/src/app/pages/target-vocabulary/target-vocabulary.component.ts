@@ -8,7 +8,12 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TargetVocabularyItem, TargetVocabularyService } from '@flashmind/api-client';
-import { DialogService, FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
+import {
+  DialogService,
+  FmConfirmDialogComponent,
+  FmIconButtonComponent,
+  FmPageHeaderComponent,
+} from '@flashmind/ui';
 
 import {
   filterTargetVocabulary,
@@ -45,6 +50,7 @@ export class TargetVocabularyComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal('');
   readonly notice = signal('');
+  readonly rejectingId = signal<string | null>(null);
   readonly ttsError = this.ttsStore.error;
   readonly backNavigation = getTargetVocabularyBackNavigation(
     this.route.snapshot.queryParamMap.get('from'),
@@ -123,6 +129,50 @@ export class TargetVocabularyComponent implements OnInit {
       );
       this.setFilter('ADDED');
       this.notice.set(`${updated.term} 已加入牌組`);
+    });
+  }
+
+  rejectActualUse(item: TargetVocabularyItem): void {
+    if (item.status !== 'USED' || this.rejectingId()) return;
+
+    const confirmMessage =
+      item.useCount > 1
+        ? `${item.term} 有 ${item.useCount} 次 Speaking 使用記錄，移除後會全部清除。確定不是你使用過的單字嗎？`
+        : `確定要將 ${item.term} 從「已使用」移除嗎？這會清除目前的使用情境與自然句子。`;
+    const dialogRef = this.dialogService.open(FmConfirmDialogComponent, {
+      data: {
+        title: '移除已使用判定',
+        message: confirmMessage,
+        confirmText: '確定移除',
+        cancelText: '取消',
+      },
+      ariaLabel: `將 ${item.term} 從已使用移除`,
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) return;
+      this.performRejectActualUse(item);
+    });
+  }
+
+  private performRejectActualUse(item: TargetVocabularyItem): void {
+    this.rejectingId.set(item.id);
+    this.error.set('');
+    this.notice.set('');
+    this.api.rejectTargetVocabularyUse(item.id).subscribe({
+      next: ({ data: updated }) => {
+        this.items.update((items) =>
+          items.map((current) => (current.id === updated.id ? updated : current)),
+        );
+        this.notice.set(
+          `${updated.term} 已移回${updated.status === 'PRACTICING' ? '待練習' : '待接觸'}`,
+        );
+        this.rejectingId.set(null);
+      },
+      error: () => {
+        this.error.set('移除已使用判定失敗，請稍後再試');
+        this.rejectingId.set(null);
+      },
     });
   }
 

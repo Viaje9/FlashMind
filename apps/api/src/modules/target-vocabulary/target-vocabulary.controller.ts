@@ -51,4 +51,10 @@ export class TargetVocabularyController {
   ) {
     return this.service.addToDeck(req.user.id, id, dto);
   }
+
+  @Post(':id/reject-use')
+  @HttpCode(HttpStatus.OK)
+  rejectActualUse(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.service.rejectActualUse(req.user.id, id);
+  }
 }

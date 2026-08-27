@@ -260,6 +260,24 @@
               <div class="word-actions">
                 <button
                   type="button"
+                  class="reject-use-button"
+                  (click)="rejectActualUse(item)"
+                  [disabled]="rejectingId() === item.id"
+                  [attr.aria-label]="'將 ' + item.term + ' 從已使用移除'"
+                  [attr.data-testid]="'target-vocabulary-reject-use-' + item.id"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    @if (rejectingId() === item.id) {
+                      progress_activity
+                    } @else {
+                      undo
+                    }
+                  </span>
+                  不是我用過的
+                </button>
+                <button
+                  type="button"
+                  class="add-to-deck-button"
                   (click)="openAddToDeck(item)"
                   [attr.aria-label]="'將 ' + item.term + ' 加入牌組'"
                   [attr.data-testid]="'target-vocabulary-add-to-deck-' + item.id"

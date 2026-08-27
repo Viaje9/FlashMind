@@ -940,6 +940,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /target-vocabulary/{id}/reject-use:
+    post:
+      operationId: rejectTargetVocabularyUse
+      tags: [TargetVocabulary]
+      summary: 撤銷目標單字的已使用判定
+      description: 清除尚未加入牌組的使用記錄，並依推薦次數回到待練習或待接觸。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 已撤銷使用判定
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RejectTargetVocabularyUseResponse"
+        "401":
+          description: 未授權
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 找不到目標單字
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 目標單字不在可撤銷的已使用狀態
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # ============================================================
   # Collections
   # ============================================================
@@ -3514,6 +3554,13 @@ components:
           maxLength: 2000
 
     AddTargetVocabularyToDeckResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/TargetVocabularyItem"
+
+    RejectTargetVocabularyUseResponse:
       type: object
       required: [data]
       properties:

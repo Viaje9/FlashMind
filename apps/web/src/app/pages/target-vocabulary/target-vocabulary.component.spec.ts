@@ -2,14 +2,22 @@ import '@angular/compiler';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
-import { TargetVocabularyService } from '@flashmind/api-client';
+import { TargetVocabularyItem, TargetVocabularyService } from '@flashmind/api-client';
 import { DialogService } from '@flashmind/ui';
+import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TtsStore } from '../../components/tts/tts.store';
 import { TargetVocabularyComponent } from './target-vocabulary.component';
 
 describe('TargetVocabularyComponent audio', () => {
   let component: TargetVocabularyComponent;
+  const targetVocabularyApiMock = {
+    listTargetVocabulary: vi.fn(),
+    rejectTargetVocabularyUse: vi.fn(),
+  };
+  const dialogServiceMock = {
+    open: vi.fn(),
+  };
   const ttsStoreMock = {
     playingText: signal<string | null>(null),
     loadingText: signal<string | null>(null),
@@ -27,11 +35,11 @@ describe('TargetVocabularyComponent audio', () => {
       providers: [
         {
           provide: TargetVocabularyService,
-          useValue: { listTargetVocabulary: vi.fn() },
+          useValue: targetVocabularyApiMock,
         },
         {
           provide: DialogService,
-          useValue: { open: vi.fn() },
+          useValue: dialogServiceMock,
         },
         {
           provide: TtsStore,
@@ -87,5 +95,58 @@ describe('TargetVocabularyComponent audio', () => {
 
     const restored = TestBed.runInInjectionContext(() => new TargetVocabularyComponent());
     expect(restored.activeFilter()).toBe('USED');
+  });
+
+  it('撤銷多次使用時應先確認，成功後更新清單與提示', () => {
+    const usedItem = {
+      id: 'target-1',
+      term: 'site',
+      status: 'USED',
+      useCount: 2,
+      recommendationCount: 1,
+    } as TargetVocabularyItem;
+    const updatedItem = {
+      ...usedItem,
+      status: 'PRACTICING',
+      useCount: 0,
+      expressionContext: null,
+      naturalSentence: null,
+    } as TargetVocabularyItem;
+    dialogServiceMock.open.mockReturnValue({ afterClosed: () => of(true) });
+    targetVocabularyApiMock.rejectTargetVocabularyUse.mockReturnValue(of({ data: updatedItem }));
+    component.items.set([usedItem]);
+
+    component.rejectActualUse(usedItem);
+
+    expect(dialogServiceMock.open).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        data: expect.objectContaining({ message: expect.stringContaining('2 次') }),
+      }),
+    );
+    expect(targetVocabularyApiMock.rejectTargetVocabularyUse).toHaveBeenCalledWith('target-1');
+    expect(component.items()).toEqual([updatedItem]);
+    expect(component.notice()).toBe('site 已移回待練習');
+  });
+
+  it('撤銷單次使用也應先確認，取消時不應呼叫 API', () => {
+    const usedItem = {
+      id: 'target-2',
+      term: 'um',
+      status: 'USED',
+      useCount: 1,
+      recommendationCount: 0,
+    } as TargetVocabularyItem;
+    dialogServiceMock.open.mockReturnValue({ afterClosed: () => of(false) });
+
+    component.rejectActualUse(usedItem);
+
+    expect(dialogServiceMock.open).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        data: expect.objectContaining({ message: expect.stringContaining('um') }),
+      }),
+    );
+    expect(targetVocabularyApiMock.rejectTargetVocabularyUse).not.toHaveBeenCalled();
   });
 });

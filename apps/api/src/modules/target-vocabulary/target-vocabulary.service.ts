@@ -284,6 +284,46 @@ export class TargetVocabularyService {
     });
   }
 
+  async rejectActualUse(userId: string, targetVocabularyId: string) {
+    const target = await this.prisma.targetVocabulary.findFirst({
+      where: { id: targetVocabularyId, userId },
+    });
+
+    if (!target) {
+      throw new NotFoundException({
+        error: {
+          code: 'TARGET_VOCABULARY_NOT_FOUND',
+          message: '找不到此目標單字',
+        },
+      });
+    }
+
+    if (target.status !== TargetVocabularyStatus.USED) {
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'TARGET_VOCABULARY_NOT_USED',
+          message: '只能撤銷尚未加入牌組的已使用單字',
+        },
+      });
+    }
+
+    const status =
+      target.recommendationCount > 0
+        ? TargetVocabularyStatus.PRACTICING
+        : TargetVocabularyStatus.UNSEEN;
+    const updated = await this.prisma.targetVocabulary.update({
+      where: { id: targetVocabularyId },
+      data: {
+        status,
+        useCount: 0,
+        expressionContext: null,
+        naturalSentence: null,
+      },
+    });
+
+    return { data: updated };
+  }
+
   private uniqueReviewItems<T extends { term: string }>(items: T[]): T[] {
     return [
       ...new Map(

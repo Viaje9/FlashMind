@@ -82,6 +82,7 @@ model/loginRequest.ts
 model/models.ts
 model/paginationMeta.ts
 model/registerRequest.ts
+model/rejectTargetVocabularyUseResponse.ts
 model/relatedExample.ts
 model/relatedExampleResponse.ts
 model/reviewResult.ts

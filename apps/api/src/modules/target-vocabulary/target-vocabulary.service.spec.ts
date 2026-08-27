@@ -231,4 +231,62 @@ describe('TargetVocabularyService', () => {
       select: { id: true },
     });
   });
+
+  it('撤銷已使用時，曾被推薦的單字應回到待練習並清除使用內容', async () => {
+    const { service, prisma } = createService();
+    prisma.targetVocabulary.findFirst.mockResolvedValue({
+      id: 'target-1',
+      userId: 'user-1',
+      status: TargetVocabularyStatus.USED,
+      recommendationCount: 2,
+      useCount: 3,
+    });
+    prisma.targetVocabulary.update.mockResolvedValue({
+      id: 'target-1',
+      status: TargetVocabularyStatus.PRACTICING,
+      recommendationCount: 2,
+      useCount: 0,
+    });
+
+    const result = await service.rejectActualUse('user-1', 'target-1');
+
+    expect(prisma.targetVocabulary.update).toHaveBeenCalledWith({
+      where: { id: 'target-1' },
+      data: {
+        status: TargetVocabularyStatus.PRACTICING,
+        useCount: 0,
+        expressionContext: null,
+        naturalSentence: null,
+      },
+    });
+    expect(result.data.status).toBe(TargetVocabularyStatus.PRACTICING);
+  });
+
+  it('撤銷已使用時，未被推薦的單字應回到待接觸', async () => {
+    const { service, prisma } = createService();
+    prisma.targetVocabulary.findFirst.mockResolvedValue({
+      id: 'target-2',
+      userId: 'user-1',
+      status: TargetVocabularyStatus.USED,
+      recommendationCount: 0,
+      useCount: 1,
+    });
+    prisma.targetVocabulary.update.mockResolvedValue({
+      id: 'target-2',
+      status: TargetVocabularyStatus.UNSEEN,
+      recommendationCount: 0,
+      useCount: 0,
+    });
+
+    const result = await service.rejectActualUse('user-1', 'target-2');
+
+    expect(prisma.targetVocabulary.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: TargetVocabularyStatus.UNSEEN,
+        }),
+      }),
+    );
+    expect(result.data.status).toBe(TargetVocabularyStatus.UNSEEN);
+  });
 });

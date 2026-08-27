@@ -61,6 +61,7 @@ export * from "./importTargetVocabularyWord";
 export * from "./loginRequest";
 export * from "./paginationMeta";
 export * from "./registerRequest";
+export * from "./rejectTargetVocabularyUseResponse";
 export * from "./relatedExample";
 export * from "./relatedExampleResponse";
 export * from "./reviewResult";
