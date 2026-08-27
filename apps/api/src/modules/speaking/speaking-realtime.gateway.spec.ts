@@ -22,6 +22,10 @@ describe('SpeakingRealtimeGateway', () => {
       voice: 'marin',
       instructions: 'Speak naturally.',
       autoMemoryEnabled: true,
+      lastPractice: {
+        title: '與 AI 協作流程',
+        summary: 'I explained how I work with an AI agent.',
+      },
       nextPractice: {
         topic: 'How I work with an AI agent',
         speakingGoal: 'Explain one collaboration workflow.',
@@ -55,6 +59,17 @@ describe('SpeakingRealtimeGateway', () => {
         ],
       },
     });
+    expect(
+      (event['session'] as { instructions?: string }).instructions,
+    ).toContain('Previous conversation context');
+    expect(
+      (event['session'] as { instructions?: string }).instructions,
+    ).toContain('I explained how I work with an AI agent.');
+    expect(
+      (event['session'] as { instructions?: string }).instructions,
+    ).toContain(
+      'If the user asks what you discussed last time, answer directly',
+    );
     expect(
       (event['session'] as { instructions?: string }).instructions,
     ).toContain('Next practice context (private guidance)');

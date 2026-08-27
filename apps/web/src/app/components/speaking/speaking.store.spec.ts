@@ -132,7 +132,7 @@ describe('speaking.store selection translate', () => {
 });
 
 describe('speaking.store review flow', () => {
-  it('產生 Summary 後應顯示 Review 並保存下一次練習內容', async () => {
+  it('產生 Summary 後應顯示 Review 並保存上次對話與下一次練習內容', async () => {
     const nextPractice = {
       topic: 'How I work with an AI agent',
       speakingGoal: 'Explain one collaboration workflow.',
@@ -231,7 +231,13 @@ describe('speaking.store review flow', () => {
     expect(store.messages().at(-1)?.text).toContain('練習回顧');
     expect(store.messages().at(-1)?.text).toContain('cooperation（合作；協作）');
     expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ nextPractice }),
+      expect.objectContaining({
+        lastPractice: {
+          title: '與 AI 協作流程',
+          summary: 'I explained how I work with an AI agent.',
+        },
+        nextPractice,
+      }),
     );
     expect(repositoryMock.saveConversation).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -263,6 +263,7 @@ export class SpeakingRepository {
         voice: parsed.voice ?? SPEAKING_DEFAULT_SETTINGS.voice,
         memory: parsed.memory ?? SPEAKING_DEFAULT_SETTINGS.memory,
         autoMemoryEnabled: parsed.autoMemoryEnabled ?? SPEAKING_DEFAULT_SETTINGS.autoMemoryEnabled,
+        lastPractice: parsed.lastPractice ?? SPEAKING_DEFAULT_SETTINGS.lastPractice,
         nextPractice: parsed.nextPractice ?? SPEAKING_DEFAULT_SETTINGS.nextPractice,
       };
     } catch {

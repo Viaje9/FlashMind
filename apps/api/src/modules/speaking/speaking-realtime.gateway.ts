@@ -16,6 +16,10 @@ interface ConfigureEvent {
   memory?: string;
   history?: Array<{ role: 'user' | 'assistant'; text: string }>;
   autoMemoryEnabled?: boolean;
+  lastPractice?: {
+    title: string;
+    summary: string;
+  };
   nextPractice?: {
     topic: string;
     speakingGoal: string;
@@ -102,10 +106,12 @@ export class SpeakingRealtimeGateway
     config: Omit<ConfigureEvent, 'type'>,
   ): Record<string, unknown> {
     const memory = config.memory?.trim();
+    const lastPractice = this.buildLastPracticeContext(config.lastPractice);
     const nextPractice = this.buildNextPracticeContext(config.nextPractice);
     const instructions = [
       config.instructions?.trim(),
       memory ? `Long-term memory:\n${memory}` : '',
+      lastPractice,
       nextPractice,
     ]
       .filter(Boolean)
@@ -157,6 +163,25 @@ export class SpeakingRealtimeGateway
           : undefined,
       },
     };
+  }
+
+  private buildLastPracticeContext(
+    lastPractice: ConfigureEvent['lastPractice'],
+  ): string {
+    if (!lastPractice) return '';
+
+    const title = lastPractice.title?.trim();
+    const summary = lastPractice.summary?.trim();
+    if (!title && !summary) return '';
+
+    return [
+      'Previous conversation context (private background):',
+      title ? `Topic: ${title}` : '',
+      summary ? `Summary: ${summary}` : '',
+      'If the user asks what you discussed last time, answer directly from this context. Otherwise, use it only when it helps the conversation continue naturally.',
+    ]
+      .filter(Boolean)
+      .join('\n');
   }
 
   private buildNextPracticeContext(

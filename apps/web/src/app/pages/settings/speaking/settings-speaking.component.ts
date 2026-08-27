@@ -216,6 +216,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
       systemPrompt: normalizedPrompt,
       memory: this.memoryControl.value,
       voice: this.voiceControl.value,
+      lastPractice: this.repository.loadSettings().lastPractice,
       nextPractice: this.repository.loadSettings().nextPractice,
     };
   }

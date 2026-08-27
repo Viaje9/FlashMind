@@ -70,6 +70,7 @@ export class SpeakingRealtimeService {
             instructions: input.settings.systemPrompt.trim() || SPEAKING_DEFAULT_SYSTEM_PROMPT,
             memory: input.settings.memory || undefined,
             autoMemoryEnabled: input.settings.autoMemoryEnabled,
+            lastPractice: input.settings.lastPractice,
             nextPractice: input.settings.nextPractice,
             history: input.history
               .filter((message) => message.role !== 'summary' && message.text?.trim())

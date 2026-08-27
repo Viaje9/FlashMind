@@ -290,6 +290,10 @@ export class SpeakingStore {
       await this.repository.saveMessage(summaryMessage);
       const updatedSettings: SpeakingSettings = {
         ...this.repository.loadSettings(),
+        lastPractice: {
+          title: response.data.title,
+          summary: response.data.summary,
+        },
         nextPractice: response.data.nextPractice,
       };
       this.repository.saveSettings(updatedSettings);
