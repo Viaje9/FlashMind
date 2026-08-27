@@ -10,7 +10,7 @@ export interface MeaningDraft {
   selector: 'fm-meaning-editor-card',
   templateUrl: './meaning-editor-card.component.html',
   host: { class: 'block' },
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FmMeaningEditorCardComponent {
   readonly meaning = input<MeaningDraft>({ zhMeaning: '', enExample: '', zhExample: '' });
@@ -18,15 +18,18 @@ export class FmMeaningEditorCardComponent {
   readonly showDelete = input(true);
   readonly testId = input<string>();
   readonly isPlayingAudio = input(false);
+  readonly showTranslate = input(false);
+  readonly isTranslating = input(false);
 
   readonly meaningChange = output<MeaningDraft>();
   readonly deleteClick = output<void>();
   readonly playAudioClick = output<void>();
+  readonly translateClick = output<void>();
 
   onFieldChange(field: keyof MeaningDraft, value: string) {
     const nextValue = {
       ...this.meaning(),
-      [field]: value
+      [field]: value,
     };
     this.meaningChange.emit(nextValue);
   }

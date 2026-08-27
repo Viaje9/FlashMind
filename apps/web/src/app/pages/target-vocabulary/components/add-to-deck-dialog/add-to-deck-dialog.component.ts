@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@ang
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   DecksService,
+  SpeakingService,
   type DeckListItem,
   type TargetVocabularyItem,
   TargetVocabularyService,
@@ -14,10 +15,13 @@ import {
   FmDialogComponent,
   FmDialogContentComponent,
   FmDialogTitleComponent,
-  FmGlowTextareaComponent,
-  FmLabeledInputComponent,
   type DialogConfig,
 } from '@flashmind/ui';
+import { firstValueFrom } from 'rxjs';
+import { FlashcardEditorFieldsComponent } from '../../../../components/card/flashcard-editor-fields/flashcard-editor-fields.component';
+import { createEmptyMeaning } from '../../../../components/card/card.domain';
+import type { MeaningDraft } from '../../../card-editor/components/meaning-editor-card/meaning-editor-card.component';
+import { TtsStore } from '../../../../components/tts/tts.store';
 import {
   readStoredTargetVocabularyDeckId,
   resolveStoredTargetVocabularyDeckId,
@@ -37,8 +41,7 @@ export interface AddToDeckDialogData {
     FmDialogContentComponent,
     FmDialogActionsComponent,
     FmButtonComponent,
-    FmLabeledInputComponent,
-    FmGlowTextareaComponent,
+    FlashcardEditorFieldsComponent,
   ],
   template: `
     <fm-dialog>
@@ -74,30 +77,20 @@ export interface AddToDeckDialogData {
             </select>
           </label>
 
-          <fm-labeled-input
-            label="單字或片語"
-            formControlName="term"
-            ariaLabel="單字或片語"
-            testId="target-vocabulary-add-term"
+          <app-flashcard-editor-fields
+            [front]="front()"
+            [meanings]="meanings()"
+            [showTranslate]="true"
+            [showAddMeaning]="false"
+            [translatingIndex]="translatingIndex()"
+            [playingText]="ttsStore.playingText()"
+            (frontChange)="front.set($event)"
+            (meaningChange)="onMeaningChange($event)"
+            (deleteMeaning)="onDeleteMeaning($event)"
+            (addMeaning)="onAddMeaning()"
+            (playSentence)="onPlaySentence($event)"
+            (translateSentence)="onTranslateSentence($event)"
           />
-          <fm-labeled-input
-            label="中文意思"
-            formControlName="zhMeaning"
-            ariaLabel="中文意思"
-            testId="target-vocabulary-add-meaning"
-          />
-
-          <label class="flex flex-col gap-2">
-            <span class="ml-1 text-sm font-bold text-slate-700 dark:text-slate-300">自然句子</span>
-            <fm-glow-textarea
-              formControlName="naturalSentence"
-              placeholder="保留這次 Review 整理出的自然說法"
-              minHeightClass="min-h-[110px]"
-              [maxLength]="2000"
-              ariaLabel="自然句子"
-              testId="target-vocabulary-add-sentence"
-            />
-          </label>
 
           @if (error()) {
             <p class="text-sm text-red-500" data-testid="target-vocabulary-add-error">
@@ -117,7 +110,9 @@ export interface AddToDeckDialogData {
         </fm-button>
         <fm-button
           variant="primary"
-          [disabled]="form.invalid || loadingDecks() || decks().length === 0 || submitting()"
+          [disabled]="
+            form.invalid || !isCardValid() || loadingDecks() || decks().length === 0 || submitting()
+          "
           (click)="onConfirm()"
           testId="target-vocabulary-add-confirm"
         >
@@ -129,7 +124,7 @@ export interface AddToDeckDialogData {
   styles: `
     :host fm-dialog-content {
       min-height: 0;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     :host fm-dialog-actions {
@@ -141,6 +136,8 @@ export interface AddToDeckDialogData {
 export class AddToDeckDialogComponent implements OnInit {
   private readonly decksApi = inject(DecksService);
   private readonly targetVocabularyApi = inject(TargetVocabularyService);
+  private readonly speakingApi = inject(SpeakingService);
+  readonly ttsStore = inject(TtsStore);
   private readonly dialogRef =
     inject<DialogRef<AddToDeckDialogComponent, TargetVocabularyItem>>(DialogRef);
   private readonly config = inject(DIALOG_CONFIG) as DialogConfig<AddToDeckDialogData>;
@@ -150,21 +147,73 @@ export class AddToDeckDialogComponent implements OnInit {
   readonly loadingDecks = signal(true);
   readonly submitting = signal(false);
   readonly error = signal('');
+  readonly front = signal(this.item.term);
+  readonly meanings = signal<MeaningDraft[]>([
+    {
+      ...createEmptyMeaning(),
+      zhMeaning: this.item.zhMeaning,
+      enExample: this.item.naturalSentence ?? '',
+    },
+  ]);
+  readonly translatingIndex = signal<number | null>(null);
   readonly form = new FormGroup({
     deckId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    term: new FormControl(this.item.term, {
-      nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
-    }),
-    zhMeaning: new FormControl(this.item.zhMeaning, {
-      nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(1000)],
-    }),
-    naturalSentence: new FormControl(this.item.naturalSentence ?? '', {
-      nonNullable: true,
-      validators: [Validators.maxLength(2000)],
-    }),
   });
+
+  isCardValid(): boolean {
+    return (
+      !!this.front().trim() &&
+      this.front().length <= 200 &&
+      this.meanings().length > 0 &&
+      this.meanings().every(
+        (meaning) =>
+          !!meaning.zhMeaning.trim() &&
+          meaning.zhMeaning.length <= 1000 &&
+          meaning.enExample.length <= 2000 &&
+          meaning.zhExample.length <= 2000,
+      )
+    );
+  }
+
+  onMeaningChange(event: { index: number; meaning: MeaningDraft }): void {
+    this.meanings.update((meanings) =>
+      meanings.map((meaning, index) => (index === event.index ? event.meaning : meaning)),
+    );
+  }
+
+  onDeleteMeaning(index: number): void {
+    if (this.meanings().length <= 1) return;
+    this.meanings.update((meanings) => meanings.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  onAddMeaning(): void {
+    this.meanings.update((meanings) => [...meanings, createEmptyMeaning()]);
+  }
+
+  onPlaySentence(text: string): void {
+    if (text.trim()) void this.ttsStore.play(text);
+  }
+
+  async onTranslateSentence(index: number): Promise<void> {
+    const meaning = this.meanings()[index];
+    if (!meaning?.enExample.trim() || this.translatingIndex() !== null) return;
+
+    this.translatingIndex.set(index);
+    this.error.set('');
+    try {
+      const response = await firstValueFrom(
+        this.speakingApi.translateSpeakingText({ text: meaning.enExample.trim() }),
+      );
+      this.onMeaningChange({
+        index,
+        meaning: { ...meaning, zhExample: response.data.translatedText.trim() },
+      });
+    } catch {
+      this.error.set('例句翻譯失敗，請稍後再試');
+    } finally {
+      this.translatingIndex.set(null);
+    }
+  }
 
   ngOnInit(): void {
     this.decksApi.listDecks().subscribe({
@@ -187,20 +236,22 @@ export class AddToDeckDialogComponent implements OnInit {
   }
 
   onConfirm(): void {
-    if (this.form.invalid || this.submitting()) {
+    if (this.form.invalid || !this.isCardValid() || this.submitting()) {
       this.form.markAllAsTouched();
       return;
     }
 
     const value = this.form.getRawValue();
+    const meaning = this.meanings()[0];
     this.submitting.set(true);
     this.error.set('');
     this.targetVocabularyApi
       .addTargetVocabularyToDeck(this.item.id, {
         deckId: value.deckId,
-        term: value.term.trim(),
-        zhMeaning: value.zhMeaning.trim(),
-        naturalSentence: value.naturalSentence.trim() || undefined,
+        term: this.front().trim(),
+        zhMeaning: meaning.zhMeaning.trim(),
+        naturalSentence: meaning.enExample.trim() || undefined,
+        zhExample: meaning.zhExample.trim() || undefined,
       })
       .subscribe({
         next: ({ data }) => {

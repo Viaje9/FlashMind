@@ -1,0 +1,55 @@
+<section class="space-y-2">
+  <label class="text-xs font-black text-secondary-text" for="flashcard-editor-front">正面</label>
+  <textarea
+    id="flashcard-editor-front"
+    class="min-h-16 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-relaxed text-slate-900 outline-none transition focus:border-primary dark:border-slate-700 dark:bg-card-dark dark:text-white"
+    [value]="front()"
+    (input)="onFrontInput($event)"
+    data-testid="flashcard-editor-front"
+  ></textarea>
+</section>
+
+<section class="space-y-3">
+  <h3 class="text-xs font-black text-secondary-text">背面</h3>
+
+  @if (showAiGenerate()) {
+    <button
+      type="button"
+      class="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-500/20 bg-purple-500/10 py-3 font-medium text-purple-700 transition hover:bg-purple-500/15 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:text-purple-300"
+      data-testid="flashcard-editor-ai-generate"
+      [disabled]="!canAiGenerate() || aiGenerating()"
+      (click)="aiGenerate.emit()"
+    >
+      <span class="material-symbols-outlined text-[20px]" [class.animate-spin]="aiGenerating()">
+        {{ aiGenerating() ? 'progress_activity' : 'auto_awesome' }}
+      </span>
+      <span class="text-sm font-bold">{{
+        aiGenerating() ? 'AI 生成中...' : 'AI 生成詞義與例句'
+      }}</span>
+    </button>
+  }
+
+  @for (meaning of meanings(); track $index; let i = $index) {
+    <fm-meaning-editor-card
+      [meaning]="meaning"
+      [tagLabel]="meaning.zhMeaning || '詞義 ' + (i + 1)"
+      [showDelete]="meanings().length > 1"
+      [showTranslate]="showTranslate()"
+      [isTranslating]="translatingIndex() === i"
+      [isPlayingAudio]="playingText() === meaning.enExample"
+      (meaningChange)="meaningChange.emit({ index: i, meaning: $event })"
+      (deleteClick)="deleteMeaning.emit(i)"
+      (playAudioClick)="playSentence.emit(meaning.enExample)"
+      (translateClick)="translateSentence.emit(i)"
+      [testId]="'flashcard-editor-meaning-' + i"
+    />
+  }
+
+  @if (showAddMeaning()) {
+    <fm-add-item-button
+      label="新增詞義"
+      testId="flashcard-editor-add-meaning"
+      (click)="addMeaning.emit()"
+    />
+  }
+</section>

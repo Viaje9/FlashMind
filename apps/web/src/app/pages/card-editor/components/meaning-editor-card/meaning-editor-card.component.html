@@ -66,10 +66,28 @@
       </div>
     </label>
     <label class="block">
-      <span
-        class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1.5 block uppercase tracking-wide"
-        >中文例句翻譯</span
-      >
+      <span class="mb-1.5 flex items-center justify-between gap-3">
+        <span class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          中文例句翻譯
+        </span>
+        @if (showTranslate()) {
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-55"
+            [disabled]="!meaning().enExample.trim() || isTranslating()"
+            (click)="translateClick.emit()"
+            [attr.data-testid]="testId() ? testId() + '-translate' : null"
+          >
+            <span
+              class="material-symbols-outlined text-[16px]"
+              [class.animate-spin]="isTranslating()"
+            >
+              {{ isTranslating() ? 'progress_activity' : 'translate' }}
+            </span>
+            {{ isTranslating() ? '翻譯中' : '翻譯例句' }}
+          </button>
+        }
+      </span>
       <textarea
         class="w-full bg-background-light dark:bg-background-dark/50 rounded-lg px-3 py-2.5 text-base text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 border-none focus:ring-1 focus:ring-primary/50 transition-all resize-none min-h-[48px]"
         placeholder="輸入中文翻譯..."

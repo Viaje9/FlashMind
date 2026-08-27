@@ -13,4 +13,8 @@ export interface AddTargetVocabularyToDeckRequest {
   term: string;
   zhMeaning: string;
   naturalSentence?: string;
+  /**
+   * 自然句子的繁體中文翻譯
+   */
+  zhExample?: string;
 }

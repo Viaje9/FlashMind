@@ -1,12 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import {
-  FmAddItemButtonComponent,
-  FmButtonComponent,
-  FmIconButtonComponent,
-  FmPageHeaderComponent,
-} from '@flashmind/ui';
+import { FmButtonComponent, FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { CollectionSuggestionCardComponent } from '../../components/collection-pack/collection-suggestion-card.component';
 import { CollectionSuggestedCardComponent } from '../../components/collection-pack/collection-suggested-card.component';
 import {
@@ -19,12 +14,10 @@ import {
   writeStoredCollectionDeckId,
 } from '../../components/collection-pack/collection-pack.domain';
 import { CollectionPackStore } from '../../components/collection-pack/collection-pack.store';
-import {
-  FmMeaningEditorCardComponent,
-  type MeaningDraft,
-} from '../card-editor/components/meaning-editor-card/meaning-editor-card.component';
-import { canDeleteMeaning, createEmptyMeaning } from '../../components/card/card.domain';
+import type { MeaningDraft } from '../card-editor/components/meaning-editor-card/meaning-editor-card.component';
+import { createEmptyMeaning } from '../../components/card/card.domain';
 import { validateMeaningsForSubmit } from '../../components/card/card.form';
+import { FlashcardEditorFieldsComponent } from '../../components/card/flashcard-editor-fields/flashcard-editor-fields.component';
 import { AiStore } from '../../components/ai/ai.store';
 import { canGenerateContent } from '../../components/ai/ai.domain';
 import { TtsStore } from '../../components/tts/tts.store';
@@ -37,10 +30,9 @@ import { TtsStore } from '../../components/tts/tts.store';
     FmButtonComponent,
     FmIconButtonComponent,
     FmPageHeaderComponent,
-    FmAddItemButtonComponent,
     CollectionSuggestionCardComponent,
     CollectionSuggestedCardComponent,
-    FmMeaningEditorCardComponent,
+    FlashcardEditorFieldsComponent,
   ],
   templateUrl: './collection-pack-new.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,7 +40,7 @@ import { TtsStore } from '../../components/tts/tts.store';
 export class CollectionPackNewComponent {
   private readonly router = inject(Router);
   private readonly aiStore = inject(AiStore);
-  private readonly ttsStore = inject(TtsStore);
+  readonly ttsStore = inject(TtsStore);
   readonly store = inject(CollectionPackStore);
   readonly inputControl = new FormControl('', {
     nonNullable: true,
@@ -68,9 +60,6 @@ export class CollectionPackNewComponent {
   readonly flashcardFront = signal('');
   readonly flashcardMeanings = signal<MeaningDraft[]>([createEmptyMeaning()]);
   readonly flashcardError = signal<string | null>(null);
-  readonly canDeleteFlashcardMeanings = computed(() =>
-    canDeleteMeaning(this.flashcardMeanings().length),
-  );
   readonly flashcardAiGenerating = this.aiStore.generating;
   readonly canFlashcardAiGenerate = computed(() => canGenerateContent(this.flashcardFront()));
 
@@ -184,8 +173,12 @@ export class CollectionPackNewComponent {
     this.flashcardMeanings.set(updated);
   }
 
+  onFlashcardEditorMeaningChange(event: { index: number; meaning: MeaningDraft }): void {
+    this.onFlashcardMeaningChange(event.index, event.meaning);
+  }
+
   onDeleteFlashcardMeaning(index: number): void {
-    if (!this.canDeleteFlashcardMeanings()) return;
+    if (this.flashcardMeanings().length <= 1) return;
     this.flashcardMeanings.update((meanings) =>
       meanings.filter((_, itemIndex) => itemIndex !== index),
     );

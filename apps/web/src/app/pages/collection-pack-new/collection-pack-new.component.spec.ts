@@ -1,7 +1,13 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { AIService, CardsService, CollectionsService, DecksService } from '@flashmind/api-client';
+import {
+  AIService,
+  CardsService,
+  CollectionsService,
+  Configuration,
+  DecksService,
+} from '@flashmind/api-client';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CollectionPackStore } from '../../components/collection-pack/collection-pack.store';
@@ -221,6 +227,10 @@ describe('CollectionPackNewComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         CollectionPackStore,
+        {
+          provide: Configuration,
+          useValue: new Configuration(),
+        },
         {
           provide: CollectionsService,
           useValue: collectionsApiMock,

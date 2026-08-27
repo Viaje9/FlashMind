@@ -64,4 +64,9 @@ export class AddTargetVocabularyToDeckDto {
   @IsOptional()
   @MaxLength(2000)
   naturalSentence?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000)
+  zhExample?: string;
 }

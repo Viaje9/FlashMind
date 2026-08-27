@@ -212,6 +212,7 @@ describe('TargetVocabularyService', () => {
       zhMeaning: '功能',
       naturalSentence:
         'It depends on what kind of function the node tree needs.',
+      zhExample: '這取決於節點樹需要什麼樣的功能。',
     });
 
     expect(prisma.card.create).toHaveBeenCalledWith({
@@ -224,6 +225,7 @@ describe('TargetVocabularyService', () => {
             zhMeaning: '功能',
             enExample:
               'It depends on what kind of function the node tree needs.',
+            zhExample: '這取決於節點樹需要什麼樣的功能。',
             sortOrder: 0,
           },
         },

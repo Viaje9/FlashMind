@@ -3552,6 +3552,10 @@ components:
         naturalSentence:
           type: string
           maxLength: 2000
+        zhExample:
+          type: string
+          maxLength: 2000
+          description: 自然句子的繁體中文翻譯
 
     AddTargetVocabularyToDeckResponse:
       type: object

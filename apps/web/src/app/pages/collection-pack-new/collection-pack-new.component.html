@@ -244,61 +244,20 @@
             </p>
           }
 
-          <section class="space-y-2">
-            <label class="text-xs font-black text-secondary-text" for="collection-flashcard-front">
-              正面
-            </label>
-            <textarea
-              id="collection-flashcard-front"
-              class="min-h-16 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-relaxed text-slate-900 outline-none transition focus:border-primary dark:border-slate-700 dark:bg-card-dark dark:text-white"
-              [value]="flashcardFront()"
-              (input)="flashcardFront.set($any($event.target).value)"
-              data-testid="collection-flashcard-front"
-            ></textarea>
-          </section>
-
-          <section class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h3 class="text-xs font-black text-secondary-text">背面</h3>
-            </div>
-
-            <button
-              type="button"
-              class="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 py-3 font-medium text-purple-700 transition-all hover:bg-purple-500/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:text-purple-300"
-              data-testid="collection-flashcard-ai-generate"
-              [disabled]="!canFlashcardAiGenerate() || flashcardAiGenerating()"
-              (click)="onFlashcardAiGenerate()"
-            >
-              @if (flashcardAiGenerating()) {
-                <span class="material-symbols-outlined text-[20px] animate-spin">
-                  progress_activity
-                </span>
-                <span class="relative z-10 text-sm font-bold">AI 生成中...</span>
-              } @else {
-                <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
-                <span class="relative z-10 text-sm font-bold">AI 生成詞義與例句</span>
-              }
-            </button>
-
-            @for (meaning of flashcardMeanings(); track $index; let i = $index) {
-              <fm-meaning-editor-card
-                [meaning]="meaning"
-                [tagLabel]="meaning.zhMeaning || '詞義 ' + (i + 1)"
-                [showDelete]="canDeleteFlashcardMeanings()"
-                [isPlayingAudio]="isFlashcardSentenceAudioPlaying(meaning.enExample)"
-                (meaningChange)="onFlashcardMeaningChange(i, $event)"
-                (deleteClick)="onDeleteFlashcardMeaning(i)"
-                (playAudioClick)="onPlayFlashcardSentenceAudio(meaning.enExample)"
-                [testId]="'collection-flashcard-meaning-' + i"
-              ></fm-meaning-editor-card>
-            }
-
-            <fm-add-item-button
-              label="新增詞義"
-              testId="collection-flashcard-add-meaning"
-              (click)="onAddFlashcardMeaning()"
-            ></fm-add-item-button>
-          </section>
+          <app-flashcard-editor-fields
+            [front]="flashcardFront()"
+            [meanings]="flashcardMeanings()"
+            [showAiGenerate]="true"
+            [aiGenerating]="flashcardAiGenerating()"
+            [canAiGenerate]="canFlashcardAiGenerate()"
+            [playingText]="ttsStore.playingText()"
+            (frontChange)="flashcardFront.set($event)"
+            (meaningChange)="onFlashcardEditorMeaningChange($event)"
+            (deleteMeaning)="onDeleteFlashcardMeaning($event)"
+            (addMeaning)="onAddFlashcardMeaning()"
+            (aiGenerate)="onFlashcardAiGenerate()"
+            (playSentence)="onPlayFlashcardSentenceAudio($event)"
+          />
         </div>
 
         <footer class="flex justify-end gap-2 border-t border-slate-200 p-4 dark:border-slate-800">

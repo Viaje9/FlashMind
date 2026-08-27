@@ -72,6 +72,9 @@ describe('SpeakingService', () => {
     expect(requestBody.messages[0].content).toContain(
       'After helping, return directly to the original conversation',
     );
+    expect(requestBody.messages[0].content).toContain(
+      'End every live-conversation reply with exactly one simple, natural question',
+    );
   });
 
   it('Speaking 文字端點應使用 COLLECTION_CODEX_MODEL', async () => {

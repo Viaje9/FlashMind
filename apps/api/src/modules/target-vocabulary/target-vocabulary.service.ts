@@ -251,6 +251,7 @@ export class TargetVocabularyService {
         (card) => this.normalizeTerm(card.front) === normalizedTerm,
       );
       const naturalSentence = dto.naturalSentence?.trim() || null;
+      const zhExample = dto.zhExample?.trim() || null;
       const cardId = existingCard
         ? existingCard.id
         : (
@@ -263,6 +264,7 @@ export class TargetVocabularyService {
                   create: {
                     zhMeaning: dto.zhMeaning.trim(),
                     enExample: naturalSentence,
+                    zhExample,
                     sortOrder: 0,
                   },
                 },

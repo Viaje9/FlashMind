@@ -22,13 +22,19 @@ describe('speaking.domain', () => {
       'Respond to what the user is talking about, not to the quality of their English',
     );
     expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
-      'Avoid consecutive follow-up questions or turning the conversation into an interview',
+      'End every live-conversation reply with exactly one simple, natural question',
+    );
+    expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
+      "clarify the user's meaning; deepen the current topic; open a naturally related topic; then use the next-practice context",
     );
     expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
       'Never ask the user to repeat, make another sentence, try again, or deliberately use a word',
     );
     expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
       'After helping, return directly to the original conversation',
+    );
+    expect(SPEAKING_DEFAULT_SYSTEM_PROMPT).toContain(
+      'A clear ending instruction is the only exception to the one-question rule',
     );
   });
 
