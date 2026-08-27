@@ -3,6 +3,7 @@ import { Injectable, computed, signal } from '@angular/core';
 interface PlayOptions {
   auto?: boolean;
   maxRetryAttempts?: number;
+  waitForEnd?: boolean;
 }
 
 function createSilentWavBlob(durationMs = 250): Blob {
@@ -129,11 +130,14 @@ export class SpeakingAudioPlayerService {
 
     const maxRetryAttempts = options.maxRetryAttempts ?? 6;
 
+    let finishWait: (() => void) | undefined;
+    const playbackFinished = new Promise<void>((resolve) => (finishWait = resolve));
     audio.onended = () => {
       this.cleanupPlaybackStateForKey(key);
       if (this.sharedTrackEnabled) {
         void this.enterKeepAliveMode();
       }
+      finishWait?.();
     };
     audio.onerror = () => {
       this.errorState.set('語音播放失敗，請再試一次。');
@@ -141,6 +145,7 @@ export class SpeakingAudioPlayerService {
       if (this.sharedTrackEnabled) {
         void this.enterKeepAliveMode();
       }
+      finishWait?.();
     };
 
     try {
@@ -149,12 +154,14 @@ export class SpeakingAudioPlayerService {
       } else {
         await audio.play();
       }
+      if (options.waitForEnd) await playbackFinished;
     } catch {
       this.errorState.set('語音播放失敗，請再試一次。');
       this.cleanupPlaybackStateForKey(key);
       if (this.sharedTrackEnabled) {
         void this.enterKeepAliveMode();
       }
+      finishWait?.();
     }
   }
 

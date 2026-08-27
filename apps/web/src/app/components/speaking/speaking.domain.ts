@@ -8,6 +8,7 @@ import {
 
 export type SpeakingRole = 'user' | 'assistant' | 'summary';
 export type SpeakingAssistantRole = 'user' | 'assistant';
+export type SpeakingInteractionMode = 'TURN_BASED' | 'REALTIME';
 
 export interface SpeakingMessage {
   id: string;
@@ -46,6 +47,7 @@ export interface SpeakingLastPractice {
 }
 
 export interface SpeakingSettings {
+  interactionMode: SpeakingInteractionMode;
   autoPlayVoice: boolean;
   showTranscript: boolean;
   autoTranslate: boolean;
@@ -133,6 +135,7 @@ Ending:
 - Then briefly acknowledge the ending and do not ask another question`;
 
 export const SPEAKING_DEFAULT_SETTINGS: SpeakingSettings = {
+  interactionMode: 'TURN_BASED',
   autoPlayVoice: true,
   showTranscript: true,
   autoTranslate: false,

@@ -21,6 +21,7 @@ describe('SettingsSpeakingComponent', () => {
   };
 
   const loadedSettings: SpeakingSettings = {
+    interactionMode: 'TURN_BASED',
     autoPlayVoice: false,
     showTranscript: true,
     autoTranslate: true,
@@ -66,6 +67,16 @@ describe('SettingsSpeakingComponent', () => {
 
   it('初始載入時不應誤判為未儲存變更', () => {
     expect(component.hasUnsavedChanges()).toBe(false);
+  });
+
+  it('可切換並保存即時對話模式', async () => {
+    component.interactionModeControl.setValue('REALTIME');
+
+    await component.onSave();
+
+    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ interactionMode: 'REALTIME' }),
+    );
   });
 
   it('設定頁不應顯示 AI 聲音選擇與試聽介面', () => {

@@ -167,6 +167,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly notePanelTop = signal(this.initialNotePanelTop());
   readonly noteEditing = signal(false);
   readonly stoppingAndSending = signal(false);
+  readonly realtimeConversationActive = signal(false);
   readonly copiedSummaryMessageId = signal<string | null>(null);
 
   readonly hasUserMessages = computed(() =>
@@ -470,7 +471,13 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     await this.speakingStore.activateSharedAudioTrack();
     try {
       await this.speakingStore.prepareRealtimeSession();
-      await this.recorder.start();
+      const realtime = this.settings().interactionMode === 'REALTIME';
+      this.realtimeConversationActive.set(realtime);
+      await this.recorder.start(
+        realtime
+          ? { autoStopOnSilence: true, onSilence: () => void this.onRealtimeSilence() }
+          : undefined,
+      );
     } catch {
       // Store 已顯示 Realtime 連線錯誤。
       this.speakingStore.deactivateSharedAudioTrack();
@@ -482,16 +489,33 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   onResumeRecording(): void {
-    this.recorder.resume();
+    const realtime = this.settings().interactionMode === 'REALTIME';
+    this.realtimeConversationActive.set(realtime);
+    this.recorder.resume(
+      realtime
+        ? { autoStopOnSilence: true, onSilence: () => void this.onRealtimeSilence() }
+        : undefined,
+    );
   }
 
   async onStopRecording(): Promise<void> {
+    this.realtimeConversationActive.set(false);
     if (this.stoppingAndSending() || this.sending()) {
       return;
     }
 
+    await this.stopAndSendRecording(false);
+  }
+
+  private async onRealtimeSilence(): Promise<void> {
+    await this.stopAndSendRecording(true);
+  }
+
+  private async stopAndSendRecording(resumeRealtime: boolean): Promise<void> {
+    if (this.stoppingAndSending() || this.sending()) return;
     this.stoppingAndSending.set(true);
 
+    let restarted = false;
     try {
       const blob = await this.recorder.stop();
       this.recorder.cancel();
@@ -501,8 +525,15 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       }
 
       await this.speakingStore.sendAudioMessage(blob);
+      if (resumeRealtime && this.realtimeConversationActive() && !this.hasConversationSummary()) {
+        await this.recorder.start({
+          autoStopOnSilence: true,
+          onSilence: () => void this.onRealtimeSilence(),
+        });
+        restarted = true;
+      }
     } finally {
-      if (this.recorderStatus() !== 'idle') {
+      if (!restarted && this.recorderStatus() !== 'idle') {
         this.recorder.cancel();
       }
       this.stoppingAndSending.set(false);
@@ -513,6 +544,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     if (this.stoppingAndSending()) {
       return;
     }
+    this.realtimeConversationActive.set(false);
     this.recorder.cancel();
   }
 

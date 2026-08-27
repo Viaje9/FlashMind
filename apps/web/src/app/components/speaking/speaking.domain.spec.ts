@@ -40,6 +40,7 @@ describe('speaking.domain', () => {
 
   it('預設設定應包含 voice 與 memory 欄位', () => {
     expect(SPEAKING_DEFAULT_SETTINGS).toMatchObject({
+      interactionMode: 'TURN_BASED',
       autoPlayVoice: true,
       showTranscript: true,
       autoTranslate: false,

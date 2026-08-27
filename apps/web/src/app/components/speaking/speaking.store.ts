@@ -659,8 +659,11 @@ export class SpeakingStore {
       this.retryPayload = null;
 
       if (settings.autoPlayVoice) {
-        // 不阻塞送出流程，收到回應後即可結束 loading，再由背景播放語音。
-        void this.audioPlayer.play(assistantAudioBlob, assistantAudioKey, { auto: true });
+        const playback = this.audioPlayer.play(assistantAudioBlob, assistantAudioKey, {
+          auto: true,
+          waitForEnd: settings.interactionMode === 'REALTIME',
+        });
+        if (settings.interactionMode === 'REALTIME') await playback;
       }
 
       return true;

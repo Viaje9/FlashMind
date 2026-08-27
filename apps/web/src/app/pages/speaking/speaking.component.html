@@ -650,14 +650,26 @@
             <button
               type="button"
               class="mic-main-btn"
-              [class.mic-recording]="recorderStatus() === 'recording'"
+              [class.mic-recording]="
+                recorderStatus() === 'recording' || realtimeConversationActive()
+              "
               [class.mic-paused]="recorderStatus() === 'paused'"
-              [attr.aria-label]="isRecorderActive() ? '停止並送出錄音' : '開始錄音'"
-              [disabled]="interactionLocked()"
-              (click)="isRecorderActive() ? onStopRecording() : onStartRecording()"
+              [attr.aria-label]="
+                realtimeConversationActive()
+                  ? '結束即時對話'
+                  : isRecorderActive()
+                    ? '停止並送出錄音'
+                    : '開始錄音'
+              "
+              [disabled]="interactionLocked() && !realtimeConversationActive()"
+              (click)="
+                realtimeConversationActive() || isRecorderActive()
+                  ? onStopRecording()
+                  : onStartRecording()
+              "
               data-testid="speaking-mic-main"
             >
-              @if (!isRecorderActive()) {
+              @if (!isRecorderActive() && !realtimeConversationActive()) {
                 <span class="material-symbols-outlined text-[28px]">mic</span>
               } @else {
                 <div class="flex flex-col items-center">

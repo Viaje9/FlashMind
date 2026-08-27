@@ -15,6 +15,12 @@ export class SpeakingRecorderService {
   private readonly chunks: Blob[] = [];
   private durationTimer: number | null = null;
   private startedAt = 0;
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private silenceFrame: number | null = null;
+  private silenceStartedAt: number | null = null;
+  private speechDetected = false;
+  private silenceCallback: (() => void) | null = null;
 
   private readonly statusState = signal<SpeakingRecorderStatus>(
     this.checkSupported() ? 'idle' : 'unsupported',
@@ -29,7 +35,7 @@ export class SpeakingRecorderService {
   readonly recordedBlob = computed(() => this.recordedBlobState());
   readonly canRecord = computed(() => this.statusState() !== 'unsupported');
 
-  async start(): Promise<void> {
+  async start(options?: { autoStopOnSilence?: boolean; onSilence?: () => void }): Promise<void> {
     if (!this.checkSupported()) {
       this.statusState.set('unsupported');
       this.errorState.set('目前裝置不支援麥克風錄音。');
@@ -67,6 +73,9 @@ export class SpeakingRecorderService {
       this.durationMsState.set(0);
       this.startDurationTimer();
       this.statusState.set('recording');
+      if (options?.autoStopOnSilence && options.onSilence) {
+        this.startSilenceDetection(stream, options.onSilence);
+      }
     } catch (error) {
       const domError = error as DOMException | undefined;
       const errorName = domError?.name;
@@ -103,7 +112,7 @@ export class SpeakingRecorderService {
     this.clearDurationTimer();
   }
 
-  resume(): void {
+  resume(options?: { autoStopOnSilence?: boolean; onSilence?: () => void }): void {
     if (this.mediaRecorder?.state !== 'paused') {
       return;
     }
@@ -111,6 +120,9 @@ export class SpeakingRecorderService {
     this.mediaRecorder.resume();
     this.statusState.set('recording');
     this.startDurationTimer();
+    if (options?.autoStopOnSilence && options.onSilence && this.mediaStream) {
+      this.startSilenceDetection(this.mediaStream, options.onSilence);
+    }
   }
 
   async stop(): Promise<Blob | null> {
@@ -122,6 +134,7 @@ export class SpeakingRecorderService {
     }
 
     this.clearDurationTimer();
+    this.stopSilenceDetection();
 
     await new Promise<void>((resolve) => {
       const recorder = this.mediaRecorder;
@@ -155,6 +168,7 @@ export class SpeakingRecorderService {
     this.mediaRecorder = null;
     this.chunks.length = 0;
     this.clearDurationTimer();
+    this.stopSilenceDetection();
     this.durationMsState.set(0);
     this.recordedBlobState.set(null);
     this.errorState.set(null);
@@ -178,6 +192,54 @@ export class SpeakingRecorderService {
       window.clearInterval(this.durationTimer);
       this.durationTimer = null;
     }
+  }
+
+  private startSilenceDetection(stream: MediaStream, callback: () => void): void {
+    this.stopSilenceDetection();
+    this.silenceCallback = callback;
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 1024;
+    this.audioContext.createMediaStreamSource(stream).connect(this.analyser);
+    const samples = new Uint8Array(this.analyser.fftSize);
+
+    const detect = (): void => {
+      if (!this.analyser || this.statusState() !== 'recording') return;
+      this.analyser.getByteTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) {
+        const normalized = (sample - 128) / 128;
+        sum += normalized * normalized;
+      }
+      const rms = Math.sqrt(sum / samples.length);
+      const now = Date.now();
+      if (rms >= 0.025) {
+        this.speechDetected = true;
+        this.silenceStartedAt = null;
+      } else if (this.speechDetected) {
+        this.silenceStartedAt ??= now;
+        if (now - this.silenceStartedAt >= 1100 && this.durationMsState() >= 700) {
+          const onSilence = this.silenceCallback;
+          this.stopSilenceDetection();
+          onSilence?.();
+          return;
+        }
+      }
+      this.silenceFrame = requestAnimationFrame(detect);
+    };
+    this.silenceFrame = requestAnimationFrame(detect);
+  }
+
+  private stopSilenceDetection(): void {
+    if (this.silenceFrame !== null) cancelAnimationFrame(this.silenceFrame);
+    this.silenceFrame = null;
+    this.silenceStartedAt = null;
+    this.speechDetected = false;
+    this.silenceCallback = null;
+    this.analyser?.disconnect();
+    this.analyser = null;
+    if (this.audioContext) void this.audioContext.close();
+    this.audioContext = null;
   }
 
   private checkSupported(): boolean {

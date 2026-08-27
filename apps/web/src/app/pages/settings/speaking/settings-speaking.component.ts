@@ -24,6 +24,7 @@ import {
   SPEAKING_DEFAULT_SYSTEM_PROMPT,
   SPEAKING_DEFAULT_SETTINGS,
   type SpeakingSettings,
+  type SpeakingInteractionMode,
 } from '../../../components/speaking/speaking.domain';
 import { SpeakingRepository } from '../../../components/speaking/speaking.repository';
 import { type HasUnsavedChanges } from '../../../guards/unsaved-changes.guard';
@@ -61,6 +62,9 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   ];
 
   readonly autoPlayVoiceControl = new FormControl(true, { nonNullable: true });
+  readonly interactionModeControl = new FormControl<SpeakingInteractionMode>('TURN_BASED', {
+    nonNullable: true,
+  });
   readonly showTranscriptControl = new FormControl(true, { nonNullable: true });
   readonly autoTranslateControl = new FormControl(false, { nonNullable: true });
   readonly autoMemoryEnabledControl = new FormControl(true, { nonNullable: true });
@@ -97,6 +101,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
 
     merge(
       this.autoPlayVoiceControl.valueChanges,
+      this.interactionModeControl.valueChanges,
       this.showTranscriptControl.valueChanges,
       this.autoTranslateControl.valueChanges,
       this.autoMemoryEnabledControl.valueChanges,
@@ -193,6 +198,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   }
 
   private applySettingsToForm(settings: SpeakingSettings): void {
+    this.interactionModeControl.setValue(settings.interactionMode, { emitEvent: false });
     this.autoPlayVoiceControl.setValue(settings.autoPlayVoice, { emitEvent: false });
     this.showTranscriptControl.setValue(settings.showTranscript, { emitEvent: false });
     this.autoTranslateControl.setValue(settings.autoTranslate, { emitEvent: false });
@@ -209,6 +215,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     const normalizedPrompt = this.normalizeSystemPromptForStorage(this.systemPromptControl.value);
 
     return {
+      interactionMode: this.interactionModeControl.value,
       autoPlayVoice: this.autoPlayVoiceControl.value,
       showTranscript: this.showTranscriptControl.value,
       autoTranslate: this.autoTranslateControl.value,
@@ -224,6 +231,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   private isSameSettings(left: SpeakingSettings, right: SpeakingSettings): boolean {
     return (
       left.autoPlayVoice === right.autoPlayVoice &&
+      left.interactionMode === right.interactionMode &&
       left.showTranscript === right.showTranscript &&
       left.autoTranslate === right.autoTranslate &&
       left.autoMemoryEnabled === right.autoMemoryEnabled &&

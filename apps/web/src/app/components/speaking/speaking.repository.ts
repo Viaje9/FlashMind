@@ -256,6 +256,7 @@ export class SpeakingRepository {
       const parsed = JSON.parse(raw) as Partial<SpeakingSettings>;
 
       return {
+        interactionMode: parsed.interactionMode ?? SPEAKING_DEFAULT_SETTINGS.interactionMode,
         autoPlayVoice: parsed.autoPlayVoice ?? SPEAKING_DEFAULT_SETTINGS.autoPlayVoice,
         showTranscript: parsed.showTranscript ?? SPEAKING_DEFAULT_SETTINGS.showTranscript,
         autoTranslate: parsed.autoTranslate ?? SPEAKING_DEFAULT_SETTINGS.autoTranslate,

@@ -19,6 +19,42 @@
     <section>
       <fm-section-heading text="口說偏好"></fm-section-heading>
       <div
+        class="mb-3 grid grid-cols-2 gap-2 rounded-2xl bg-surface-light p-2 shadow-sm dark:bg-surface-dark"
+      >
+        <button
+          type="button"
+          class="rounded-xl border px-3 py-3 text-left transition"
+          [class.border-primary]="interactionModeControl.value === 'TURN_BASED'"
+          [class.bg-primary]="interactionModeControl.value === 'TURN_BASED'"
+          [class.text-white]="interactionModeControl.value === 'TURN_BASED'"
+          [class.border-slate-200]="interactionModeControl.value !== 'TURN_BASED'"
+          [class.dark:border-white/10]="interactionModeControl.value !== 'TURN_BASED'"
+          (click)="interactionModeControl.setValue('TURN_BASED')"
+          data-testid="speaking-settings-mode-turn-based"
+        >
+          <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+          <strong class="mt-1 block text-sm">一問一答</strong>
+          <span class="mt-1 block text-xs leading-relaxed opacity-75">手動停止後送出這一句</span>
+        </button>
+        <button
+          type="button"
+          class="rounded-xl border px-3 py-3 text-left transition"
+          [class.border-primary]="interactionModeControl.value === 'REALTIME'"
+          [class.bg-primary]="interactionModeControl.value === 'REALTIME'"
+          [class.text-white]="interactionModeControl.value === 'REALTIME'"
+          [class.border-slate-200]="interactionModeControl.value !== 'REALTIME'"
+          [class.dark:border-white/10]="interactionModeControl.value !== 'REALTIME'"
+          (click)="interactionModeControl.setValue('REALTIME')"
+          data-testid="speaking-settings-mode-realtime"
+        >
+          <span class="material-symbols-outlined text-[20px]">graphic_eq</span>
+          <strong class="mt-1 block text-sm">即時對話</strong>
+          <span class="mt-1 block text-xs leading-relaxed opacity-75"
+            >停頓後自動送出並繼續聆聽</span
+          >
+        </button>
+      </div>
+      <div
         class="overflow-hidden divide-y divide-slate-100 rounded-2xl bg-surface-light shadow-sm dark:divide-white/5 dark:bg-surface-dark"
       >
         <fm-setting-row
