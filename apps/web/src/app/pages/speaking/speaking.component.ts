@@ -308,11 +308,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
     effect(() => {
       const status = this.recorderStatus();
-      const muted =
-        status === 'recording' ||
-        status === 'paused' ||
-        this.sending() ||
-        this.stoppingAndSending();
+      const muted = status === 'recording' || status === 'paused' || this.sending();
       this.speakingStore.setAudioPlaybackMuted(muted);
     });
   }

@@ -128,6 +128,24 @@ describe('speaking.component selection actions', () => {
     expect(component.targetVocabularyQueryParams()).toEqual({ from: 'speaking' });
   });
 
+  it('停止錄音並等待即時回覆播放時不應持續靜音', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    storeMock.setAudioPlaybackMuted.mockClear();
+
+    storeMock.sending.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(storeMock.setAudioPlaybackMuted).toHaveBeenLastCalledWith(true);
+
+    component.stoppingAndSending.set(true);
+    storeMock.sending.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(storeMock.setAudioPlaybackMuted).toHaveBeenLastCalledWith(false);
+  });
+
   it('使用者語音逐字稿應預設收合，並可獨立展開與收起', async () => {
     storeMock.messages.set([
       {
