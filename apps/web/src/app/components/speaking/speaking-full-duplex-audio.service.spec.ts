@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resamplePcm16Base64 } from './speaking-full-duplex-audio.service';
+import {
+  SpeakingFullDuplexAudioService,
+  resamplePcm16Base64,
+} from './speaking-full-duplex-audio.service';
 
 describe('speaking-full-duplex-audio', () => {
   it('應將瀏覽器浮點取樣轉成 24 kHz PCM16 base64', () => {
@@ -12,5 +15,15 @@ describe('speaking-full-duplex-audio', () => {
     expect(bytes.byteLength).toBe(24_000 * 2);
     expect(bytes.readInt16LE(0)).toBeGreaterThan(16_000);
     vi.unstubAllGlobals();
+  });
+
+  it('應分別記錄使用者與 AI 聲音的靜音狀態', () => {
+    const service = new SpeakingFullDuplexAudioService();
+
+    service.setInputMuted(true);
+    service.setOutputMuted(true);
+
+    expect(service.inputMuted()).toBe(true);
+    expect(service.outputMuted()).toBe(true);
   });
 });

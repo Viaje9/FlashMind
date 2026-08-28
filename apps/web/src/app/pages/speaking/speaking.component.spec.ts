@@ -157,6 +157,21 @@ describe('speaking.component selection actions', () => {
     expect(storeMock.startFullDuplexConversation).toHaveBeenCalledTimes(1);
     expect(component.realtimeConversationActive()).toBe(true);
 
+    fixture.detectChanges();
+    const aiMuteButton = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-full-duplex-ai-mute"]',
+    ) as HTMLButtonElement | null;
+    const myMuteButton = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-full-duplex-my-mute"]',
+    ) as HTMLButtonElement | null;
+    expect(aiMuteButton?.getAttribute('aria-label')).toBe('將 AI 聲音靜音');
+    expect(myMuteButton?.getAttribute('aria-label')).toBe('將我的聲音靜音');
+
+    aiMuteButton?.click();
+    myMuteButton?.click();
+    expect(storeMock.toggleFullDuplexOutputMuted).toHaveBeenCalledTimes(1);
+    expect(storeMock.toggleFullDuplexInputMuted).toHaveBeenCalledTimes(1);
+
     await component.onStopRecording();
 
     expect(storeMock.stopFullDuplexConversation).toHaveBeenCalled();
@@ -742,12 +757,16 @@ function createSpeakingStoreMock() {
     error: signal<string | null>(null),
     conversationId: signal<string | null>('conversation-1'),
     playingAudioKey: signal<string | null>(null),
+    fullDuplexInputMuted: signal(false),
+    fullDuplexOutputMuted: signal(false),
     refreshSpeakingSettings: vi.fn(),
     activateSharedAudioTrack: vi.fn(async () => undefined),
     prepareRealtimeSession: vi.fn(async () => undefined),
     disconnectRealtimeSession: vi.fn(),
     startFullDuplexConversation: vi.fn(async () => undefined),
     stopFullDuplexConversation: vi.fn(),
+    toggleFullDuplexInputMuted: vi.fn(),
+    toggleFullDuplexOutputMuted: vi.fn(),
     deactivateSharedAudioTrack: vi.fn(),
     setAudioPlaybackMuted: vi.fn(),
     startNewConversation: vi.fn(async () => undefined),

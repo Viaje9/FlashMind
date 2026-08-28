@@ -82,6 +82,8 @@ export class SpeakingStore {
   readonly playingAudioKey = computed(() => this.audioPlayer.playingKey());
   readonly pausedAudioKey = computed(() => this.audioPlayer.pausedKey());
   readonly fullDuplexActive = computed(() => this.fullDuplexActiveState());
+  readonly fullDuplexInputMuted = this.fullDuplexAudio.inputMuted;
+  readonly fullDuplexOutputMuted = this.fullDuplexAudio.outputMuted;
 
   async activateSharedAudioTrack(): Promise<void> {
     await this.audioPlayer.activateSharedTrack();
@@ -223,6 +225,14 @@ export class SpeakingStore {
     this.fullDuplexActiveState.set(false);
     this.fullDuplexAudio.stop();
     this.realtime.stopLive();
+  }
+
+  toggleFullDuplexInputMuted(): void {
+    this.fullDuplexAudio.setInputMuted(!this.fullDuplexAudio.inputMuted());
+  }
+
+  toggleFullDuplexOutputMuted(): void {
+    this.fullDuplexAudio.setOutputMuted(!this.fullDuplexAudio.outputMuted());
   }
 
   async sendAudioMessage(audioBlob: Blob): Promise<void> {

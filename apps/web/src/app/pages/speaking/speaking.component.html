@@ -631,7 +631,27 @@
                   />
                 </svg>
               </button>
-              @if (hasUserMessages()) {
+              @if (fullDuplexConversationActive()) {
+                <button
+                  type="button"
+                  class="control-btn"
+                  [style.border-color]="
+                    fullDuplexOutputMuted() ? 'rgb(251 113 133)' : 'rgb(52 211 153)'
+                  "
+                  [style.background]="
+                    fullDuplexOutputMuted() ? 'rgb(255 241 242)' : 'rgb(236 253 245)'
+                  "
+                  [style.color]="fullDuplexOutputMuted() ? 'rgb(225 29 72)' : 'rgb(5 150 105)'"
+                  (click)="onToggleAiVoiceMuted()"
+                  [attr.aria-label]="fullDuplexOutputMuted() ? '開啟 AI 聲音' : '將 AI 聲音靜音'"
+                  [attr.aria-pressed]="fullDuplexOutputMuted()"
+                  data-testid="speaking-full-duplex-ai-mute"
+                >
+                  <span class="material-symbols-outlined text-[18px]">
+                    {{ fullDuplexOutputMuted() ? 'volume_off' : 'volume_up' }}
+                  </span>
+                </button>
+              } @else if (hasUserMessages()) {
                 <button
                   type="button"
                   class="control-btn"
@@ -703,7 +723,27 @@
                 </span>
               </button>
             } @else {
-              @if (canShowSummarizeAction()) {
+              @if (fullDuplexConversationActive()) {
+                <button
+                  type="button"
+                  class="control-btn"
+                  [style.border-color]="
+                    fullDuplexInputMuted() ? 'rgb(251 113 133)' : 'rgb(56 189 248)'
+                  "
+                  [style.background]="
+                    fullDuplexInputMuted() ? 'rgb(255 241 242)' : 'rgb(240 249 255)'
+                  "
+                  [style.color]="fullDuplexInputMuted() ? 'rgb(225 29 72)' : 'rgb(2 132 199)'"
+                  (click)="onToggleMyVoiceMuted()"
+                  [attr.aria-label]="fullDuplexInputMuted() ? '開啟我的聲音' : '將我的聲音靜音'"
+                  [attr.aria-pressed]="fullDuplexInputMuted()"
+                  data-testid="speaking-full-duplex-my-mute"
+                >
+                  <span class="material-symbols-outlined text-[18px]">
+                    {{ fullDuplexInputMuted() ? 'mic_off' : 'mic' }}
+                  </span>
+                </button>
+              } @else if (canShowSummarizeAction()) {
                 <button
                   type="button"
                   class="control-btn"

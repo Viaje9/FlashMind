@@ -140,6 +140,8 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly translatingMessageId = this.speakingStore.translatingMessageId;
   readonly loadingConversation = this.speakingStore.loadingConversation;
   readonly retryAvailable = this.speakingStore.retryAvailable;
+  readonly fullDuplexInputMuted = this.speakingStore.fullDuplexInputMuted;
+  readonly fullDuplexOutputMuted = this.speakingStore.fullDuplexOutputMuted;
 
   readonly assistantMessages = this.speakingStore.assistantMessages;
   readonly assistantSending = this.speakingStore.assistantSending;
@@ -168,6 +170,9 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly noteEditing = signal(false);
   readonly stoppingAndSending = signal(false);
   readonly realtimeConversationActive = signal(false);
+  readonly fullDuplexConversationActive = computed(
+    () => this.realtimeConversationActive() && this.settings().interactionMode === 'FULL_DUPLEX',
+  );
   readonly copiedSummaryMessageId = signal<string | null>(null);
 
   readonly hasUserMessages = computed(() =>
@@ -1013,6 +1018,14 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   async onSummarize(): Promise<void> {
     if (this.hasConversationSummary()) return;
     await this.speakingStore.summarizeCurrentConversation();
+  }
+
+  onToggleMyVoiceMuted(): void {
+    this.speakingStore.toggleFullDuplexInputMuted();
+  }
+
+  onToggleAiVoiceMuted(): void {
+    this.speakingStore.toggleFullDuplexOutputMuted();
   }
 
   async onCopySummary(message: SpeakingMessage): Promise<void> {

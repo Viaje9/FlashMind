@@ -39,6 +39,7 @@ export class SpeakingFullDuplexAudioService {
   private inputSource: MediaStreamAudioSourceNode | null = null;
   private processor: ScriptProcessorNode | null = null;
   private silentGain: GainNode | null = null;
+  private playbackGain: GainNode | null = null;
   private readonly scheduledSources = new Set<AudioBufferSourceNode>();
   private nextPlaybackAt = 0;
   private playbackStartedAt: number | null = null;
@@ -46,9 +47,13 @@ export class SpeakingFullDuplexAudioService {
 
   private readonly activeState = signal(false);
   private readonly errorState = signal<string | null>(null);
+  private readonly inputMutedState = signal(false);
+  private readonly outputMutedState = signal(false);
 
   readonly active = computed(() => this.activeState());
   readonly error = computed(() => this.errorState());
+  readonly inputMuted = computed(() => this.inputMutedState());
+  readonly outputMuted = computed(() => this.outputMutedState());
 
   async start(onAudioChunk: (base64Pcm16: string) => void): Promise<void> {
     this.stop();
@@ -69,7 +74,9 @@ export class SpeakingFullDuplexAudioService {
       const source = context.createMediaStreamSource(stream);
       const processor = context.createScriptProcessor(4096, 1, 1);
       const silentGain = context.createGain();
+      const playbackGain = context.createGain();
       silentGain.gain.value = 0;
+      playbackGain.gain.value = this.outputMutedState() ? 0 : 1;
 
       processor.onaudioprocess = (event) => {
         if (!this.activeState()) return;
@@ -80,12 +87,14 @@ export class SpeakingFullDuplexAudioService {
       source.connect(processor);
       processor.connect(silentGain);
       silentGain.connect(context.destination);
+      playbackGain.connect(context.destination);
 
       this.audioContext = context;
       this.mediaStream = stream;
       this.inputSource = source;
       this.processor = processor;
       this.silentGain = silentGain;
+      this.playbackGain = playbackGain;
       this.activeState.set(true);
     } catch {
       this.stop();
@@ -98,6 +107,18 @@ export class SpeakingFullDuplexAudioService {
     this.currentAssistantItemId = itemId;
     this.playbackStartedAt = null;
     this.nextPlaybackAt = this.audioContext?.currentTime ?? 0;
+  }
+
+  setInputMuted(muted: boolean): void {
+    this.inputMutedState.set(muted);
+    this.mediaStream?.getAudioTracks().forEach((track) => {
+      track.enabled = !muted;
+    });
+  }
+
+  setOutputMuted(muted: boolean): void {
+    this.outputMutedState.set(muted);
+    if (this.playbackGain) this.playbackGain.gain.value = muted ? 0 : 1;
   }
 
   playPcm16Chunk(base64: string): void {
@@ -119,7 +140,7 @@ export class SpeakingFullDuplexAudioService {
 
     const source = context.createBufferSource();
     source.buffer = buffer;
-    source.connect(context.destination);
+    source.connect(this.playbackGain ?? context.destination);
     source.onended = () => this.scheduledSources.delete(source);
 
     const startsAt = Math.max(context.currentTime, this.nextPlaybackAt);
@@ -154,13 +175,17 @@ export class SpeakingFullDuplexAudioService {
     this.processor?.disconnect();
     this.inputSource?.disconnect();
     this.silentGain?.disconnect();
+    this.playbackGain?.disconnect();
     this.mediaStream?.getTracks().forEach((track) => track.stop());
     if (this.audioContext) void this.audioContext.close();
     this.processor = null;
     this.inputSource = null;
     this.silentGain = null;
+    this.playbackGain = null;
     this.mediaStream = null;
     this.audioContext = null;
+    this.inputMutedState.set(false);
+    this.outputMutedState.set(false);
   }
 
   clearError(): void {
