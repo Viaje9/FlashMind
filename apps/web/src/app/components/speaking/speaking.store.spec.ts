@@ -40,6 +40,7 @@ describe('speaking.store selection translate', () => {
             connect: vi.fn(async () => undefined),
             sendTurn: vi.fn(),
             disconnect: vi.fn(),
+            stopLive: vi.fn(),
           },
         },
         {
@@ -209,7 +210,12 @@ describe('speaking.store review flow', () => {
         { provide: SpeakingRepository, useValue: repositoryMock },
         {
           provide: SpeakingRealtimeService,
-          useValue: { connect: vi.fn(), sendTurn: vi.fn(), disconnect: vi.fn() },
+          useValue: {
+            connect: vi.fn(),
+            sendTurn: vi.fn(),
+            disconnect: vi.fn(),
+            stopLive: vi.fn(),
+          },
         },
         {
           provide: SpeakingAudioPlayerService,

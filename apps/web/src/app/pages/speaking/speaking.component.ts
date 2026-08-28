@@ -215,7 +215,11 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
   readonly combinedError = computed(() => this.speakingStore.error() ?? this.recorderError());
   readonly interactionLocked = computed(
-    () => this.sending() || this.summarizing() || this.stoppingAndSending(),
+    () =>
+      this.sending() ||
+      this.summarizing() ||
+      this.stoppingAndSending() ||
+      this.realtimeConversationActive(),
   );
   readonly sendingStatusText = computed(() => {
     if (this.sending()) {
@@ -464,6 +468,16 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.settings().interactionMode === 'FULL_DUPLEX') {
+      try {
+        await this.speakingStore.startFullDuplexConversation();
+        this.realtimeConversationActive.set(true);
+      } catch {
+        this.realtimeConversationActive.set(false);
+      }
+      return;
+    }
+
     await this.speakingStore.activateSharedAudioTrack();
     try {
       await this.speakingStore.prepareRealtimeSession();
@@ -495,6 +509,13 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   async onStopRecording(): Promise<void> {
+    if (this.settings().interactionMode === 'FULL_DUPLEX') {
+      this.realtimeConversationActive.set(false);
+      this.speakingStore.stopFullDuplexConversation();
+      this.speakingStore.disconnectRealtimeSession();
+      return;
+    }
+
     this.realtimeConversationActive.set(false);
     if (this.stoppingAndSending() || this.sending()) {
       return;
@@ -541,6 +562,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return;
     }
     this.realtimeConversationActive.set(false);
+    this.speakingStore.stopFullDuplexConversation();
     this.recorder.cancel();
   }
 

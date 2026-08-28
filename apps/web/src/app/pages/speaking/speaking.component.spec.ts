@@ -146,6 +146,24 @@ describe('speaking.component selection actions', () => {
     expect(storeMock.setAudioPlaybackMuted).toHaveBeenLastCalledWith(false);
   });
 
+  it('真即時模式應啟動持續串流，停止時結束連線', async () => {
+    storeMock.speakingSettings.set({
+      ...SPEAKING_DEFAULT_SETTINGS,
+      interactionMode: 'FULL_DUPLEX',
+    });
+
+    await component.onStartRecording();
+
+    expect(storeMock.startFullDuplexConversation).toHaveBeenCalledTimes(1);
+    expect(component.realtimeConversationActive()).toBe(true);
+
+    await component.onStopRecording();
+
+    expect(storeMock.stopFullDuplexConversation).toHaveBeenCalled();
+    expect(storeMock.disconnectRealtimeSession).toHaveBeenCalled();
+    expect(component.realtimeConversationActive()).toBe(false);
+  });
+
   it('使用者語音逐字稿應預設收合，並可獨立展開與收起', async () => {
     storeMock.messages.set([
       {
@@ -728,6 +746,8 @@ function createSpeakingStoreMock() {
     activateSharedAudioTrack: vi.fn(async () => undefined),
     prepareRealtimeSession: vi.fn(async () => undefined),
     disconnectRealtimeSession: vi.fn(),
+    startFullDuplexConversation: vi.fn(async () => undefined),
+    stopFullDuplexConversation: vi.fn(),
     deactivateSharedAudioTrack: vi.fn(),
     setAudioPlaybackMuted: vi.fn(),
     startNewConversation: vi.fn(async () => undefined),

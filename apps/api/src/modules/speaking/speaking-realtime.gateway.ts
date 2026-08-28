@@ -12,6 +12,7 @@ import { SessionService } from '../auth/session.service';
 interface ConfigureEvent {
   type: 'session.configure';
   voice: string;
+  interactionMode?: 'TURN_BASED' | 'REALTIME' | 'FULL_DUPLEX';
   instructions?: string;
   memory?: string;
   history?: Array<{ role: 'user' | 'assistant'; text: string }>;
@@ -32,7 +33,13 @@ type ClientEvent =
   | ConfigureEvent
   | { type: 'input_audio_buffer.append'; audio: string }
   | { type: 'input_audio_buffer.commit' }
-  | { type: 'response.cancel' };
+  | { type: 'response.cancel' }
+  | {
+      type: 'conversation.item.truncate';
+      item_id: string;
+      content_index: number;
+      audio_end_ms: number;
+    };
 
 @Injectable()
 export class SpeakingRealtimeGateway
@@ -128,7 +135,17 @@ export class SpeakingRealtimeGateway
           input: {
             format: { type: 'audio/pcm', rate: 24000 },
             transcription: { model: this.transcriptionModel },
-            turn_detection: null,
+            turn_detection:
+              config.interactionMode === 'FULL_DUPLEX'
+                ? {
+                    type: 'server_vad',
+                    threshold: 0.5,
+                    prefix_padding_ms: 300,
+                    silence_duration_ms: 700,
+                    create_response: true,
+                    interrupt_response: true,
+                  }
+                : null,
           },
           output: {
             format: { type: 'audio/pcm', rate: 24000 },

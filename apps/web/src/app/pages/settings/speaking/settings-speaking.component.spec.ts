@@ -79,6 +79,16 @@ describe('SettingsSpeakingComponent', () => {
     );
   });
 
+  it('可切換並保存可打斷的真即時對話模式', async () => {
+    component.interactionModeControl.setValue('FULL_DUPLEX');
+
+    await component.onSave();
+
+    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ interactionMode: 'FULL_DUPLEX' }),
+    );
+  });
+
   it('設定頁不應顯示 AI 聲音選擇與試聽介面', () => {
     expect(
       fixture.nativeElement.querySelector('[data-testid="speaking-settings-voice"]'),

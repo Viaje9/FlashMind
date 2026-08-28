@@ -7,7 +7,11 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { blobToWavBlob } from './speaking-audio.utils';
 import { SpeakingAudioPlayerService } from './speaking-audio-player.service';
-import { SpeakingRealtimeService } from './speaking-realtime.service';
+import {
+  SpeakingRealtimeService,
+  type SpeakingRealtimeTurnResult,
+} from './speaking-realtime.service';
+import { SpeakingFullDuplexAudioService } from './speaking-full-duplex-audio.service';
 import {
   SPEAKING_HISTORY_LIMIT_BYTES,
   createSelectionTranslationCacheKey,
@@ -42,6 +46,7 @@ export class SpeakingStore {
   private readonly repository = inject(SpeakingRepository);
   private readonly audioPlayer = inject(SpeakingAudioPlayerService);
   private readonly realtime = inject(SpeakingRealtimeService);
+  private readonly fullDuplexAudio = inject(SpeakingFullDuplexAudioService);
   private readonly skipLoadingContext = new HttpContext().set(SKIP_LOADING, true);
 
   private readonly state = signal<SpeakingStoreState>({
@@ -60,6 +65,8 @@ export class SpeakingStore {
   private readonly speakingSettingsState = signal(this.repository.loadSettings());
   private readonly selectionTranslationCache = new Map<string, string>();
   private retryPayload: RetryPayload | null = null;
+  private livePersistenceQueue = Promise.resolve();
+  private readonly fullDuplexActiveState = signal(false);
 
   readonly conversationId = computed(() => this.state().conversationId);
   readonly messages = computed(() => this.state().messages);
@@ -74,6 +81,7 @@ export class SpeakingStore {
   readonly speakingSettings = computed(() => this.speakingSettingsState());
   readonly playingAudioKey = computed(() => this.audioPlayer.playingKey());
   readonly pausedAudioKey = computed(() => this.audioPlayer.pausedKey());
+  readonly fullDuplexActive = computed(() => this.fullDuplexActiveState());
 
   async activateSharedAudioTrack(): Promise<void> {
     await this.audioPlayer.activateSharedTrack();
@@ -89,6 +97,7 @@ export class SpeakingStore {
 
   async startNewConversation(): Promise<void> {
     const assistantMessages = this.state().assistantMessages;
+    this.stopFullDuplexConversation();
     this.audioPlayer.stop();
     this.realtime.disconnect();
     this.retryPayload = null;
@@ -107,6 +116,7 @@ export class SpeakingStore {
   }
 
   async loadConversation(conversationId: string): Promise<boolean> {
+    this.stopFullDuplexConversation();
     this.realtime.disconnect();
     this.state.update((state) => ({ ...state, loadingConversation: true, error: null }));
 
@@ -163,7 +173,56 @@ export class SpeakingStore {
   }
 
   disconnectRealtimeSession(): void {
+    this.stopFullDuplexConversation();
     this.realtime.disconnect();
+  }
+
+  async startFullDuplexConversation(): Promise<void> {
+    await this.prepareRealtimeSession();
+    this.audioPlayer.stop();
+    this.realtime.startLive({
+      onSpeechStarted: () => {
+        const interrupted = this.fullDuplexAudio.interruptPlayback();
+        if (interrupted) {
+          this.realtime.truncateAssistantAudio(interrupted.itemId, interrupted.audioEndMs);
+        }
+      },
+      onAssistantItem: (itemId) => this.fullDuplexAudio.beginAssistantItem(itemId),
+      onAudioDelta: (audio) => this.fullDuplexAudio.playPcm16Chunk(audio),
+      onTurnCompleted: (result) => {
+        this.livePersistenceQueue = this.livePersistenceQueue
+          .then(() => this.persistFullDuplexTurn(result))
+          .catch((error) => {
+            this.state.update((state) => ({
+              ...state,
+              error: this.resolveSpeakingErrorMessage(error),
+            }));
+          });
+      },
+      onError: (message) => {
+        this.fullDuplexActiveState.set(false);
+        this.fullDuplexAudio.stop();
+        this.state.update((state) => ({ ...state, error: message }));
+      },
+    });
+
+    try {
+      await this.fullDuplexAudio.start((audio) => this.realtime.appendLiveAudio(audio));
+      this.fullDuplexActiveState.set(true);
+    } catch (error) {
+      this.realtime.stopLive();
+      this.state.update((state) => ({
+        ...state,
+        error: this.resolveSpeakingErrorMessage(error),
+      }));
+      throw error;
+    }
+  }
+
+  stopFullDuplexConversation(): void {
+    this.fullDuplexActiveState.set(false);
+    this.fullDuplexAudio.stop();
+    this.realtime.stopLive();
   }
 
   async sendAudioMessage(audioBlob: Blob): Promise<void> {
@@ -675,6 +734,67 @@ export class SpeakingStore {
       }));
       return false;
     }
+  }
+
+  private async persistFullDuplexTurn(result: SpeakingRealtimeTurnResult): Promise<void> {
+    const userTranscript = result.userTranscript.trim();
+    const assistantTranscript = result.assistantTranscript.trim();
+    if (!userTranscript || !assistantTranscript) return;
+
+    const conversationId = this.state().conversationId ?? createSpeakingId();
+    const settings = this.repository.loadSettings();
+    const userMessage: SpeakingMessage = {
+      id: createSpeakingId(),
+      conversationId,
+      role: 'user',
+      text: userTranscript,
+      createdAt: new Date().toISOString(),
+    };
+
+    const assistantMessageId = createSpeakingId();
+    const assistantAudioKey = await this.repository.saveAudioBlob({
+      conversationId,
+      messageId: assistantMessageId,
+      blob: result.assistantAudio,
+      mimeType: result.assistantAudio.type,
+      audioKey: `${assistantMessageId}:audio`,
+    });
+    const translatedText = settings.autoTranslate
+      ? await this.translateText(assistantTranscript)
+      : undefined;
+    const assistantMessage: SpeakingMessage = {
+      id: assistantMessageId,
+      conversationId,
+      role: 'assistant',
+      text: assistantTranscript,
+      translatedText,
+      audioBlobKey: assistantAudioKey,
+      audioMimeType: result.assistantAudio.type || 'audio/wav',
+      createdAt: new Date().toISOString(),
+      usage: result.usage,
+      transcriptionDurationSeconds: result.transcriptionDurationSeconds,
+    };
+
+    if (result.memoryUpdate?.memory) {
+      const updatedSettings = { ...settings, memory: result.memoryUpdate.memory };
+      this.repository.saveSettings(updatedSettings);
+      this.speakingSettingsState.set(updatedSettings);
+    }
+
+    const nextMessages = [...this.state().messages, userMessage, assistantMessage];
+    this.state.update((state) => ({
+      ...state,
+      conversationId,
+      messages: nextMessages,
+      error: null,
+    }));
+    await this.repository.saveMessage(userMessage);
+    await this.repository.saveMessage(assistantMessage);
+    await this.persistConversation(conversationId, nextMessages);
+    await this.repository.enforceConversationStorageLimit(
+      SPEAKING_HISTORY_LIMIT_BYTES,
+      conversationId,
+    );
   }
 
   private async persistConversation(

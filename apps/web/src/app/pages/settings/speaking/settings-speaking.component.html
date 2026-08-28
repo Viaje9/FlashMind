@@ -19,7 +19,7 @@
     <section>
       <fm-section-heading text="口說偏好"></fm-section-heading>
       <div
-        class="mb-3 grid grid-cols-2 gap-2 rounded-2xl bg-surface-light p-2 shadow-sm dark:bg-surface-dark"
+        class="mb-3 grid grid-cols-3 gap-2 rounded-2xl bg-surface-light p-2 shadow-sm dark:bg-surface-dark"
       >
         <button
           type="button"
@@ -52,6 +52,21 @@
           <span class="mt-1 block text-xs leading-relaxed opacity-75"
             >停頓後自動送出並繼續聆聽</span
           >
+        </button>
+        <button
+          type="button"
+          class="rounded-xl border px-2 py-3 text-left transition"
+          [class.border-primary]="interactionModeControl.value === 'FULL_DUPLEX'"
+          [class.bg-primary]="interactionModeControl.value === 'FULL_DUPLEX'"
+          [class.text-white]="interactionModeControl.value === 'FULL_DUPLEX'"
+          [class.border-slate-200]="interactionModeControl.value !== 'FULL_DUPLEX'"
+          [class.dark:border-white/10]="interactionModeControl.value !== 'FULL_DUPLEX'"
+          (click)="interactionModeControl.setValue('FULL_DUPLEX')"
+          data-testid="speaking-settings-mode-full-duplex"
+        >
+          <span class="material-symbols-outlined text-[20px]">spatial_audio</span>
+          <strong class="mt-1 block text-sm">真即時</strong>
+          <span class="mt-1 block text-xs leading-relaxed opacity-75">可在 AI 說話時直接插話</span>
         </button>
       </div>
       <div

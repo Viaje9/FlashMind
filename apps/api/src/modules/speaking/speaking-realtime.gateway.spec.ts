@@ -80,4 +80,40 @@ describe('SpeakingRealtimeGateway', () => {
       (event['session'] as { instructions?: string }).instructions,
     ).toContain('Never quiz the user or force these words');
   });
+
+  it('真即時模式應啟用 Server VAD、自動回覆與打斷', () => {
+    const configService = {
+      get: jest.fn((key: string) => {
+        const values: Record<string, string> = {
+          OPENAI_API_KEY: 'test-key',
+          OPENAI_SPEAKING_AUDIO_MODEL: 'gpt-realtime-2.1-mini',
+        };
+        return values[key];
+      }),
+    } as unknown as ConfigService;
+    const gateway = new SpeakingRealtimeGateway(
+      configService,
+      { httpAdapter: null } as never,
+      { validateSession: jest.fn() } as never,
+    );
+
+    const event = gateway.buildSessionUpdate({
+      voice: 'marin',
+      interactionMode: 'FULL_DUPLEX',
+    });
+
+    expect(event).toMatchObject({
+      session: {
+        audio: {
+          input: {
+            turn_detection: {
+              type: 'server_vad',
+              create_response: true,
+              interrupt_response: true,
+            },
+          },
+        },
+      },
+    });
+  });
 });

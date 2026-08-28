@@ -20,6 +20,14 @@ export interface SpeakingRealtimeTurnResult {
   memoryUpdate?: { memory: string; reason?: string };
 }
 
+export interface SpeakingRealtimeLiveHandlers {
+  onSpeechStarted: () => void;
+  onAssistantItem: (itemId: string) => void;
+  onAudioDelta: (base64Pcm16: string) => void;
+  onTurnCompleted: (result: SpeakingRealtimeTurnResult) => void;
+  onError: (message: string) => void;
+}
+
 interface PendingTurn {
   resolve: (value: SpeakingRealtimeTurnResult) => void;
   reject: (reason: Error) => void;
@@ -39,6 +47,9 @@ export class SpeakingRealtimeService {
   private socket: WebSocket | null = null;
   private readyPromise: Promise<void> | null = null;
   private pendingTurn: PendingTurn | null = null;
+  private liveHandlers: SpeakingRealtimeLiveHandlers | null = null;
+  private liveTurn: PendingTurn | null = null;
+  private liveSpeechStartedAtMs: number | null = null;
   private conversationId: string | null = null;
 
   async connect(input: {
@@ -67,6 +78,7 @@ export class SpeakingRealtimeService {
           JSON.stringify({
             type: 'session.configure',
             voice: input.settings.voice,
+            interactionMode: input.settings.interactionMode,
             instructions: input.settings.systemPrompt.trim() || SPEAKING_DEFAULT_SYSTEM_PROMPT,
             memory: input.settings.memory || undefined,
             autoMemoryEnabled: input.settings.autoMemoryEnabled,
@@ -100,10 +112,12 @@ export class SpeakingRealtimeService {
       socket.onerror = () => {
         window.clearTimeout(timeout);
         reject(new Error('Realtime WebSocket 連線失敗'));
+        this.liveHandlers?.onError('Realtime WebSocket 連線失敗');
         this.rejectPending('Realtime WebSocket 連線失敗');
       };
       socket.onclose = () => {
         window.clearTimeout(timeout);
+        this.liveHandlers?.onError('Realtime WebSocket 已中斷');
         this.rejectPending('Realtime WebSocket 已中斷');
         if (this.socket === socket) this.socket = null;
       };
@@ -143,19 +157,54 @@ export class SpeakingRealtimeService {
     }
   }
 
+  startLive(handlers: SpeakingRealtimeLiveHandlers): void {
+    this.liveHandlers = handlers;
+    this.liveTurn = null;
+  }
+
+  appendLiveAudio(audio: string): void {
+    if (!audio || !this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+    this.socket.send(JSON.stringify({ type: 'input_audio_buffer.append', audio }));
+  }
+
+  truncateAssistantAudio(itemId: string, audioEndMs: number): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+    this.socket.send(
+      JSON.stringify({
+        type: 'conversation.item.truncate',
+        item_id: itemId,
+        content_index: 0,
+        audio_end_ms: Math.max(0, audioEndMs),
+      }),
+    );
+  }
+
+  stopLive(): void {
+    this.liveHandlers = null;
+    this.liveTurn = null;
+    this.liveSpeechStartedAtMs = null;
+  }
+
   disconnect(): void {
     this.rejectPending('Realtime session 已結束');
     this.socket?.close();
     this.socket = null;
     this.readyPromise = null;
     this.conversationId = null;
+    this.stopLive();
   }
 
   private handleEvent(event: Record<string, unknown>): void {
     const type = String(event['type'] ?? '');
     if (type === 'error') {
       const error = event['error'] as { message?: string } | undefined;
+      this.liveHandlers?.onError(error?.message || 'Realtime 回覆失敗');
       this.rejectPending(error?.message || 'Realtime 回覆失敗');
+      return;
+    }
+
+    if (this.liveHandlers) {
+      this.handleLiveEvent(type, event);
       return;
     }
 
@@ -191,6 +240,96 @@ export class SpeakingRealtimeService {
     }
 
     this.completeWhenReady();
+  }
+
+  private handleLiveEvent(type: string, event: Record<string, unknown>): void {
+    const handlers = this.liveHandlers;
+    if (!handlers) return;
+
+    if (type === 'input_audio_buffer.speech_started') {
+      handlers.onSpeechStarted();
+      this.liveTurn = this.createPendingTurn();
+      this.liveSpeechStartedAtMs = Number(event['audio_start_ms'] ?? 0);
+      return;
+    }
+
+    const liveTurn = this.liveTurn;
+    if (!liveTurn) return;
+
+    if (type === 'input_audio_buffer.speech_stopped') {
+      const stoppedAtMs = Number(event['audio_end_ms'] ?? this.liveSpeechStartedAtMs ?? 0);
+      liveTurn.transcriptionDurationSeconds = Math.max(
+        0,
+        (stoppedAtMs - (this.liveSpeechStartedAtMs ?? stoppedAtMs)) / 1000,
+      );
+    } else if (type === 'conversation.item.input_audio_transcription.completed') {
+      liveTurn.userTranscript = String(event['transcript'] ?? '').trim();
+    } else if (type === 'response.output_item.added') {
+      const item = event['item'] as { id?: string } | undefined;
+      if (item?.id) handlers.onAssistantItem(item.id);
+    } else if (type === 'response.output_audio.delta') {
+      const delta = String(event['delta'] ?? '');
+      if (delta) {
+        liveTurn.audioChunks.push(delta);
+        handlers.onAudioDelta(delta);
+      }
+    } else if (type === 'response.output_audio_transcript.delta') {
+      liveTurn.assistantTranscript += String(event['delta'] ?? '');
+    } else if (
+      type === 'response.output_audio_transcript.done' ||
+      type === 'response.output_audio_transcript.completed'
+    ) {
+      liveTurn.assistantTranscript =
+        String(event['transcript'] ?? '').trim() || liveTurn.assistantTranscript.trim();
+    } else if (type === 'flashmind.memory.updated') {
+      const memory = String(event['memory'] ?? '').trim();
+      if (memory) {
+        liveTurn.memoryUpdate = {
+          memory,
+          reason: String(event['reason'] ?? '').trim() || undefined,
+        };
+      }
+    } else if (type === 'response.done') {
+      const response = event['response'] as Record<string, unknown> | undefined;
+      if (response?.['status'] === 'cancelled') return;
+      liveTurn.responseDone = true;
+      liveTurn.usage = this.mapUsage(response?.['usage']);
+      liveTurn.assistantTranscript ||= this.readTranscriptFromResponse(response);
+    }
+
+    if (liveTurn.responseDone && liveTurn.assistantTranscript && liveTurn.audioChunks.length > 0) {
+      if (liveTurn.userTranscript) {
+        this.resolveLiveTurn(liveTurn);
+      } else if (!liveTurn.completionTimer) {
+        liveTurn.completionTimer = window.setTimeout(() => this.resolveLiveTurn(liveTurn), 1200);
+      }
+    }
+  }
+
+  private createPendingTurn(): PendingTurn {
+    return {
+      resolve: () => undefined,
+      reject: () => undefined,
+      userTranscript: '',
+      assistantTranscript: '',
+      audioChunks: [],
+      responseDone: false,
+      transcriptionDurationSeconds: 0,
+    };
+  }
+
+  private resolveLiveTurn(turn: PendingTurn): void {
+    if (this.liveTurn !== turn || !this.liveHandlers) return;
+    if (turn.completionTimer) window.clearTimeout(turn.completionTimer);
+    this.liveTurn = null;
+    this.liveHandlers.onTurnCompleted({
+      userTranscript: turn.userTranscript.trim(),
+      assistantTranscript: turn.assistantTranscript.trim(),
+      assistantAudio: wavBlobFromPcm16Base64(turn.audioChunks, 24_000),
+      usage: turn.usage ?? this.emptyUsage(),
+      transcriptionDurationSeconds: turn.transcriptionDurationSeconds,
+      memoryUpdate: turn.memoryUpdate,
+    });
   }
 
   private completeWhenReady(): void {
