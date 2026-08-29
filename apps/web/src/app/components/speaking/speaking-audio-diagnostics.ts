@@ -4,7 +4,7 @@ export interface SpeakingAudioDiagnosticEntry {
   details: Record<string, unknown>;
 }
 
-export const SPEAKING_AUDIO_DIAGNOSTICS_LIMIT = 1000;
+export const SPEAKING_AUDIO_DIAGNOSTICS_LIMIT = 50_000;
 
 const STORAGE_KEY = 'flashmind:speaking:audio-diagnostics:v1';
 
@@ -25,7 +25,7 @@ export function logSpeakingAudio(event: string, details: Record<string, unknown>
     const entries = [...getSpeakingAudioDiagnostics(), entry].slice(
       -SPEAKING_AUDIO_DIAGNOSTICS_LIMIT,
     );
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    saveDiagnosticsWithQuotaRecovery(entries);
   } catch {
     // 診斷記錄不得影響口說流程。
   }
@@ -86,4 +86,35 @@ function safeStringify(value: unknown): string {
   } catch {
     return '{"serializationError":true}';
   }
+}
+
+function saveDiagnosticsWithQuotaRecovery(entries: SpeakingAudioDiagnosticEntry[]): void {
+  let pendingEntries = entries;
+
+  while (pendingEntries.length > 0) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingEntries));
+      return;
+    } catch (error) {
+      if (!isQuotaExceededError(error)) {
+        return;
+      }
+
+      const removalCount = Math.max(1, Math.ceil(pendingEntries.length * 0.1));
+      pendingEntries = pendingEntries.slice(removalCount);
+    }
+  }
+}
+
+function isQuotaExceededError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) {
+    return false;
+  }
+
+  return (
+    error.name === 'QuotaExceededError' ||
+    error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+    error.code === 22 ||
+    error.code === 1014
+  );
 }

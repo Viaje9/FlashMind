@@ -26,4 +26,37 @@ describe('speaking-full-duplex-audio', () => {
     expect(service.inputMuted()).toBe(true);
     expect(service.outputMuted()).toBe(true);
   });
+
+  it('新的 AI item 應接在尚未播放完成的 item 後方，不可重疊播放', () => {
+    const starts: number[] = [];
+    const context = {
+      currentTime: 10,
+      destination: {},
+      createBuffer: vi.fn(() => ({
+        duration: 0.4,
+        getChannelData: () => new Float32Array(2),
+      })),
+      createBufferSource: vi.fn(() => ({
+        buffer: null,
+        connect: vi.fn(),
+        start: (startsAt: number) => starts.push(startsAt),
+        stop: vi.fn(),
+        onended: null,
+      })),
+    };
+    const service = new SpeakingFullDuplexAudioService();
+    (
+      service as unknown as {
+        audioContext: typeof context;
+      }
+    ).audioContext = context;
+
+    service.beginAssistantItem('item-1');
+    service.playPcm16Chunk('AAAAAA==');
+    context.currentTime = 10.1;
+    service.beginAssistantItem('item-2');
+    service.playPcm16Chunk('AAAAAA==');
+
+    expect(starts).toEqual([10, 10.4]);
+  });
 });

@@ -130,7 +130,9 @@ export class SpeakingFullDuplexAudioService {
     });
     this.currentAssistantItemId = itemId;
     this.playbackStartedAt = null;
-    this.nextPlaybackAt = this.audioContext?.currentTime ?? 0;
+    if (this.scheduledSources.size === 0) {
+      this.nextPlaybackAt = this.audioContext?.currentTime ?? 0;
+    }
   }
 
   setInputMuted(muted: boolean): void {

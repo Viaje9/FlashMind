@@ -27,15 +27,28 @@ describe('speaking audio diagnostics', () => {
     ]);
   });
 
-  it('超過上限時應保留最新的記錄', () => {
-    for (let index = 0; index <= SPEAKING_AUDIO_DIAGNOSTICS_LIMIT; index += 1) {
-      logSpeakingAudio(`event-${index}`);
-    }
+  it('應將診斷記錄上限設定為五萬筆', () => {
+    expect(SPEAKING_AUDIO_DIAGNOSTICS_LIMIT).toBe(50_000);
+  });
 
-    const entries = getSpeakingAudioDiagnostics();
-    expect(entries).toHaveLength(SPEAKING_AUDIO_DIAGNOSTICS_LIMIT);
-    expect(entries[0]?.event).toBe('event-1');
-    expect(entries.at(-1)?.event).toBe(`event-${SPEAKING_AUDIO_DIAGNOSTICS_LIMIT}`);
+  it('localStorage 容量不足時應刪除最舊記錄並保留最新事件', () => {
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+      const entries = JSON.parse(value) as unknown[];
+      if (entries.length > 2) {
+        throw new DOMException('容量不足', 'QuotaExceededError');
+      }
+      originalSetItem(key, value);
+    });
+
+    logSpeakingAudio('event-1');
+    logSpeakingAudio('event-2');
+    logSpeakingAudio('event-3');
+
+    expect(getSpeakingAudioDiagnostics().map((entry) => entry.event)).toEqual([
+      'event-2',
+      'event-3',
+    ]);
   });
 
   it('應產生可複製與匯出的 JSON', () => {
