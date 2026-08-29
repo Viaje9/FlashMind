@@ -21,6 +21,10 @@ import {
 } from '@flashmind/ui';
 import { base64ToBlob } from '../../../components/speaking/speaking-audio.utils';
 import {
+  getSpeakingAudioDiagnostics,
+  serializeSpeakingAudioDiagnostics,
+} from '../../../components/speaking/speaking-audio-diagnostics';
+import {
   SPEAKING_DEFAULT_SYSTEM_PROMPT,
   SPEAKING_DEFAULT_SETTINGS,
   type SpeakingSettings,
@@ -66,6 +70,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     nonNullable: true,
   });
   readonly showTranscriptControl = new FormControl(true, { nonNullable: true });
+  readonly showCostControl = new FormControl(true, { nonNullable: true });
   readonly autoTranslateControl = new FormControl(false, { nonNullable: true });
   readonly autoMemoryEnabledControl = new FormControl(true, { nonNullable: true });
   readonly systemPromptControl = new FormControl('', { nonNullable: true });
@@ -77,6 +82,8 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   readonly previewLoading = signal(false);
   readonly previewError = signal<string | null>(null);
   readonly discardModalOpen = signal(false);
+  readonly diagnosticLogCount = signal(0);
+  readonly diagnosticActionMessage = signal<string | null>(null);
 
   private readonly initialSettings = signal<SpeakingSettings | null>(null);
   private readonly formRevision = signal(0);
@@ -98,11 +105,13 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     const settings = this.repository.loadSettings();
     this.initialSettings.set(settings);
     this.applySettingsToForm(settings);
+    this.refreshDiagnosticLogCount();
 
     merge(
       this.autoPlayVoiceControl.valueChanges,
       this.interactionModeControl.valueChanges,
       this.showTranscriptControl.valueChanges,
+      this.showCostControl.valueChanges,
       this.autoTranslateControl.valueChanges,
       this.autoMemoryEnabledControl.valueChanges,
       this.systemPromptControl.valueChanges,
@@ -117,7 +126,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
 
   async onBack(): Promise<void> {
     if (!this.hasUnsavedChanges()) {
-      await this.router.navigate(['/settings']);
+      await this.router.navigate(['/speaking']);
       return;
     }
 
@@ -129,7 +138,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     this.repository.saveSettings(next);
     this.initialSettings.set(next);
     this.formRevision.update((revision) => revision + 1);
-    await this.router.navigate(['/settings']);
+    await this.router.navigate(['/speaking']);
   }
 
   onResetDraft(): void {
@@ -148,7 +157,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
   async onConfirmDiscard(): Promise<void> {
     this.discardModalOpen.set(false);
     this.bypassUnsavedPromptOnce.set(true);
-    const navigated = await this.router.navigate(['/settings']);
+    const navigated = await this.router.navigate(['/speaking']);
     if (!navigated) {
       this.bypassUnsavedPromptOnce.set(false);
     }
@@ -185,6 +194,43 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     }
   }
 
+  async onCopyAudioDiagnostics(): Promise<void> {
+    const count = this.refreshDiagnosticLogCount();
+    if (count === 0) {
+      this.diagnosticActionMessage.set('目前沒有可複製的記錄');
+      return;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      this.diagnosticActionMessage.set('瀏覽器不支援複製，請改用匯出');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(serializeSpeakingAudioDiagnostics());
+      this.diagnosticActionMessage.set(`已複製 ${count} 筆記錄`);
+    } catch {
+      this.diagnosticActionMessage.set('複製失敗，請改用匯出');
+    }
+  }
+
+  onExportAudioDiagnostics(): void {
+    const count = this.refreshDiagnosticLogCount();
+    if (count === 0) {
+      this.diagnosticActionMessage.set('目前沒有可匯出的記錄');
+      return;
+    }
+
+    const blob = new Blob([serializeSpeakingAudioDiagnostics()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `flashmind-speaking-audio-logs-${this.getLocalDateStamp()}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    this.diagnosticActionMessage.set(`已匯出 ${count} 筆記錄`);
+  }
+
   canDeactivate(): boolean {
     if (this.bypassUnsavedPromptOnce()) {
       return true;
@@ -201,6 +247,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     this.interactionModeControl.setValue(settings.interactionMode, { emitEvent: false });
     this.autoPlayVoiceControl.setValue(settings.autoPlayVoice, { emitEvent: false });
     this.showTranscriptControl.setValue(settings.showTranscript, { emitEvent: false });
+    this.showCostControl.setValue(settings.showCost, { emitEvent: false });
     this.autoTranslateControl.setValue(settings.autoTranslate, { emitEvent: false });
     this.autoMemoryEnabledControl.setValue(settings.autoMemoryEnabled, { emitEvent: false });
     this.systemPromptControl.setValue(
@@ -218,6 +265,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
       interactionMode: this.interactionModeControl.value,
       autoPlayVoice: this.autoPlayVoiceControl.value,
       showTranscript: this.showTranscriptControl.value,
+      showCost: this.showCostControl.value,
       autoTranslate: this.autoTranslateControl.value,
       autoMemoryEnabled: this.autoMemoryEnabledControl.value,
       systemPrompt: normalizedPrompt,
@@ -233,6 +281,7 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
       left.autoPlayVoice === right.autoPlayVoice &&
       left.interactionMode === right.interactionMode &&
       left.showTranscript === right.showTranscript &&
+      left.showCost === right.showCost &&
       left.autoTranslate === right.autoTranslate &&
       left.autoMemoryEnabled === right.autoMemoryEnabled &&
       left.systemPrompt === right.systemPrompt &&
@@ -252,5 +301,19 @@ export class SettingsSpeakingComponent implements OnInit, HasUnsavedChanges {
     }
 
     return prompt;
+  }
+
+  private refreshDiagnosticLogCount(): number {
+    const count = getSpeakingAudioDiagnostics().length;
+    this.diagnosticLogCount.set(count);
+    return count;
+  }
+
+  private getLocalDateStamp(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

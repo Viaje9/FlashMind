@@ -85,10 +85,19 @@
           [formControl]="showTranscriptControl"
           icon="subtitles"
           iconClass="bg-cyan-500/10 text-cyan-500"
-          label="顯示逐字稿"
-          description="顯示 AI 回覆文字內容"
+          label="預設顯示 AI 逐字稿"
+          description="關閉時預設收合，仍可逐則展開查看"
           variant="toggle"
           testId="speaking-settings-show-transcript"
+        ></fm-setting-row>
+        <fm-setting-row
+          [formControl]="showCostControl"
+          icon="payments"
+          iconClass="bg-amber-500/10 text-amber-600"
+          label="顯示花費估算"
+          description="在口說頁底部顯示本次與累計花費"
+          variant="toggle"
+          testId="speaking-settings-show-cost"
         ></fm-setting-row>
         <fm-setting-row
           [formControl]="autoTranslateControl"
@@ -149,6 +158,59 @@
           placeholder="例如：我正在準備多益，希望先練工作與旅遊情境。"
           data-testid="speaking-settings-memory"
         ></textarea>
+      </div>
+    </section>
+
+    <section>
+      <fm-section-heading text="音訊診斷記錄"></fm-section-heading>
+      <div class="rounded-2xl bg-surface-light p-4 shadow-sm dark:bg-surface-dark">
+        <div class="flex items-start gap-3">
+          <span
+            class="material-symbols-outlined inline-flex size-10 flex-none items-center justify-center rounded-xl bg-cyan-500/10 text-[20px] text-cyan-600 dark:text-cyan-400"
+            >monitor_heart</span
+          >
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              已保存 {{ diagnosticLogCount() }} 筆
+            </p>
+            <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-300">
+              最多保留最近 1000 筆，可在發生聲音重疊或播放異常後提供給開發者分析。
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <fm-button
+            variant="ghost"
+            size="sm"
+            [disabled]="diagnosticLogCount() === 0"
+            (click)="onCopyAudioDiagnostics()"
+            testId="speaking-settings-copy-audio-logs"
+          >
+            <span class="material-symbols-outlined text-[18px]">content_copy</span>
+            複製記錄
+          </fm-button>
+          <fm-button
+            variant="primary"
+            size="sm"
+            [disabled]="diagnosticLogCount() === 0"
+            (click)="onExportAudioDiagnostics()"
+            testId="speaking-settings-export-audio-logs"
+          >
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            匯出 JSON
+          </fm-button>
+        </div>
+
+        @if (diagnosticActionMessage()) {
+          <p
+            class="mt-3 text-center text-xs font-medium text-cyan-700 dark:text-cyan-300"
+            role="status"
+            data-testid="speaking-settings-audio-log-status"
+          >
+            {{ diagnosticActionMessage() }}
+          </p>
+        }
       </div>
     </section>
 

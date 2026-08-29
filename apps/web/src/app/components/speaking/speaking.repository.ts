@@ -259,6 +259,7 @@ export class SpeakingRepository {
         interactionMode: parsed.interactionMode ?? SPEAKING_DEFAULT_SETTINGS.interactionMode,
         autoPlayVoice: parsed.autoPlayVoice ?? SPEAKING_DEFAULT_SETTINGS.autoPlayVoice,
         showTranscript: parsed.showTranscript ?? SPEAKING_DEFAULT_SETTINGS.showTranscript,
+        showCost: parsed.showCost ?? SPEAKING_DEFAULT_SETTINGS.showCost,
         autoTranslate: parsed.autoTranslate ?? SPEAKING_DEFAULT_SETTINGS.autoTranslate,
         systemPrompt: parsed.systemPrompt ?? SPEAKING_DEFAULT_SETTINGS.systemPrompt,
         voice: parsed.voice ?? SPEAKING_DEFAULT_SETTINGS.voice,

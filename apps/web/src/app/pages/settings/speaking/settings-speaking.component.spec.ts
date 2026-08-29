@@ -9,6 +9,7 @@ import {
   SPEAKING_DEFAULT_SETTINGS,
 } from '../../../components/speaking/speaking.domain';
 import { SpeakingRepository } from '../../../components/speaking/speaking.repository';
+import { logSpeakingAudio } from '../../../components/speaking/speaking-audio-diagnostics';
 import { SettingsSpeakingComponent } from './settings-speaking.component';
 
 describe('SettingsSpeakingComponent', () => {
@@ -24,6 +25,7 @@ describe('SettingsSpeakingComponent', () => {
     interactionMode: 'TURN_BASED',
     autoPlayVoice: false,
     showTranscript: true,
+    showCost: true,
     autoTranslate: true,
     systemPrompt: 'custom prompt',
     voice: SpeakingVoice.Alloy,
@@ -32,6 +34,7 @@ describe('SettingsSpeakingComponent', () => {
   };
 
   beforeEach(async () => {
+    localStorage.clear();
     routerMock = {
       navigate: vi.fn().mockResolvedValue(true),
     };
@@ -77,6 +80,13 @@ describe('SettingsSpeakingComponent', () => {
     expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
       expect.objectContaining({ interactionMode: 'REALTIME' }),
     );
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/speaking']);
+  });
+
+  it('沒有設定異動時按返回應回到口說練習', async () => {
+    await component.onBack();
+
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/speaking']);
   });
 
   it('可切換並保存可打斷的真即時對話模式', async () => {
@@ -89,11 +99,65 @@ describe('SettingsSpeakingComponent', () => {
     );
   });
 
+  it('可關閉 Speaking 花費顯示', async () => {
+    component.showCostControl.setValue(false);
+
+    await component.onSave();
+
+    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ showCost: false }),
+    );
+  });
+
+  it('可關閉 AI 逐字稿的預設展開', async () => {
+    component.showTranscriptControl.setValue(false);
+
+    await component.onSave();
+
+    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ showTranscript: false }),
+    );
+    expect(fixture.nativeElement.textContent).toContain('預設顯示 AI 逐字稿');
+  });
+
   it('設定頁不應顯示 AI 聲音選擇與試聽介面', () => {
     expect(
       fixture.nativeElement.querySelector('[data-testid="speaking-settings-voice"]'),
     ).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('試聽語音');
+  });
+
+  it('可從設定頁複製音訊診斷記錄', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    logSpeakingAudio('playback.overlap-detected', { itemId: 'item-1' });
+
+    await component.onCopyAudioDiagnostics();
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('playback.overlap-detected'));
+    expect(component.diagnosticActionMessage()).toBe('已複製 1 筆記錄');
+  });
+
+  it('可從設定頁匯出音訊診斷記錄', () => {
+    logSpeakingAudio('realtime.response.done', { responseId: 'response-1' });
+    const click = vi.fn();
+    const anchor = document.createElement('a');
+    anchor.click = click;
+    const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(anchor);
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:diagnostics');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+
+    component.onExportAudioDiagnostics();
+
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(anchor.download).toMatch(/^flashmind-speaking-audio-logs-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:diagnostics');
+    expect(component.diagnosticActionMessage()).toBe('已匯出 1 筆記錄');
+    createElementSpy.mockRestore();
   });
 
   it('使用放棄變更彈窗確認後，不應再觸發第二個離開 alert', async () => {
@@ -107,7 +171,7 @@ describe('SettingsSpeakingComponent', () => {
 
     await component.onConfirmDiscard();
 
-    expect(routerMock.navigate).toHaveBeenCalledWith(['/settings']);
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/speaking']);
     expect(component.canDeactivate()).toBe(true);
     expect(confirmSpy).not.toHaveBeenCalled();
   });

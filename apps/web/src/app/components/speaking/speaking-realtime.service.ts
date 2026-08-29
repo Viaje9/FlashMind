@@ -10,6 +10,7 @@ import {
   type SpeakingMessage,
   type SpeakingSettings,
 } from './speaking.domain';
+import { logSpeakingAudio } from './speaking-audio-diagnostics';
 
 export interface SpeakingRealtimeTurnResult {
   userTranscript: string;
@@ -22,6 +23,8 @@ export interface SpeakingRealtimeTurnResult {
 
 export interface SpeakingRealtimeLiveHandlers {
   onSpeechStarted: () => void;
+  onUserTranscriptDelta: (delta: string) => void;
+  onUserTranscriptCompleted: (transcript: string) => void;
   onAssistantItem: (itemId: string) => void;
   onAudioDelta: (base64Pcm16: string) => void;
   onTurnCompleted: (result: SpeakingRealtimeTurnResult) => void;
@@ -51,6 +54,7 @@ export class SpeakingRealtimeService {
   private liveTurn: PendingTurn | null = null;
   private liveSpeechStartedAtMs: number | null = null;
   private conversationId: string | null = null;
+  private responseAudioChunkSequence = 0;
 
   async connect(input: {
     conversationId: string;
@@ -247,6 +251,9 @@ export class SpeakingRealtimeService {
     if (!handlers) return;
 
     if (type === 'input_audio_buffer.speech_started') {
+      logSpeakingAudio('realtime.user.speech-started', {
+        audioStartMs: Number(event['audio_start_ms'] ?? 0),
+      });
       handlers.onSpeechStarted();
       this.liveTurn = this.createPendingTurn();
       this.liveSpeechStartedAtMs = Number(event['audio_start_ms'] ?? 0);
@@ -257,19 +264,40 @@ export class SpeakingRealtimeService {
     if (!liveTurn) return;
 
     if (type === 'input_audio_buffer.speech_stopped') {
+      logSpeakingAudio('realtime.user.speech-stopped', {
+        audioEndMs: Number(event['audio_end_ms'] ?? 0),
+      });
       const stoppedAtMs = Number(event['audio_end_ms'] ?? this.liveSpeechStartedAtMs ?? 0);
       liveTurn.transcriptionDurationSeconds = Math.max(
         0,
         (stoppedAtMs - (this.liveSpeechStartedAtMs ?? stoppedAtMs)) / 1000,
       );
+    } else if (type === 'conversation.item.input_audio_transcription.delta') {
+      const delta = String(event['delta'] ?? '');
+      if (delta) {
+        liveTurn.userTranscript += delta;
+        handlers.onUserTranscriptDelta(delta);
+      }
     } else if (type === 'conversation.item.input_audio_transcription.completed') {
       liveTurn.userTranscript = String(event['transcript'] ?? '').trim();
+      handlers.onUserTranscriptCompleted(liveTurn.userTranscript);
     } else if (type === 'response.output_item.added') {
       const item = event['item'] as { id?: string } | undefined;
+      logSpeakingAudio('realtime.response.item-added', {
+        responseId: event['response_id'] ?? null,
+        itemId: item?.id ?? null,
+      });
       if (item?.id) handlers.onAssistantItem(item.id);
     } else if (type === 'response.output_audio.delta') {
       const delta = String(event['delta'] ?? '');
       if (delta) {
+        this.responseAudioChunkSequence += 1;
+        logSpeakingAudio('realtime.response.audio-delta', {
+          chunk: this.responseAudioChunkSequence,
+          responseId: event['response_id'] ?? null,
+          itemId: event['item_id'] ?? null,
+          encodedBytes: delta.length,
+        });
         liveTurn.audioChunks.push(delta);
         handlers.onAudioDelta(delta);
       }
@@ -291,6 +319,12 @@ export class SpeakingRealtimeService {
       }
     } else if (type === 'response.done') {
       const response = event['response'] as Record<string, unknown> | undefined;
+      logSpeakingAudio('realtime.response.done', {
+        responseId: response?.['id'] ?? null,
+        status: response?.['status'] ?? null,
+        itemId: this.readLastOutputItemId(response),
+        audioChunks: liveTurn.audioChunks.length,
+      });
       if (response?.['status'] === 'cancelled') return;
       liveTurn.responseDone = true;
       liveTurn.usage = this.mapUsage(response?.['usage']);
@@ -394,6 +428,13 @@ export class SpeakingRealtimeService {
       }
     }
     return '';
+  }
+
+  private readLastOutputItemId(response?: Record<string, unknown>): string | null {
+    const output = response?.['output'];
+    if (!Array.isArray(output) || output.length === 0) return null;
+    const item = output.at(-1) as { id?: unknown } | undefined;
+    return typeof item?.id === 'string' ? item.id : null;
   }
 
   private mapUsage(raw: unknown): SpeakingTokenUsage {

@@ -31,6 +31,7 @@ import {
 } from './speaking.domain';
 import { SpeakingRepository } from './speaking.repository';
 import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
+import { logSpeakingAudio } from './speaking-audio-diagnostics';
 
 interface RetryPayload {
   conversationId: string;
@@ -67,6 +68,8 @@ export class SpeakingStore {
   private retryPayload: RetryPayload | null = null;
   private livePersistenceQueue = Promise.resolve();
   private readonly fullDuplexActiveState = signal(false);
+  private readonly liveTranscriptState = signal('');
+  private fullDuplexStartSequence = 0;
 
   readonly conversationId = computed(() => this.state().conversationId);
   readonly messages = computed(() => this.state().messages);
@@ -82,6 +85,7 @@ export class SpeakingStore {
   readonly playingAudioKey = computed(() => this.audioPlayer.playingKey());
   readonly pausedAudioKey = computed(() => this.audioPlayer.pausedKey());
   readonly fullDuplexActive = computed(() => this.fullDuplexActiveState());
+  readonly liveTranscript = computed(() => this.liveTranscriptState());
   readonly fullDuplexInputMuted = this.fullDuplexAudio.inputMuted;
   readonly fullDuplexOutputMuted = this.fullDuplexAudio.outputMuted;
 
@@ -180,14 +184,26 @@ export class SpeakingStore {
   }
 
   async startFullDuplexConversation(): Promise<void> {
+    const attempt = ++this.fullDuplexStartSequence;
+    logSpeakingAudio('conversation.full-duplex.start-requested', {
+      attempt,
+      alreadyActive: this.fullDuplexActiveState(),
+    });
     await this.prepareRealtimeSession();
     this.audioPlayer.stop();
     this.realtime.startLive({
       onSpeechStarted: () => {
+        this.liveTranscriptState.set('');
         const interrupted = this.fullDuplexAudio.interruptPlayback();
         if (interrupted) {
           this.realtime.truncateAssistantAudio(interrupted.itemId, interrupted.audioEndMs);
         }
+      },
+      onUserTranscriptDelta: (delta) => {
+        this.liveTranscriptState.update((transcript) => transcript + delta);
+      },
+      onUserTranscriptCompleted: (transcript) => {
+        this.liveTranscriptState.set(transcript);
       },
       onAssistantItem: (itemId) => this.fullDuplexAudio.beginAssistantItem(itemId),
       onAudioDelta: (audio) => this.fullDuplexAudio.playPcm16Chunk(audio),
@@ -203,6 +219,7 @@ export class SpeakingStore {
       },
       onError: (message) => {
         this.fullDuplexActiveState.set(false);
+        this.liveTranscriptState.set('');
         this.fullDuplexAudio.stop();
         this.state.update((state) => ({ ...state, error: message }));
       },
@@ -211,7 +228,9 @@ export class SpeakingStore {
     try {
       await this.fullDuplexAudio.start((audio) => this.realtime.appendLiveAudio(audio));
       this.fullDuplexActiveState.set(true);
+      logSpeakingAudio('conversation.full-duplex.started', { attempt });
     } catch (error) {
+      logSpeakingAudio('conversation.full-duplex.start-failed', { attempt });
       this.realtime.stopLive();
       this.state.update((state) => ({
         ...state,
@@ -223,6 +242,7 @@ export class SpeakingStore {
 
   stopFullDuplexConversation(): void {
     this.fullDuplexActiveState.set(false);
+    this.liveTranscriptState.set('');
     this.fullDuplexAudio.stop();
     this.realtime.stopLive();
   }
@@ -805,6 +825,9 @@ export class SpeakingStore {
       SPEAKING_HISTORY_LIMIT_BYTES,
       conversationId,
     );
+    if (this.liveTranscriptState().trim() === userTranscript) {
+      this.liveTranscriptState.set('');
+    }
   }
 
   private async persistConversation(

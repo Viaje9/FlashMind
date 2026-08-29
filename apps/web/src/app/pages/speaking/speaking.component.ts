@@ -142,6 +142,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly retryAvailable = this.speakingStore.retryAvailable;
   readonly fullDuplexInputMuted = this.speakingStore.fullDuplexInputMuted;
   readonly fullDuplexOutputMuted = this.speakingStore.fullDuplexOutputMuted;
+  readonly liveTranscript = this.speakingStore.liveTranscript;
 
   readonly assistantMessages = this.speakingStore.assistantMessages;
   readonly assistantSending = this.speakingStore.assistantSending;
@@ -152,6 +153,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly assistantPanelHeight = signal(this.loadAssistantPanelHeight());
   readonly translationVisibleIds = signal<Set<string>>(new Set());
   readonly expandedUserTranscriptIds = signal<Set<string>>(new Set());
+  readonly expandedAssistantTranscriptIds = signal<Set<string>>(new Set());
   readonly selectionTranslateTarget = signal<SelectionTranslateTarget | null>(null);
   readonly selectionActionPosition = signal<SelectionOverlayPosition>({ left: 0, top: 0 });
   readonly selectionTooltipStatus = signal<SelectionTooltipStatus>('idle');
@@ -299,6 +301,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       this.messages();
+      this.liveTranscript();
       this.scrollSpeakingMessagesToBottom();
     });
 
@@ -597,6 +600,22 @@ export class SpeakingComponent implements OnInit, OnDestroy {
 
   isUserTranscriptExpanded(messageId: string): boolean {
     return this.expandedUserTranscriptIds().has(messageId);
+  }
+
+  toggleAssistantTranscript(messageId: string): void {
+    this.expandedAssistantTranscriptIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }
+
+  isAssistantTranscriptExpanded(messageId: string): boolean {
+    return this.settings().showTranscript || this.expandedAssistantTranscriptIds().has(messageId);
   }
 
   async onToggleTranslate(message: SpeakingMessage): Promise<void> {

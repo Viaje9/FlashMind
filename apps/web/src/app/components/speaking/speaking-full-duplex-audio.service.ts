@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { logSpeakingAudio } from './speaking-audio-diagnostics';
 
 export function resamplePcm16Base64(
   input: Float32Array,
@@ -44,6 +45,9 @@ export class SpeakingFullDuplexAudioService {
   private nextPlaybackAt = 0;
   private playbackStartedAt: number | null = null;
   private currentAssistantItemId: string | null = null;
+  private startAttemptSequence = 0;
+  private activeStartAttempt = 0;
+  private playbackChunkSequence = 0;
 
   private readonly activeState = signal(false);
   private readonly errorState = signal<string | null>(null);
@@ -56,6 +60,12 @@ export class SpeakingFullDuplexAudioService {
   readonly outputMuted = computed(() => this.outputMutedState());
 
   async start(onAudioChunk: (base64Pcm16: string) => void): Promise<void> {
+    const attempt = ++this.startAttemptSequence;
+    logSpeakingAudio('full-duplex.start.requested', {
+      attempt,
+      previousAttempt: this.activeStartAttempt || null,
+      wasActive: this.activeState(),
+    });
     this.stop();
     this.errorState.set(null);
 
@@ -95,8 +105,15 @@ export class SpeakingFullDuplexAudioService {
       this.processor = processor;
       this.silentGain = silentGain;
       this.playbackGain = playbackGain;
+      this.activeStartAttempt = attempt;
       this.activeState.set(true);
+      logSpeakingAudio('full-duplex.start.ready', {
+        attempt,
+        sampleRate: context.sampleRate,
+        contextState: context.state,
+      });
     } catch {
+      logSpeakingAudio('full-duplex.start.failed', { attempt });
       this.stop();
       this.errorState.set('無法啟動真即時語音，請確認麥克風權限後再試。');
       throw new Error(this.errorState() ?? '無法啟動真即時語音');
@@ -104,6 +121,13 @@ export class SpeakingFullDuplexAudioService {
   }
 
   beginAssistantItem(itemId: string): void {
+    logSpeakingAudio('playback.item.begin', {
+      itemId,
+      previousItemId: this.currentAssistantItemId,
+      scheduledSources: this.scheduledSources.size,
+      currentTime: this.audioContext?.currentTime ?? null,
+      previousNextPlaybackAt: this.nextPlaybackAt,
+    });
     this.currentAssistantItemId = itemId;
     this.playbackStartedAt = null;
     this.nextPlaybackAt = this.audioContext?.currentTime ?? 0;
@@ -139,14 +163,33 @@ export class SpeakingFullDuplexAudioService {
     }
 
     const source = context.createBufferSource();
+    const chunk = ++this.playbackChunkSequence;
+    const itemId = this.currentAssistantItemId;
     source.buffer = buffer;
     source.connect(this.playbackGain ?? context.destination);
-    source.onended = () => this.scheduledSources.delete(source);
+    source.onended = () => {
+      this.scheduledSources.delete(source);
+      logSpeakingAudio('playback.chunk.ended', {
+        chunk,
+        itemId,
+        scheduledSources: this.scheduledSources.size,
+        currentTime: context.currentTime,
+      });
+    };
 
     const startsAt = Math.max(context.currentTime, this.nextPlaybackAt);
     this.playbackStartedAt ??= startsAt;
     this.nextPlaybackAt = startsAt + buffer.duration;
     this.scheduledSources.add(source);
+    logSpeakingAudio('playback.chunk.scheduled', {
+      chunk,
+      itemId,
+      durationMs: Math.round(buffer.duration * 1000),
+      startsAt,
+      currentTime: context.currentTime,
+      nextPlaybackAt: this.nextPlaybackAt,
+      scheduledSources: this.scheduledSources.size,
+    });
     source.start(startsAt);
   }
 
@@ -154,6 +197,10 @@ export class SpeakingFullDuplexAudioService {
     const context = this.audioContext;
     const itemId = this.currentAssistantItemId;
     if (!context || !itemId || this.playbackStartedAt === null) {
+      logSpeakingAudio('playback.interrupt.without-active-item', {
+        itemId,
+        scheduledSources: this.scheduledSources.size,
+      });
       this.stopPlayback();
       return null;
     }
@@ -165,10 +212,17 @@ export class SpeakingFullDuplexAudioService {
       ),
     );
     this.stopPlayback();
+    logSpeakingAudio('playback.interrupted', { itemId, audioEndMs });
     return { itemId, audioEndMs };
   }
 
   stop(): void {
+    logSpeakingAudio('full-duplex.stop', {
+      attempt: this.activeStartAttempt || null,
+      wasActive: this.activeState(),
+      itemId: this.currentAssistantItemId,
+      scheduledSources: this.scheduledSources.size,
+    });
     this.activeState.set(false);
     this.stopPlayback();
     if (this.processor) this.processor.onaudioprocess = null;
@@ -184,6 +238,7 @@ export class SpeakingFullDuplexAudioService {
     this.playbackGain = null;
     this.mediaStream = null;
     this.audioContext = null;
+    this.activeStartAttempt = 0;
     this.inputMutedState.set(false);
     this.outputMutedState.set(false);
   }
@@ -193,6 +248,14 @@ export class SpeakingFullDuplexAudioService {
   }
 
   private stopPlayback(): void {
+    if (this.scheduledSources.size > 0 || this.currentAssistantItemId) {
+      logSpeakingAudio('playback.queue.cleared', {
+        itemId: this.currentAssistantItemId,
+        scheduledSources: this.scheduledSources.size,
+        currentTime: this.audioContext?.currentTime ?? null,
+        nextPlaybackAt: this.nextPlaybackAt,
+      });
+    }
     for (const source of this.scheduledSources) {
       try {
         source.stop();

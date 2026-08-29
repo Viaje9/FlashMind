@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { logSpeakingAudio } from './speaking-audio-diagnostics';
 
 interface PlayOptions {
   auto?: boolean;
@@ -100,6 +101,12 @@ export class SpeakingAudioPlayerService {
   }
 
   async play(blob: Blob, key: string, options: PlayOptions = {}): Promise<void> {
+    logSpeakingAudio('message-player.play.requested', {
+      key,
+      currentKey: this.currentKey,
+      auto: options.auto ?? false,
+      waitForEnd: options.waitForEnd ?? false,
+    });
     this.errorState.set(null);
 
     if (!blob || blob.size === 0) {
@@ -133,6 +140,7 @@ export class SpeakingAudioPlayerService {
     let finishWait: (() => void) | undefined;
     const playbackFinished = new Promise<void>((resolve) => (finishWait = resolve));
     audio.onended = () => {
+      logSpeakingAudio('message-player.play.ended', { key });
       this.cleanupPlaybackStateForKey(key);
       if (this.sharedTrackEnabled) {
         void this.enterKeepAliveMode();
@@ -140,6 +148,7 @@ export class SpeakingAudioPlayerService {
       finishWait?.();
     };
     audio.onerror = () => {
+      logSpeakingAudio('message-player.play.error', { key });
       this.errorState.set('語音播放失敗，請再試一次。');
       this.cleanupPlaybackStateForKey(key);
       if (this.sharedTrackEnabled) {
@@ -154,6 +163,7 @@ export class SpeakingAudioPlayerService {
       } else {
         await audio.play();
       }
+      logSpeakingAudio('message-player.play.started', { key });
       if (options.waitForEnd) await playbackFinished;
     } catch {
       this.errorState.set('語音播放失敗，請再試一次。');
@@ -171,6 +181,7 @@ export class SpeakingAudioPlayerService {
     }
 
     this.trackAudio.pause();
+    logSpeakingAudio('message-player.play.paused', { key: this.currentKey });
     this.playingKeyState.set(null);
     this.pausedKeyState.set(this.currentKey);
   }
@@ -193,6 +204,7 @@ export class SpeakingAudioPlayerService {
 
       this.playingKeyState.set(key);
       this.pausedKeyState.set(null);
+      logSpeakingAudio('message-player.play.resumed', { key });
     } catch {
       this.errorState.set('語音播放失敗，請再試一次。');
       this.cleanupPlaybackStateForKey(key);
@@ -203,6 +215,11 @@ export class SpeakingAudioPlayerService {
   }
 
   stop(): void {
+    logSpeakingAudio('message-player.stop', {
+      key: this.currentKey,
+      playing: this.playingKeyState() !== null,
+      paused: this.pausedKeyState() !== null,
+    });
     this.stopCurrentClip();
     if (this.sharedTrackEnabled) {
       void this.enterKeepAliveMode();

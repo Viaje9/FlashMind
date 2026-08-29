@@ -92,7 +92,7 @@
           </div>
         }
 
-        @if (!loadingConversation() && messages().length === 0) {
+        @if (!loadingConversation() && messages().length === 0 && !liveTranscript().trim()) {
           <div class="flex h-full flex-col items-center justify-center gap-4 py-6 text-center">
             <div
               class="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 text-primary"
@@ -352,99 +352,149 @@
                   class="max-w-[78%] rounded-2xl rounded-bl-md bg-surface-light px-4 py-2.5 shadow-sm ring-1 ring-slate-200"
                 >
                   @if (!settings().showTranscript) {
-                    <p class="text-base text-slate-500">已隱藏逐字稿，請播放語音收聽。</p>
-                  } @else {
-                    @if (
-                      useCustomSelectionMode() && getDisplayedTranscript(message);
-                      as transcript
-                    ) {
-                      @if (transcript.trim()) {
+                    <button
+                      type="button"
+                      class="flex w-full items-center justify-between gap-3 rounded-xl px-1 py-1 text-left text-slate-600 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60"
+                      (click)="toggleAssistantTranscript(message.id)"
+                      [attr.aria-expanded]="isAssistantTranscriptExpanded(message.id)"
+                      [attr.aria-controls]="'speaking-assistant-transcript-' + message.id"
+                      [attr.aria-label]="
+                        isAssistantTranscriptExpanded(message.id)
+                          ? '收起 AI 逐字稿'
+                          : '展開 AI 逐字稿'
+                      "
+                      [attr.data-testid]="'speaking-assistant-transcript-toggle-' + message.id"
+                    >
+                      <span class="inline-flex items-center gap-2 text-base font-medium">
+                        <span class="material-symbols-outlined text-[19px]">subtitles</span>
+                        AI 逐字稿
+                      </span>
+                      <span class="material-symbols-outlined text-[20px]">
+                        {{
+                          isAssistantTranscriptExpanded(message.id) ? 'expand_less' : 'expand_more'
+                        }}
+                      </span>
+                    </button>
+                  }
+
+                  @if (isAssistantTranscriptExpanded(message.id)) {
+                    <div
+                      [class.mt-2]="!settings().showTranscript"
+                      [class.border-t]="!settings().showTranscript"
+                      [class.border-slate-200]="!settings().showTranscript"
+                      [class.pt-3]="!settings().showTranscript"
+                      [id]="'speaking-assistant-transcript-' + message.id"
+                      [attr.data-testid]="'speaking-assistant-transcript-' + message.id"
+                    >
+                      @if (
+                        useCustomSelectionMode() && getDisplayedTranscript(message);
+                        as transcript
+                      ) {
+                        @if (transcript.trim()) {
+                          <p
+                            class="custom-selection-transcript text-base leading-relaxed text-slate-700"
+                            data-testid="speaking-assistant-transcript"
+                            [attr.data-speaking-assistant-message-id]="message.id"
+                            data-speaking-selection-context="main-transcript"
+                            (contextmenu)="onAssistantTranscriptContextMenu($event)"
+                            (pointerdown)="onCustomTranscriptPointerDown(message, $event)"
+                            (pointermove)="onCustomTranscriptPointerMove(message, $event)"
+                            (pointerup)="onCustomTranscriptPointerUp(message, $event)"
+                            (pointercancel)="onCustomTranscriptPointerCancel(message, $event)"
+                          >
+                            @for (token of getTranscriptTokens(message); track $index) {
+                              <span
+                                class="selection-token"
+                                [class.selection-token-selected]="
+                                  isCustomTokenSelected('main-transcript', message.id, $index)
+                                "
+                                [class.selection-token-space]="isWhitespaceToken(token)"
+                                [attr.data-token-index]="$index"
+                              >
+                                {{ token }}
+                              </span>
+                            }
+                          </p>
+                        } @else {
+                          <span class="opacity-75">（語音訊息）</span>
+                        }
+                      } @else {
                         <p
-                          class="custom-selection-transcript text-base leading-relaxed text-slate-700"
+                          class="whitespace-pre-wrap text-base leading-relaxed text-slate-700"
                           data-testid="speaking-assistant-transcript"
                           [attr.data-speaking-assistant-message-id]="message.id"
                           data-speaking-selection-context="main-transcript"
                           (contextmenu)="onAssistantTranscriptContextMenu($event)"
-                          (pointerdown)="onCustomTranscriptPointerDown(message, $event)"
-                          (pointermove)="onCustomTranscriptPointerMove(message, $event)"
-                          (pointerup)="onCustomTranscriptPointerUp(message, $event)"
-                          (pointercancel)="onCustomTranscriptPointerCancel(message, $event)"
                         >
-                          @for (token of getTranscriptTokens(message); track $index) {
-                            <span
-                              class="selection-token"
-                              [class.selection-token-selected]="
-                                isCustomTokenSelected('main-transcript', message.id, $index)
-                              "
-                              [class.selection-token-space]="isWhitespaceToken(token)"
-                              [attr.data-token-index]="$index"
-                            >
-                              {{ token }}
-                            </span>
+                          @if (shouldShowTranslation(message) && message.translatedText?.trim()) {
+                            {{ message.translatedText }}
+                          } @else if (message.text?.trim()) {
+                            {{ message.text }}
+                          } @else {
+                            <span class="opacity-75">（語音訊息）</span>
                           }
                         </p>
-                      } @else {
-                        <span class="opacity-75">（語音訊息）</span>
                       }
-                    } @else {
-                      <p
-                        class="whitespace-pre-wrap text-base leading-relaxed text-slate-700"
-                        data-testid="speaking-assistant-transcript"
-                        [attr.data-speaking-assistant-message-id]="message.id"
-                        data-speaking-selection-context="main-transcript"
-                        (contextmenu)="onAssistantTranscriptContextMenu($event)"
-                      >
-                        @if (shouldShowTranslation(message) && message.translatedText?.trim()) {
-                          {{ message.translatedText }}
-                        } @else if (message.text?.trim()) {
-                          {{ message.text }}
-                        } @else {
-                          <span class="opacity-75">（語音訊息）</span>
-                        }
-                      </p>
-                    }
-                  }
 
-                  @if (translatingMessageId() === message.id) {
-                    <div
-                      class="mt-2 inline-flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-base font-medium text-white dark:bg-blue-500"
-                    >
-                      <span>翻譯中</span>
-                      <span
-                        class="dot-bounce [animation-delay:0ms]"
-                        style="background-color: #ffffff"
-                      ></span>
-                      <span
-                        class="dot-bounce [animation-delay:150ms]"
-                        style="background-color: #ffffff"
-                      ></span>
-                      <span
-                        class="dot-bounce [animation-delay:300ms]"
-                        style="background-color: #ffffff"
-                      ></span>
+                      @if (translatingMessageId() === message.id) {
+                        <div
+                          class="mt-2 inline-flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-base font-medium text-white dark:bg-blue-500"
+                        >
+                          <span>翻譯中</span>
+                          <span
+                            class="dot-bounce [animation-delay:0ms]"
+                            style="background-color: #ffffff"
+                          ></span>
+                          <span
+                            class="dot-bounce [animation-delay:150ms]"
+                            style="background-color: #ffffff"
+                          ></span>
+                          <span
+                            class="dot-bounce [animation-delay:300ms]"
+                            style="background-color: #ffffff"
+                          ></span>
+                        </div>
+                      }
+
+                      <div class="mt-2 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          class="rounded-full bg-blue-600 px-3 py-1 text-base font-medium text-white hover:bg-blue-700 disabled:bg-blue-600 disabled:text-white dark:bg-blue-500 dark:hover:bg-blue-400 dark:disabled:bg-blue-500"
+                          (click)="onToggleTranslate(message)"
+                          [disabled]="translatingMessageId() === message.id"
+                        >
+                          @if (translatingMessageId() === message.id) {
+                            翻譯中...
+                          } @else if (message.translatedText && shouldShowTranslation(message)) {
+                            原文
+                          } @else {
+                            翻譯
+                          }
+                        </button>
+                      </div>
                     </div>
                   }
-
-                  <div class="mt-2 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      class="rounded-full bg-blue-600 px-3 py-1 text-base font-medium text-white hover:bg-blue-700 disabled:bg-blue-600 disabled:text-white dark:bg-blue-500 dark:hover:bg-blue-400 dark:disabled:bg-blue-500"
-                      (click)="onToggleTranslate(message)"
-                      [disabled]="translatingMessageId() === message.id"
-                    >
-                      @if (translatingMessageId() === message.id) {
-                        翻譯中...
-                      } @else if (message.translatedText && shouldShowTranslation(message)) {
-                        原文
-                      } @else {
-                        翻譯
-                      }
-                    </button>
-                  </div>
                 </div>
               }
             </article>
           }
+        }
+
+        @if (liveTranscript().trim()) {
+          <div class="mb-3 flex justify-end" aria-live="polite" aria-atomic="false">
+            <div
+              class="max-w-[82%] rounded-2xl rounded-br-md bg-orange-500 px-4 py-3 text-white shadow-sm"
+              data-testid="speaking-live-transcript"
+            >
+              <div class="mb-1 flex items-center gap-1.5 text-xs font-semibold text-orange-100">
+                <span class="material-symbols-outlined text-[16px]">graphic_eq</span>
+                即時逐字稿
+              </div>
+              <p class="whitespace-pre-wrap text-base leading-relaxed">
+                {{ liveTranscript() }}<span class="ml-0.5 inline-block animate-pulse">▍</span>
+              </p>
+            </div>
+          </div>
         }
       </section>
 
@@ -775,10 +825,12 @@
           </div>
         </div>
       </footer>
-      <p class="mt-2 px-1 text-[11px] text-slate-500" data-testid="speaking-cost-summary">
-        總花費：約 NT$ {{ formatCostTwd(spending().totalCostTwd) }} ｜ 單次花費：約 NT$
-        {{ formatCostTwd(spending().lastRequestCostTwd) }}
-      </p>
+      @if (settings().showCost) {
+        <p class="mt-2 px-1 text-[11px] text-slate-500" data-testid="speaking-cost-summary">
+          總花費：約 NT$ {{ formatCostTwd(spending().totalCostTwd) }} ｜ 單次花費：約 NT$
+          {{ formatCostTwd(spending().lastRequestCostTwd) }}
+        </p>
+      }
     }
   </main>
 

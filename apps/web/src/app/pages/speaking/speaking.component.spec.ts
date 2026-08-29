@@ -70,13 +70,14 @@ describe('speaking.component selection actions', () => {
     document.body.innerHTML = '';
   });
 
-  it('應分別使用 Realtime 2.1 mini 與 Luna 價格估算語音及摘要花費', () => {
+  it('應分別使用 Realtime 2.1 mini、GPT Transcribe 與 Luna 價格估算花費', () => {
     storeMock.messages.set([
       {
         id: 'assistant-cost',
         conversationId: 'conversation-1',
         role: 'assistant',
         createdAt: '2026-08-26T01:00:00.000Z',
+        transcriptionDurationSeconds: 60,
         usage: {
           promptTokens: 2_000_000,
           completionTokens: 2_000_000,
@@ -104,8 +105,32 @@ describe('speaking.component selection actions', () => {
       },
     ]);
 
-    expect(component.spending().totalCostTwd).toBeCloseTo(1126.4);
+    expect(component.spending().totalCostTwd).toBeCloseTo(1126.544);
     expect(component.spending().lastRequestCostTwd).toBeCloseTo(70.4);
+  });
+
+  it('關閉花費顯示後應隱藏 Speaking 花費摘要', async () => {
+    storeMock.speakingSettings.set({
+      ...storeMock.speakingSettings(),
+      showCost: false,
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="speaking-cost-summary"]')).toBeNull();
+  });
+
+  it('真即時對話應顯示使用者正在產生的逐字稿', async () => {
+    storeMock.liveTranscript.set('I am building a website');
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const transcript = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-live-transcript"]',
+    ) as HTMLElement | null;
+    expect(transcript?.textContent).toContain('I am building a website');
   });
 
   it('目標單字連結應保留目前 Speaking 對話來源', () => {
@@ -224,6 +249,58 @@ describe('speaking.component selection actions', () => {
     expect(
       fixture.nativeElement.querySelector(
         '[data-testid="speaking-user-transcript-user-transcript-1"]',
+      ),
+    ).toBeNull();
+  });
+
+  it('關閉預設顯示 AI 逐字稿時，應預設收合並可獨立展開與收起', async () => {
+    storeMock.speakingSettings.set({
+      ...SPEAKING_DEFAULT_SETTINGS,
+      showTranscript: false,
+    });
+    storeMock.messages.set([
+      {
+        id: 'assistant-transcript-1',
+        conversationId: 'conversation-1',
+        role: 'assistant',
+        text: 'Would you like to continue?',
+        createdAt: '2026-08-29T01:00:00.000Z',
+      },
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const toggle = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-assistant-transcript-toggle-assistant-transcript-1"]',
+    ) as HTMLButtonElement | null;
+
+    expect(toggle).toBeTruthy();
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="speaking-assistant-transcript-assistant-transcript-1"]',
+      ),
+    ).toBeNull();
+
+    toggle?.click();
+    fixture.detectChanges();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="speaking-assistant-transcript-assistant-transcript-1"]',
+      )?.textContent,
+    ).toContain('Would you like to continue?');
+
+    toggle?.click();
+    fixture.detectChanges();
+
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-testid="speaking-assistant-transcript-assistant-transcript-1"]',
       ),
     ).toBeNull();
   });
@@ -745,6 +822,7 @@ function createSpeakingStoreMock() {
     speakingSettings: signal({
       ...SPEAKING_DEFAULT_SETTINGS,
       showTranscript: true,
+      showCost: true,
     }),
     messages: signal<SpeakingMessage[]>([]),
     sending: signal(false),
@@ -759,6 +837,7 @@ function createSpeakingStoreMock() {
     playingAudioKey: signal<string | null>(null),
     fullDuplexInputMuted: signal(false),
     fullDuplexOutputMuted: signal(false),
+    liveTranscript: signal(''),
     refreshSpeakingSettings: vi.fn(),
     activateSharedAudioTrack: vi.fn(async () => undefined),
     prepareRealtimeSession: vi.fn(async () => undefined),

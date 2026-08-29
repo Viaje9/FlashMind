@@ -50,6 +50,7 @@ export interface SpeakingSettings {
   interactionMode: SpeakingInteractionMode;
   autoPlayVoice: boolean;
   showTranscript: boolean;
+  showCost: boolean;
   autoTranslate: boolean;
   systemPrompt: string;
   voice: SpeakingVoice;
@@ -138,6 +139,7 @@ export const SPEAKING_DEFAULT_SETTINGS: SpeakingSettings = {
   interactionMode: 'TURN_BASED',
   autoPlayVoice: true,
   showTranscript: true,
+  showCost: true,
   autoTranslate: false,
   systemPrompt: '',
   voice: SpeakingVoice.Marin,

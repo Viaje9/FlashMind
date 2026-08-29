@@ -43,6 +43,7 @@ describe('speaking.domain', () => {
       interactionMode: 'TURN_BASED',
       autoPlayVoice: true,
       showTranscript: true,
+      showCost: true,
       autoTranslate: false,
       systemPrompt: '',
       voice: 'marin',
