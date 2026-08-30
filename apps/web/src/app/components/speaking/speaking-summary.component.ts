@@ -24,20 +24,12 @@ renderer.table = function (token) {
 @Component({
   selector: 'app-speaking-summary',
   template: `
-    <article
-      class="mb-4 min-w-0 overflow-hidden rounded-2xl border border-slate-200 border-t-4 border-t-orange-500 bg-white shadow-sm dark:border-white/10 dark:border-t-orange-500 dark:bg-slate-900"
-      data-testid="speaking-summary-card"
-    >
-      <div class="px-4 py-5 sm:px-7 sm:py-6">
-        <header class="mb-6 flex items-center justify-between gap-3">
-          <div>
-            <p
-              class="text-[10px] font-bold uppercase tracking-[0.16em] text-orange-600 dark:text-orange-300"
-            >
-              Speaking Review
-            </p>
-            <h2 class="mt-1 text-lg font-bold text-slate-900 dark:text-white">口說練習回顧</h2>
-          </div>
+    <article class="mb-4 min-w-0 border-t-2 border-orange-400" data-testid="speaking-summary-card">
+      <div class="py-5 sm:py-6">
+        <header class="mb-4 flex items-center justify-between gap-3">
+          <h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            口說練習回顧
+          </h2>
           @if (showCopy()) {
             <button
               type="button"
