@@ -182,6 +182,131 @@ test("解析、驗證、401、409 與 redirect 分別失敗且不輸出原文", 
   result = await run(["review", "validate", file]);
   assert.equal(result.code, 2);
 });
+test("保存失敗顯示後端代碼與欄位原因，保留退出碼且不改草稿", async (t) => {
+  const apiError = {
+    code: "REVIEW_INVALID",
+    message: "Review 驗證不符",
+    details: [
+      {
+        path: "/result/actualUses/0/targetVocabularyId",
+        code: "TARGET_NOT_FOUND",
+        message: "找不到目前帳號的對應目標單字",
+      },
+    ],
+  };
+  let status = 422;
+  const { run, file } = await setup(t, (_, res) => {
+    res.statusCode = status;
+    res.end(JSON.stringify({ error: apiError }));
+  });
+  const before = await fs.readFile(file, "utf8");
+  for (status of [422, 400]) {
+    const result = await run(["review", "save", file]);
+    assert.equal(result.code, 4);
+    assert.equal(result.json().error.code, "VALIDATION_FAILED");
+    assert.match(result.json().error.message, new RegExp(`HTTP ${status}`));
+    assert.deepEqual(result.json().error.apiError, apiError);
+  }
+  apiError.code = "REVIEW_TARGET_MISMATCH";
+  apiError.message = "草稿帳號或環境與目前登入不同";
+  delete apiError.details;
+  const result = await run(["review", "save", file]);
+  assert.deepEqual(result.json().error.apiError, apiError);
+  assert.equal(await fs.readFile(file, "utf8"), before);
+});
+test("後端錯誤只輸出允許欄位，遮蔽 token 與回傳的逐字稿", async (t) => {
+  const { run, file } = await setup(t, (req, res, body) => {
+    res.statusCode = 422;
+    res.end(
+      JSON.stringify({
+        error: {
+          code: "REVIEW_INVALID",
+          message: `驗證不符：${req.headers.cookie}`,
+          details: [
+            {
+              path: "/practice/messages/0/text",
+              code: "EVIDENCE_INVALID",
+              message: `原句不符：${body.practice.messages[0].text}`,
+              quote: body.practice.messages[0].text,
+              token: "extra-private-token",
+            },
+          ],
+          stack: "private-stack",
+          draft: body,
+          headers: req.headers,
+        },
+      }),
+    );
+  });
+  const result = await run(["review", "save", file]);
+  assert.equal(result.code, 4);
+  assert.deepEqual(result.json().error.apiError, {
+    code: "REVIEW_INVALID",
+    message: "驗證不符：session=[已隱藏]",
+    details: [
+      {
+        path: "/practice/messages/0/text",
+        code: "EVIDENCE_INVALID",
+        message: "原句不符：[已隱藏]",
+      },
+    ],
+  });
+  assert.doesNotMatch(
+    result.stdout + result.stderr,
+    /private-session|extra-private-token|private-stack/,
+  );
+  assert.ok(!result.stdout.includes(fixture.practice.messages[0].text));
+});
+test("錯誤回應不是契約 JSON 或過大時仍保留原 HTTP 錯誤", async (t) => {
+  let payload;
+  const { run, file } = await setup(t, (_, res) => {
+    res.statusCode = 422;
+    res.end(payload);
+  });
+  for (payload of [
+    "<html>private-upstream-error</html>",
+    "{ invalid",
+    JSON.stringify({ error: "private-error" }),
+    JSON.stringify({ error: { code: {}, message: [] } }),
+    JSON.stringify({
+      error: { code: "REVIEW_INVALID", message: "x".repeat(70 * 1024) },
+    }),
+  ]) {
+    const result = await run(["review", "save", file]);
+    assert.equal(result.code, 4);
+    assert.equal(result.json().error.code, "VALIDATION_FAILED");
+    assert.match(result.json().error.message, /HTTP 422/);
+    assert.equal(result.json().error.apiError, undefined);
+    assert.ok(result.stdout.length < 500);
+  }
+});
+test("後端診斷限制長度與筆數，500 保留 API_ERROR 退出碼", async (t) => {
+  const { run, file } = await setup(t, (_, res) => {
+    res.statusCode = 500;
+    res.end(
+      JSON.stringify({
+        error: {
+          code: "SERVER_ERROR",
+          message: "錯".repeat(1001),
+          details: Array.from({ length: 21 }, () => ({
+            path: "/result",
+            code: "SERVER_ERROR",
+            message: "原因\u001b[31m",
+          })),
+        },
+      }),
+    );
+  });
+  const result = await run(["review", "save", file]);
+  assert.equal(result.code, 6);
+  const error = result.json().error;
+  assert.equal(error.code, "API_ERROR");
+  assert.match(error.message, /HTTP 500/);
+  assert.equal(error.apiError.message, "錯".repeat(1000) + "…[已截短]");
+  assert.equal(error.apiError.details.length, 20);
+  assert.equal(error.apiError.truncated, true);
+  assert.ok(!error.apiError.details[0].message.includes("\u001b"));
+});
 test("login 交換 cookie、檔案 0600、不印 token，取消不覆蓋原登入", async (t) => {
   let hash,
     denied = false;

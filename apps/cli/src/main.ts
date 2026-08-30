@@ -23,7 +23,7 @@ import {
   type SpeakingReviewDraft,
   type SpeakingSavedReview,
 } from "@flashmind/shared";
-import { CliError } from "./errors";
+import { CliError, readApiError } from "./errors";
 import {
   checkContext,
   isReviewId,
@@ -334,7 +334,11 @@ async function showStatus(
       apiOrigin: origin,
       originSource,
       checked: check && Boolean(credential),
-      error: { code: error.code, message: error.message },
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.apiError ? { apiError: error.apiError } : {}),
+      },
     });
     if (check || error.code !== "AUTH_REQUIRED")
       process.exitCode = error.exitCode;
@@ -398,6 +402,8 @@ async function request(
         : "API_ERROR",
       `API 請求失敗（HTTP ${response.status}）；未變更本機草稿`,
       response.status === 400 || response.status === 422 ? 4 : 6,
+      undefined,
+      await readApiError(response, credential?.token, body),
     );
   let bytes = 0;
   const chunks: Uint8Array[] = [];
@@ -658,6 +664,7 @@ main().catch((error) => {
       code: failure.code,
       message: failure.message,
       ...(failure.details ? { details: failure.details } : {}),
+      ...(failure.apiError ? { apiError: failure.apiError } : {}),
     },
   });
   process.exitCode = failure.exitCode;

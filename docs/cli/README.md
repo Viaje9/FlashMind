@@ -144,6 +144,25 @@ flashmind review save <id>
 
 validate／save 接受舊草稿路徑以維持相容。管理資料檔 `review.json` 本身不是 API 草稿，請用 ID，勿把包含 context 的整份資料檔當作 payload。CLI 不呼叫 AI、不自動建卡、不更動 FSRS。移除遠端預驗證不會放寬 save 的資料外傳與正式保存批准。
 
+### API 錯誤提示
+
+保存遇到 HTTP 400／422 等 API 錯誤時，保留原本的 CLI 錯誤分類與退出碼，並以 `error.apiError` 顯示後端的 `code`、`message` 與欄位驗證 `details`。例如以下只是錯誤格式示例，不代表某次保存的實際原因：
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "API 請求失敗（HTTP 422）；未變更本機草稿",
+    "apiError": {
+      "code": "REVIEW_TARGET_MISMATCH",
+      "message": "草稿帳號或環境與目前登入不同"
+    }
+  }
+}
+```
+
+只輸出錯誤契約的指定欄位，不輸出原始回應、headers、stack 或附帶草稿；已知登入 token 與請求中完整的長文字／引文會遮蔽。單欄最多 1000 字元、欄位原因最多 20 筆（超過時標示 `truncated`）。非契約 JSON、讀取失敗或超過 64 KiB 的錯誤回應會退回原本的 HTTP 錯誤提示。登入失效、來源衝突、redirect 與請求過大的專用提示保持不變。
+
 ## 草稿契約
 
 完整 schema 位於 `openapi/speaking-history.yaml` 的 `SpeakingReviewDraft`，執行 `pnpm generate:speaking-contract` 產生共用型別和 AJV schema。Web client 使用 `pnpm --filter web generate:api`，JSON 的唯一陣列仍是 Array，不應序列化為 Set。
