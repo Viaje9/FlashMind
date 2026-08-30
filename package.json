@@ -14,13 +14,19 @@
     "build-storybook:web": "pnpm --filter ./apps/web build-storybook",
     "test:e2e": "pnpm --filter ./e2e test",
     "test:e2e:ui": "pnpm --filter ./e2e test:ui",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate:speaking-contract": "node scripts/generate-speaking-contract.mjs",
+    "build:cli": "pnpm --filter @flashmind/cli build",
+    "skills:sync": "node apps/cli/scripts/sync-skills.mjs",
+    "flashmind": "node apps/cli/bin/flashmind.cjs",
+    "test:e2e:speaking": "pnpm --filter api build && pnpm --filter web build --configuration development && pnpm --filter @flashmind/cli build && node apps/api/test/run-speaking-e2e.cjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "yaml": "2.8.2"
   }
 }

@@ -17,14 +17,13 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FmButtonComponent, FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { SpeakingRecorderService } from '../../components/speaking/speaking-recorder.service';
+import { SpeakingSummaryComponent } from '../../components/speaking/speaking-summary.component';
 import { SpeakingStore } from '../../components/speaking/speaking.store';
 import { TtsStore } from '../../components/tts/tts.store';
 import {
-  type SpeakingReviewSummaryView,
   type SpeakingAssistantMessage,
   type SpeakingMessage,
   isSelectionTranslationResultStale,
-  parseSpeakingReviewSummary,
 } from '../../components/speaking/speaking.domain';
 
 interface DragState {
@@ -109,6 +108,7 @@ const ASSISTANT_PANEL_CONTEXT: SelectionContext = 'assistant-panel';
     FmPageHeaderComponent,
     FmIconButtonComponent,
     FmButtonComponent,
+    SpeakingSummaryComponent,
   ],
   templateUrl: './speaking.component.html',
   styleUrl: './speaking.component.css',
@@ -119,6 +119,10 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  readonly textSyncError = computed(() => this.speakingStore.syncError?.() ?? null);
+  async retryTextSync() {
+    await this.speakingStore.retryTextSync();
+  }
   readonly speakingStore = inject(SpeakingStore);
   readonly recorder = inject(SpeakingRecorderService);
   private readonly ttsStore = inject(TtsStore);
@@ -663,10 +667,6 @@ export class SpeakingComponent implements OnInit, OnDestroy {
     }
 
     return this.getTokensWithCache(`${MAIN_TRANSCRIPT_CONTEXT}:${message.id}`, transcript);
-  }
-
-  getReviewSummaryView(message: SpeakingMessage): SpeakingReviewSummaryView {
-    return parseSpeakingReviewSummary(message.text ?? '');
   }
 
   getAssistantMessageTokens(message: SpeakingAssistantMessage): string[] {

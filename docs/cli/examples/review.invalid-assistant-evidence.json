@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "target": {
+    "apiOrigin": "https://flashmind.example",
+    "userId": "user-1"
+  },
+  "contextVersion": "vocabulary-snapshot-version",
+  "practice": {
+    "source": "LOCAL",
+    "sourceRef": {
+      "system": "local-agent",
+      "conversationId": "thread-1",
+      "sessionKey": "practice-1"
+    },
+    "title": "週末散步",
+    "startedAt": "2026-08-30T10:00:00+08:00",
+    "endedAt": "2026-08-30T10:10:00+08:00",
+    "range": {
+      "firstMessageId": "u1",
+      "lastMessageId": "a1"
+    },
+    "messages": [
+      {
+        "id": "u1",
+        "role": "user",
+        "text": "I walk in the park on weekends.",
+        "createdAt": "2026-08-30T10:00:00+08:00"
+      },
+      {
+        "id": "a1",
+        "role": "assistant",
+        "text": "Who do you usually go with?",
+        "createdAt": "2026-08-30T10:01:00+08:00"
+      }
+    ]
+  },
+  "result": {
+    "summary": "I walk in the park on weekends.",
+    "review": "你用完整句子表達了週末散步的習慣。",
+    "actualUses": [
+      {
+        "targetVocabularyId": "word-walk",
+        "term": "walk",
+        "expressionContext": "表達週末散步的習慣",
+        "naturalSentence": "I walk in the park on weekends.",
+        "evidence": [
+          {
+            "messageId": "a1",
+            "quote": "I walk in the park on weekends."
+          }
+        ]
+      }
+    ],
+    "recommendations": [],
+    "nextPractice": {
+      "topic": "Weekend routines",
+      "speakingGoal": "Describe a weekend activity",
+      "guidingQuestions": ["Where do you usually go?"],
+      "recallTargets": ["walk"]
+    },
+    "deckCandidates": ["word-walk"]
+  }
+}

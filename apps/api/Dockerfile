@@ -52,6 +52,7 @@ RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" pnpm install --
 
 # 從 builder 複製建構產物
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
 # 暴露 API 埠號
 EXPOSE 3280

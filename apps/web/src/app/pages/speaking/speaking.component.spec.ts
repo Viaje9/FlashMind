@@ -543,51 +543,59 @@ describe('speaking.component selection actions', () => {
     expect(copyButton?.getAttribute('aria-label')).toBe('摘要已複製');
   });
 
-  it('對話整理應將摘要、回顧、單字與下次主題分區呈現', async () => {
+  it('Summary 顯示四段標題、英文例句和真正的表格，且不執行內容中的 HTML', async () => {
     storeMock.messages.set([
       {
         id: 'summary-sections-1',
         conversationId: 'conversation-1',
         role: 'summary',
-        text: `I explained my learning plan.
-
-練習回顧
-你有清楚說明自己的目標。
-
-這次實際使用
-• practice（練習）
-
-下次可以試試
-• confidence（信心）
-
-下次主題
-My English-learning website`,
         createdAt: '2026-02-22T11:20:00.000Z',
+        text: `## 可以說得更自然的地方
+
+### 說明時間有限
+
+用 limited 說明你空閒時間不多。
+
+> My free time is limited.
+
+## 這次實際使用的單字
+
+| 單字 | 意思與使用情境 | 你當時的原句 | 更自然的說法 |
+| --- | --- | --- | --- |
+| time | 時間 | I have no time. | I don't have much free time. |
+
+## 建議練習的單字
+
+| 單字 | 意思與使用情境 | 可練習的句子 | 推薦原因 |
+| --- | --- | --- | --- |
+| limited | 有限的 | My free time is limited. | 說明時間不多 |
+
+## 可朗讀的英文摘要
+
+My free time is limited, so I watch this series at a faster speed.
+
+<img src=x onerror=alert(1)>`,
       },
     ]);
-
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-
+    const card = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-summary-card"]',
+    ) as HTMLElement;
     expect(
-      fixture.nativeElement.querySelector('[data-testid="speaking-summary-main"]')?.textContent,
-    ).toContain('I explained my learning plan.');
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="speaking-summary-review"]')?.textContent,
-    ).toContain('你有清楚說明自己的目標。');
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="speaking-summary-actual-uses"]')
-        ?.textContent,
-    ).toContain('practice（練習）');
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="speaking-summary-recommendations"]')
-        ?.textContent,
-    ).toContain('confidence（信心）');
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="speaking-summary-next-topic"]')
-        ?.textContent,
-    ).toContain('My English-learning website');
+      Array.from(card.querySelectorAll('.speaking-summary-content h2')).map((el) => el.textContent),
+    ).toEqual(['可以說得更自然的地方', '這次實際使用的單字', '建議練習的單字', '可朗讀的英文摘要']);
+    expect(card.querySelector('blockquote')?.textContent).toContain('My free time is limited.');
+    expect(card.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(card.querySelector('.speaking-summary-table-scroll')?.getAttribute('tabindex')).toBe(
+      '0',
+    );
+    expect(card.querySelectorAll('tbody td')).toHaveLength(8);
+    expect(card.querySelectorAll('tbody')[0]?.textContent).toContain('I have no time.');
+    expect(card.querySelectorAll('tbody')[1]?.textContent).toContain('說明時間不多');
+    expect(card.querySelector('img')).toBeNull();
+    expect(card.textContent).not.toContain('##');
   });
 
   it('assistant 輸入框按 Ctrl/Cmd + Enter 應送出訊息', () => {

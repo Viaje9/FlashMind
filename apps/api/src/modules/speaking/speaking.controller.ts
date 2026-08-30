@@ -5,6 +5,8 @@ import {
   Catch,
   Controller,
   ExceptionFilter,
+  HttpCode,
+  Header,
   Post,
   Req,
   Res,
@@ -144,6 +146,8 @@ export class SpeakingController {
   }
 
   @Post('summarize')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
   async summarize(
     @Body() dto: SpeakingSummarizeDto,
     @Req() req: AuthenticatedRequest,

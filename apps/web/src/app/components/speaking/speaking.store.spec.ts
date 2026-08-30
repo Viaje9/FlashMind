@@ -31,6 +31,13 @@ describe('speaking.store selection translate', () => {
         {
           provide: SpeakingRepository,
           useValue: {
+            ownerId: signal('test-user'),
+            syncError: signal(null),
+            beginConversation: vi.fn(async () => undefined),
+            refreshPracticeContext: vi.fn(async () => undefined),
+            requireSync: vi.fn(async () => undefined),
+            pendingAnalysis: vi.fn(async () => undefined),
+            saveAnalysis: vi.fn(async () => undefined),
             loadSettings: vi.fn(() => SPEAKING_DEFAULT_SETTINGS),
           },
         },
@@ -195,6 +202,13 @@ describe('speaking.store review flow', () => {
       },
     ];
     const repositoryMock = {
+      ownerId: signal('test-user'),
+      syncError: signal(null),
+      beginConversation: vi.fn(async () => undefined),
+      refreshPracticeContext: vi.fn(async () => undefined),
+      requireSync: vi.fn(async () => undefined),
+      pendingAnalysis: vi.fn(async () => undefined),
+      saveAnalysis: vi.fn(async () => undefined),
       loadSettings: vi.fn(() => SPEAKING_DEFAULT_SETTINGS),
       getConversation: vi.fn(async () => ({ conversation, messages })),
       getAudioBase64: vi.fn(async () => null),
@@ -234,22 +248,20 @@ describe('speaking.store review flow', () => {
     await store.loadConversation('conversation-1');
     await store.summarizeCurrentConversation();
 
-    expect(store.messages().at(-1)?.text).toContain('練習回顧');
-    expect(store.messages().at(-1)?.text).toContain('cooperation（合作；協作）');
-    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        lastPractice: {
-          title: '與 AI 協作流程',
-          summary: 'I explained how I work with an AI agent.',
-        },
-        nextPractice,
-      }),
+    expect(store.messages().at(-1)?.text).toContain('## 可以說得更自然的地方');
+    expect(store.messages().at(-1)?.text).toContain(
+      'This is cooperation between me and the AI agent.',
     );
     expect(repositoryMock.saveConversation).toHaveBeenCalledWith(
       expect.objectContaining({
         title: '與 AI 協作流程',
         summary: 'I explained how I work with an AI agent.',
       }),
+    );
+    expect(repositoryMock.saveSettings).not.toHaveBeenCalled();
+    expect(repositoryMock.saveAnalysis).toHaveBeenCalledWith(
+      'conversation-1',
+      expect.objectContaining({ nextPractice }),
     );
   });
 });

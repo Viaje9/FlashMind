@@ -15,6 +15,26 @@ servers:
   - url: https://api.flashmind.local
 
 paths:
+  /speaking/sessions:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1sessions"
+  /speaking/sessions/{id}:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1sessions~1{id}"
+  /speaking/sessions/{id}/messages:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1sessions~1{id}~1messages"
+  /speaking/practice-context:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1practice-context"
+  /speaking/reviews/validate:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1reviews~1validate"
+  /speaking/reviews:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1reviews"
+  /speaking/history-migrations:
+    $ref: "./speaking-history.yaml#/paths/~1speaking~1history-migrations"
+  /auth/cli/authorizations:
+    $ref: "./speaking-history.yaml#/paths/~1auth~1cli~1authorizations"
+  /auth/cli/authorizations/{id}/approve:
+    $ref: "./speaking-history.yaml#/paths/~1auth~1cli~1authorizations~1{id}~1approve"
+  /auth/cli/authorizations/{id}/exchange:
+    $ref: "./speaking-history.yaml#/paths/~1auth~1cli~1authorizations~1{id}~1exchange"
   # ============================================================
   # Auth
   # ============================================================
@@ -4385,6 +4405,10 @@ components:
       required:
         - role
       properties:
+        id:
+          type: string
+          description: 穩定訊息識別，供 Summary 原文證據引用
+          maxLength: 200
         role:
           type: string
           enum: [user, assistant]
@@ -4559,7 +4583,7 @@ components:
 
     SpeakingSummaryResult:
       type: object
-      description: 口說摘要結果
+      description: 口說摘要分析結果；此請求不更新單字、不保存 Review，須另行呼叫 saveSpeakingReview
       required:
         - title
         - summary
@@ -4599,6 +4623,14 @@ components:
       type: object
       required: [term, zhMeaning, expressionContext, naturalSentence]
       properties:
+        targetVocabularyId:
+          type: string
+          description: 此帳號的目標單字識別
+        evidence:
+          type: array
+          description: 實際使用的原文證據，推薦項目不需要
+          items:
+            $ref: "./speaking-history.yaml#/components/schemas/SpeakingReviewEvidence"
         term:
           type: string
         zhMeaning:

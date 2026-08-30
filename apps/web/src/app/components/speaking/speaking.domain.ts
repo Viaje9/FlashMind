@@ -11,6 +11,8 @@ export type SpeakingAssistantRole = 'user' | 'assistant';
 export type SpeakingInteractionMode = 'TURN_BASED' | 'REALTIME' | 'FULL_DUPLEX';
 
 export interface SpeakingMessage {
+  hasOriginalAudio?: boolean;
+  transcriptStatus?: 'available' | 'unavailable';
   id: string;
   conversationId: string;
   role: SpeakingRole;
@@ -25,6 +27,19 @@ export interface SpeakingMessage {
 }
 
 export interface SpeakingConversation {
+  ownerId?: string;
+  source?: 'APP' | 'LOCAL';
+  reviewed?: boolean;
+  remoteId?: string;
+  remoteRevision?: number;
+  syncedMessageIds?: string[];
+  remoteCreate?: import('@flashmind/shared').SpeakingSessionCreate;
+  pendingReview?: import('@flashmind/shared').SpeakingReviewDraft;
+  pendingAnalysis?: SpeakingSummaryResult;
+  syncPending?: boolean;
+  migratedTo?: Record<string, string>;
+  migrationDrafts?: Record<string, import('@flashmind/shared').SpeakingLegacySession>;
+  review?: import('@flashmind/shared').SpeakingRecordedResult;
   id: string;
   title: string;
   summary?: string;
@@ -149,90 +164,56 @@ export const SPEAKING_DEFAULT_SETTINGS: SpeakingSettings = {
   nextPractice: undefined,
 };
 
+/** Summary 直接保存可閱讀的 Markdown，不再解析舊版純文字標題。 */
 export function formatSpeakingReviewSummary(
   result: Pick<
     SpeakingSummaryResult,
     'summary' | 'review' | 'actualUses' | 'recommendations' | 'nextPractice'
   >,
 ): string {
-  const sections: string[] = [];
-  const summary = result.summary.trim();
-  const review = result.review.trim();
-
-  if (summary) sections.push(summary);
-  if (review) sections.push(`練習回顧\n${review}`);
-  if (result.actualUses.length > 0) {
-    sections.push(
-      `這次實際使用\n${result.actualUses
-        .map((item) => `• ${item.term}（${item.zhMeaning}）`)
-        .join('\n')}`,
-    );
-  }
-  if (result.recommendations.length > 0) {
-    sections.push(
-      `下次可以試試\n${result.recommendations
-        .map((item) => `• ${item.term}（${item.zhMeaning}）`)
-        .join('\n')}`,
-    );
-  }
+  const actualVocabulary = result.actualUses.length
+    ? [
+        '| 單字 | 意思與使用情境 | 你當時的原句 | 更自然的說法 |',
+        '| --- | --- | --- | --- |',
+        ...result.actualUses.map((item) => {
+          const quotes = item.evidence
+            ?.map((evidence) => evidence.quote)
+            .filter((quote) => quote.trim())
+            .join('\n\n');
+          return `| ${escapeReviewCell(item.term)} | ${escapeReviewCell(item.expressionContext)} | ${quotes ? escapeReviewQuote(quotes) : '未提供原句證據'} | ${escapeReviewCell(item.naturalSentence)} |`;
+        }),
+      ].join('\n')
+    : '本次沒有可確認的實際使用目標單字；下方建議單字不計入實際使用。';
+  const vocabulary = result.recommendations.length
+    ? [
+        '| 單字 | 意思與使用情境 | 可練習的句子 | 推薦原因 |',
+        '| --- | --- | --- | --- |',
+        ...result.recommendations.map(
+          (item) =>
+            `| ${[item.term, item.expressionContext, item.naturalSentence, item.recommendationReason].map(escapeReviewCell).join(' | ')} |`,
+        ),
+      ].join('\n')
+    : '本次沒有需要額外推薦的目標單字；可以先練習上面的自然說法。';
+  const sections = [
+    `## 可以說得更自然的地方\n\n${result.review.trim()}`,
+    `## 這次實際使用的單字\n\n${actualVocabulary}`,
+    `## 建議練習的單字\n\n${vocabulary}`,
+    `## 可朗讀的英文摘要\n\n${result.summary.trim()}`,
+  ];
   if (result.nextPractice.topic.trim()) {
-    sections.push(`下次主題\n${result.nextPractice.topic.trim()}`);
+    sections.push(`**下次主題：** ${escapeReviewCell(result.nextPractice.topic)}`);
   }
-
   return sections.join('\n\n');
 }
 
-export interface SpeakingReviewSummaryView {
-  summary: string;
-  review: string;
-  actualUses: string[];
-  recommendations: string[];
-  nextTopic: string;
+function escapeReviewCell(value: string): string {
+  return escapeReviewQuote(value.trim().replace(/\s+/g, ' '));
 }
 
-export function parseSpeakingReviewSummary(text: string): SpeakingReviewSummaryView {
-  type Section = 'summary' | 'review' | 'actualUses' | 'recommendations' | 'nextTopic';
-
-  const view: SpeakingReviewSummaryView = {
-    summary: '',
-    review: '',
-    actualUses: [],
-    recommendations: [],
-    nextTopic: '',
-  };
-  const textSections: Record<'summary' | 'review' | 'nextTopic', string[]> = {
-    summary: [],
-    review: [],
-    nextTopic: [],
-  };
-  const headingSections: Record<string, Section> = {
-    練習回顧: 'review',
-    這次實際使用: 'actualUses',
-    下次可以試試: 'recommendations',
-    下次主題: 'nextTopic',
-  };
-  let section: Section = 'summary';
-
-  for (const line of text.replaceAll('\r\n', '\n').split('\n')) {
-    const trimmed = line.trim();
-    const nextSection = headingSections[trimmed];
-    if (nextSection) {
-      section = nextSection;
-      continue;
-    }
-
-    if (section === 'actualUses' || section === 'recommendations') {
-      if (trimmed) view[section].push(trimmed.replace(/^•\s*/, ''));
-      continue;
-    }
-
-    textSections[section].push(line);
-  }
-
-  view.summary = textSections.summary.join('\n').trim();
-  view.review = textSections.review.join('\n').trim();
-  view.nextTopic = textSections.nextTopic.join('\n').trim();
-  return view;
+function escapeReviewQuote(value: string): string {
+  return value
+    .replace(/[&<>|\\`*[\]_]/g, (char) => `&#${char.charCodeAt(0)};`)
+    .replace(/\r\n|\r|\n/g, '&#10;');
 }
 
 export function createSpeakingId(): string {

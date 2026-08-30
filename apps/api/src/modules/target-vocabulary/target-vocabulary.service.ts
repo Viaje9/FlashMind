@@ -4,6 +4,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma, TargetVocabularyStatus } from '@prisma/client';
+import {
+  nextVocabularyStatus,
+  type SpeakingRecordedResult,
+} from '@flashmind/shared';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -124,6 +128,7 @@ export class TargetVocabularyService {
     return this.prisma.targetVocabulary.findMany({
       where: { userId },
       select: {
+        id: true,
         term: true,
         normalizedTerm: true,
         zhMeaning: true,
@@ -193,6 +198,56 @@ export class TargetVocabularyService {
 
     if (operations.length > 0) {
       await this.prisma.$transaction(operations);
+    }
+  }
+
+  // 由 Review 保存交易呼叫，避免場次已保存但單字只更新一部分。
+  async applyRecordedReview(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    result: SpeakingRecordedResult,
+    practicedAt: Date,
+  ): Promise<void> {
+    const events = [
+      ...result.recommendations.map((entry) => ({
+        ...entry,
+        type: 'recommendation' as const,
+      })),
+      ...result.actualUses.map((entry) => ({
+        ...entry,
+        type: 'actual-use' as const,
+      })),
+    ];
+    for (const event of events) {
+      const word = await tx.targetVocabulary.findFirst({
+        where: { id: event.targetVocabularyId, userId },
+      });
+      if (!word)
+        throw new UnprocessableEntityException({
+          error: {
+            code: 'TARGET_NOT_FOUND',
+            message: '目標單字已不存在，請重新 Review',
+          },
+        });
+      const data: Prisma.TargetVocabularyUpdateInput = {
+        status: nextVocabularyStatus(word.status, event.type),
+        ...(event.type === 'actual-use'
+          ? { useCount: { increment: 1 } }
+          : { recommendationCount: { increment: 1 } }),
+      };
+      if (!word.lastExpressionAt || word.lastExpressionAt <= practicedAt) {
+        data.expressionContext = event.expressionContext;
+        data.naturalSentence = event.naturalSentence;
+        data.lastExpressionAt = practicedAt;
+      }
+      if (
+        'recommendationReason' in event &&
+        (!word.lastRecommendationAt || word.lastRecommendationAt <= practicedAt)
+      ) {
+        data.recommendationReason = event.recommendationReason;
+        data.lastRecommendationAt = practicedAt;
+      }
+      await tx.targetVocabulary.update({ where: { id: word.id }, data });
     }
   }
 

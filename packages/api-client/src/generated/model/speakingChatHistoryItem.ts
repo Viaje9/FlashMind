@@ -13,6 +13,10 @@
  */
 export interface SpeakingChatHistoryItem {
   /**
+   * 穩定訊息識別，供 Summary 原文證據引用
+   */
+  id?: string;
+  /**
    * 訊息角色
    */
   role: SpeakingChatHistoryItem.RoleEnum;

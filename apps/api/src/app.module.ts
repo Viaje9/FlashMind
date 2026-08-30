@@ -13,6 +13,7 @@ import { SpeakingModule } from './modules/speaking/speaking.module';
 import { CollectionModule } from './modules/collection/collection.module';
 import { TopicConversationModule } from './modules/topic-conversation/topic-conversation.module';
 import { TargetVocabularyModule } from './modules/target-vocabulary/target-vocabulary.module';
+import { SpeakingHistoryModule } from './modules/speaking-history/speaking-history.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { TargetVocabularyModule } from './modules/target-vocabulary/target-vocab
     CollectionModule,
     TopicConversationModule,
     TargetVocabularyModule,
+    SpeakingHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

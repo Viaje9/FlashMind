@@ -27,6 +27,9 @@ model User {
   collectionChatSessions  CollectionChatSession[]
   topicConversationTopics TopicConversationTopic[]
   targetVocabulary        TargetVocabulary[]
+  speakingSessions        SpeakingSession[]
+  speakingWriteReceipts   SpeakingWriteReceipt[]
+  cliLoginAuthorizations  CliLoginAuthorization[]
 }
 
 model OAuthAccount {
@@ -148,6 +151,8 @@ model TargetVocabulary {
   expressionContext    String?                @db.Text
   naturalSentence      String?                @db.Text
   recommendationReason String?                @db.Text
+  lastExpressionAt     DateTime?
+  lastRecommendationAt DateTime?
   addedCardId          String?
   addedAt              DateTime?
   createdAt            DateTime               @default(now())
@@ -155,6 +160,7 @@ model TargetVocabulary {
 
   user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   addedCard Card? @relation(fields: [addedCardId], references: [id], onDelete: SetNull)
+  speakingEvents SpeakingReviewEvent[]
 
   @@unique([userId, normalizedTerm])
   @@index([userId, status, createdAt])
@@ -353,4 +359,121 @@ model TopicConversationMessage {
   session TopicConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
+}
+
+// 文字歷史跨裝置保存；原始音訊不寫入資料庫。
+enum SpeakingSource {
+  APP
+  LOCAL
+}
+
+model SpeakingSession {
+  id                    String   @id @default(cuid())
+  userId                String
+  source                SpeakingSource
+  sourceKey             String
+  clientSessionId       String
+  title                 String
+  startedAt             DateTime
+  endedAt               DateTime?
+  revision              Int      @default(0)
+  legacyPracticeContext Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages              SpeakingMessage[]
+  review                SpeakingReview?
+  legacySummaries       SpeakingLegacySummary[]
+
+  @@unique([userId, source, sourceKey])
+  @@index([userId, startedAt, id])
+}
+
+model SpeakingMessage {
+  id                String   @id @default(cuid())
+  sessionId         String
+  clientMessageId   String
+  ordinal           Int
+  role              String
+  text              String   @db.Text
+  translatedText    String?  @db.Text
+  transcriptStatus  String   @default("available")
+  hasOriginalAudio  Boolean  @default(false)
+  createdAt         DateTime
+  session           SpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, clientMessageId])
+  @@unique([sessionId, ordinal])
+}
+
+model SpeakingReview {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique
+  schemaVersion Int
+  contentHash   String
+  summary       String   @db.Text
+  payload       Json
+  createdAt     DateTime @default(now())
+  session       SpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  events        SpeakingReviewEvent[]
+}
+
+model SpeakingReviewEvent {
+  id                 String   @id @default(cuid())
+  reviewId           String
+  targetVocabularyId String
+  type               String
+  practicedAt        DateTime
+  payload            Json
+  review             SpeakingReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  targetVocabulary   TargetVocabulary @relation(fields: [targetVocabularyId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, targetVocabularyId, type])
+  @@index([targetVocabularyId, practicedAt])
+}
+
+model SpeakingLegacySummary {
+  id              String   @id @default(cuid())
+  sessionId       String
+  clientMessageId String
+  text            String   @db.Text
+  ordinal         Int
+  createdAt       DateTime
+  session         SpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, clientMessageId])
+}
+
+// 刪除原文後仍保留最小防重憑據；不得保存對話或引文。
+model SpeakingWriteReceipt {
+  id                  String   @id @default(cuid())
+  userId              String
+  source              SpeakingSource
+  sourceKey           String
+  sessionId           String
+  initialContentHash  String?
+  reviewContentHash   String?
+  reviewId            String?
+  actualUseCount      Int      @default(0)
+  recommendationCount Int      @default(0)
+  deletedAt           DateTime?
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source, sourceKey])
+  @@index([sessionId])
+}
+
+model CliLoginAuthorization {
+  id           String   @id @default(cuid())
+  verifierHash String
+  pairingCode  String
+  userId       String?
+  status       String   @default("pending")
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }

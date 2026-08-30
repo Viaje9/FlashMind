@@ -25,3 +25,10 @@ node_modules/
 # Test auth
 e2e/.auth/
 artifacts
+
+# Workspace builds
+/packages/shared/dist/
+/apps/cli/dist/
+/e2e/test-results/
+/e2e/playwright-report/
+/output/playwright/

@@ -1,3 +1,4 @@
+import { containsTerm, type SpeakingReviewEvidence } from '@flashmind/shared';
 import {
   Injectable,
   InternalServerErrorException,
@@ -56,29 +57,47 @@ const SUMMARIZE_SYSTEM_PROMPT = `You are reviewing an English speaking practice 
 Analyze only what the USER actually said. Assistant messages are context only and can never be evidence that the user used a word.
 
 Hard output constraints:
-- Return ONLY valid JSON; no markdown or code fences
+- Return ONLY valid JSON; no code fences around the JSON. Markdown is allowed inside the "review" string
 - Use this exact top-level shape:
   {"title":"...","summary":"...","review":"...","actualUses":[],"recommendations":[],"nextPractice":{"topic":"...","speakingGoal":"...","guidingQuestions":[],"recallTargets":[]}}
-- "title" and "review" must be Traditional Chinese (繁體中文)
+- "title" and "review" explanations must be Traditional Chinese (繁體中文); English examples and original quotes belong inside "review"
 - "summary" must be English only, first person ("I"), and preserve the user's meaning
-- "actualUses" items must use: {"term":"canonical catalog term","expressionContext":"繁體中文","naturalSentence":"English"}
+- "actualUses" items must use: {"term":"canonical catalog term","expressionContext":"繁體中文","naturalSentence":"English","evidence":[{"messageId":"original message ID","quote":"exact user quote containing the term"}]}
 - "recommendations" items must use: {"term":"canonical catalog term","expressionContext":"繁體中文","naturalSentence":"English","recommendationReason":"繁體中文"}
 - "nextPractice" values must be concise English suitable as private guidance for the next conversation`;
 
-const SUMMARIZE_PROMPT = `Based on the conversation above, summarize everything the USER said in first person.
-- Preserve completeness: include all meaningful details, examples, preferences, plans, feelings, and constraints mentioned by the user
-- Do not omit information just to make it shorter; prioritize fidelity over brevity
-- Merge repeated points without losing unique details
-- Keep the original meaning and nuance; do not invent new facts
-- If a part is unclear from audio, preserve uncertainty explicitly rather than deleting it
-- Organize naturally in a coherent flow (prefer chronological order when possible)
-- Write in first person as if the user is writing about themselves
-- Fix grammar and improve phrasing naturally, but keep the original meaning
-- Write the "summary" field in English only, even if the user spoke Chinese
-- Do not output Chinese characters in "summary"
-- Do not include anything the assistant said
-- Also create a concise conversation title in Traditional Chinese that best represents the user's topic
-- The title should be specific and clear (roughly 8-20 Chinese characters), no quotes, no punctuation-only title
+const SUMMARIZE_PROMPT = `Create a useful review the learner can study, not just a list of words or generic praise. The UI presents four required parts in this order: expression coaching (review), an actual-use vocabulary table (actualUses), a recommended vocabulary table (recommendations), and a read-aloud English summary (summary).
+
+Part 1 — review: 可以說得更自然的地方
+- Understand what the user was trying to express in each meaningful topic before correcting language.
+- For a substantive conversation, usually select 3-6 valuable expression points; use fewer for a short conversation. Never invent errors or fill a quota.
+- For EACH point, explain the intended meaning in Traditional Chinese, identify a relevant original phrase or difficulty, give a complete natural B1 English alternative, and explain why the phrasing fits or how a word can replace the difficult expression.
+- Use Markdown ### topic headings, short Chinese paragraphs, > English example sentences, and brief lists where helpful. Do not repeat the four top-level section headings inside review.
+- Quote the user's actual words exactly when presenting an original quote. Corrected sentences are suggestions, never original transcript or actual-use evidence.
+- Distinguish incorrect grammar from understandable wording that could be more natural. Do not blame the learner for ambiguous assistant questions or uncertain transcription.
+- Preserve the user's motives and scope. "I only use a whiteboard for work" does not imply deliberately setting work-life boundaries. "I speed up this series" does not mean all old shows.
+- Clearly label any optional extension as a suggestion, not something the user already meant or said. If the transcript is too short or unclear, explain the limitation instead of fabricating coaching.
+
+Part 2 — actualUses: 這次實際使用的單字
+- List target words the user actually produced to express their own meaning. Keep this table separate from recommendations; zero actual uses is valid when the transcript has no qualifying evidence.
+- For each item, expressionContext must explain the contextual Chinese meaning and what the user used it to express. naturalSentence must be a complete natural B1 English version preserving the user's meaning and the exact target term.
+- The original-quote column is taken directly from evidence[].quote. Preserve exact USER transcript excerpts, including mistakes; never replace evidence with the corrected naturalSentence, assistant words, or wording first introduced in the review.
+
+Part 3 — recommendations: 建議練習的單字
+- Choose vocabulary that helps express the user's actual meaning or addresses a real difficulty in this conversation, not loosely associated words.
+- Each expressionContext must explain the term's contextual Chinese meaning AND which idea from the conversation it helps express; this text is also used when reopening history.
+- Each naturalSentence must be a complete, reusable B1 English sentence grounded in that context and contain the exact target term.
+- Each recommendationReason must explain specifically what the word improves or can replace. "Useful word" or "fits the conversation" is not enough.
+- Prefer words already explained in the coaching, but never force vocabulary into the user's story. Distinguish contextual meanings such as episode (一集) and plot (劇情); do not silently repeat a misleading catalog gloss.
+
+Part 4 — summary: 可朗讀的英文摘要
+- Write a coherent first-person English passage the learner can read aloud, using natural B1 sentences and short paragraphs. No Chinese, headings, bullet lists, or coaching commentary in this field.
+- Preserve the important topics, reasons, preferences, plans, and contrasts; merge repetition without distorting meaning. Usually 120-220 words for a substantive conversation, shorter when the user said little, longer only when needed for important content.
+- Naturally reuse a few useful expressions from the review without forcing every recommendation into the passage. Do not include speculative extensions or assistant-only claims as the user's views.
+- Preserve uncertainty when the source is unclear; never invent facts, emotions, motives, or details to make the story smoother.
+- Also create a concise Traditional Chinese title specific to the conversation, roughly 8-20 Chinese characters.
+
+Vocabulary evidence and next practice:
 - Review vocabulary with strict evidence. A word counts as actual use only when the USER genuinely produced it to express their own meaning.
 - An assistant saying, repeating, or explaining a word does not count. The user asking what a word means or merely repeating it as a quoted item does not count.
 - Actual-use evidence must be lexical, not merely semantic: the exact catalog term must appear explicitly in the USER's transcript as the same standalone word or phrase.
@@ -319,6 +338,8 @@ export interface SpeakingSummaryResult {
 }
 
 export interface SpeakingReviewUse {
+  targetVocabularyId?: string;
+  evidence?: SpeakingReviewEvidence[];
   term: string;
   zhMeaning: string;
   expressionContext: string;
@@ -346,6 +367,7 @@ interface ParsedSpeakingSummary {
 }
 
 interface TargetVocabularyReviewCandidate {
+  id?: string;
   term: string;
   normalizedTerm: string;
   zhMeaning: string;
@@ -527,6 +549,7 @@ export class SpeakingService {
       const actualUses = this.reconcileReviewUses(
         parsed.actualUses,
         candidateMap,
+        history,
       );
       const recommendations = this.reconcileReviewRecommendations(
         parsed.recommendations,
@@ -539,13 +562,6 @@ export class SpeakingService {
           candidateMap,
         ),
       };
-
-      if (userId && this.targetVocabularyService) {
-        await this.targetVocabularyService.applyReview(userId, {
-          actualUses,
-          recommendations,
-        });
-      }
 
       return {
         title: parsed.title,
@@ -1137,9 +1153,16 @@ export class SpeakingService {
     history: SpeakingChatHistoryItemDto[],
     candidates: TargetVocabularyReviewCandidate[],
   ): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
-    const textHistory = history.flatMap((item) => {
+    const textHistory = history.flatMap((item, index) => {
       const content = item.text?.trim();
-      return content ? [{ role: item.role, content }] : [];
+      return content
+        ? [
+            {
+              role: item.role,
+              content: `[messageId: ${item.id ?? `message-${index}`}]\n${content}`,
+            },
+          ]
+        : [];
     });
 
     const catalog = candidates.length
@@ -1404,43 +1427,24 @@ export class SpeakingService {
   }
 
   private parseSummaryPayload(raw: string): ParsedSpeakingSummary {
-    const text = raw.trim();
-    if (!text) {
-      return this.createEmptyParsedSummary('');
+    const parsed = JSON.parse(raw.trim()) as Record<string, unknown>;
+    const summary = this.readString(parsed?.['summary']);
+    const review = this.readString(parsed?.['review']);
+    if (!summary || !review || !Array.isArray(parsed?.['recommendations'])) {
+      throw new Error('Summary 必須包含表達建議、推薦單字陣列及英文朗讀摘要');
     }
-
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[0]) as {
-          title?: string;
-          summary?: string;
-          review?: string;
-          actualUses?: unknown;
-          recommendations?: unknown;
-          nextPractice?: unknown;
-        };
-        const summary = parsed.summary?.trim() || '';
-        const title =
-          this.cleanSummaryTitle(parsed.title?.trim() || '') ||
-          this.deriveSummaryTitle(summary);
-
-        return {
-          title,
-          summary: summary || text,
-          review: parsed.review?.trim() || '',
-          actualUses: this.parseReviewUses(parsed.actualUses),
-          recommendations: this.parseReviewRecommendations(
-            parsed.recommendations,
-          ),
-          nextPractice: this.parseNextPractice(parsed.nextPractice),
-        };
-      } catch {
-        // fallback below
-      }
-    }
-
-    return this.createEmptyParsedSummary(text);
+    return {
+      title:
+        this.cleanSummaryTitle(this.readString(parsed['title'])) ||
+        this.deriveSummaryTitle(summary),
+      summary,
+      review,
+      actualUses: this.parseReviewUses(parsed['actualUses']),
+      recommendations: this.parseReviewRecommendations(
+        parsed['recommendations'],
+      ),
+      nextPractice: this.parseNextPractice(parsed['nextPractice']),
+    };
   }
 
   private createEmptyParsedSummary(summary: string): ParsedSpeakingSummary {
@@ -1470,8 +1474,18 @@ export class SpeakingService {
       const term = this.readString(item['term']);
       const expressionContext = this.readString(item['expressionContext']);
       const naturalSentence = this.readString(item['naturalSentence']);
+      const evidence = Array.isArray(item['evidence'])
+        ? item['evidence'].flatMap((entry: unknown) => {
+            if (!entry || typeof entry !== 'object') return [];
+            const record = entry as Record<string, unknown>;
+            return typeof record['messageId'] === 'string' &&
+              typeof record['quote'] === 'string'
+              ? [{ messageId: record['messageId'], quote: record['quote'] }]
+              : [];
+          })
+        : [];
       return term && expressionContext && naturalSentence
-        ? [{ term, expressionContext, naturalSentence }]
+        ? [{ term, expressionContext, naturalSentence, evidence }]
         : [];
     });
   }
@@ -1528,13 +1542,31 @@ export class SpeakingService {
   private reconcileReviewUses(
     uses: Array<Omit<SpeakingReviewUse, 'zhMeaning'>>,
     candidates: Map<string, TargetVocabularyReviewCandidate>,
+    history: SpeakingChatHistoryItemDto[],
   ): SpeakingReviewUse[] {
     return this.uniqueByNormalizedTerm(uses).flatMap((use) => {
       const candidate = candidates.get(this.normalizeTargetTerm(use.term));
-      return candidate
+      const evidence =
+        use.evidence?.filter((entry) => {
+          const message = history.find(
+            (item, index) =>
+              (item.id ?? `message-${index}`) === entry.messageId,
+          );
+          return (
+            message?.role === 'user' &&
+            entry.quote.trim() &&
+            message.text?.includes(entry.quote) &&
+            containsTerm(entry.quote, candidate?.term ?? '')
+          );
+        }) ?? [];
+      return candidate &&
+        evidence.length &&
+        containsTerm(use.naturalSentence, candidate.term)
         ? [
             {
               ...use,
+              evidence,
+              targetVocabularyId: candidate.id,
               term: candidate.term,
               zhMeaning: candidate.zhMeaning,
             },
@@ -1552,10 +1584,12 @@ export class SpeakingService {
         const candidate = candidates.get(
           this.normalizeTargetTerm(recommendation.term),
         );
-        return candidate
+        return candidate &&
+          containsTerm(recommendation.naturalSentence, candidate.term)
           ? [
               {
                 ...recommendation,
+                targetVocabularyId: candidate.id,
                 term: candidate.term,
                 zhMeaning: candidate.zhMeaning,
               },

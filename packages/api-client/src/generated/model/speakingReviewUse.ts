@@ -7,8 +7,17 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { SpeakingReviewEvidence } from "./speakingReviewEvidence";
 
 export interface SpeakingReviewUse {
+  /**
+   * 此帳號的目標單字識別
+   */
+  targetVocabularyId?: string;
+  /**
+   * 實際使用的原文證據，推薦項目不需要
+   */
+  evidence?: Array<SpeakingReviewEvidence>;
   term: string;
   zhMeaning: string;
   expressionContext: string;

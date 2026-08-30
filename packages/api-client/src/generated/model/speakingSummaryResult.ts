@@ -13,7 +13,7 @@ import { SpeakingNextPractice } from "./speakingNextPractice";
 import { SpeakingReviewUse } from "./speakingReviewUse";
 
 /**
- * 口說摘要結果
+ * 口說摘要分析結果；此請求不更新單字、不保存 Review，須另行呼叫 saveSpeakingReview
  */
 export interface SpeakingSummaryResult {
   /**

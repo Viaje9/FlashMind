@@ -205,16 +205,18 @@ describe('SpeakingService', () => {
     expect(userHistory?.content).toBe('fallback text');
   });
 
-  it('summarizeConversation 應只套用目標清單內的實際使用與推薦，並產生下次練習', async () => {
+  it('summarizeConversation 應驗證原文證據且不寫入單字，只產生分析結果', async () => {
     const targetVocabularyService = {
       listReviewCandidates: jest.fn().mockResolvedValue([
         {
+          id: 'word-function',
           term: 'function',
           normalizedTerm: 'function',
           zhMeaning: '功能',
           status: 'UNSEEN',
         },
         {
+          id: 'word-cooperation',
           term: 'cooperation',
           normalizedTerm: 'cooperation',
           zhMeaning: '合作；協作',
@@ -253,6 +255,13 @@ describe('SpeakingService', () => {
                   actualUses: [
                     {
                       term: 'function',
+                      evidence: [
+                        {
+                          messageId: 'user-message',
+                          quote:
+                            'It depends on what kind of function the node tree needs.',
+                        },
+                      ],
                       expressionContext: '描述 node tree 所需的功能。',
                       naturalSentence:
                         'It depends on what kind of function the node tree needs.',
@@ -292,6 +301,7 @@ describe('SpeakingService', () => {
     const result = await service.summarizeConversation(
       [
         {
+          id: 'user-message',
           role: 'user',
           text: 'It depends on what kind of function the node tree needs.',
           audioBase64: 'abc',
@@ -313,9 +323,15 @@ describe('SpeakingService', () => {
       }),
     ]);
     expect(result.nextPractice.topic).toBe('How I work with an AI agent');
-    expect(targetVocabularyService.applyReview).toHaveBeenCalledWith('user-1', {
-      actualUses: [expect.objectContaining({ term: 'function' })],
-      recommendations: [expect.objectContaining({ term: 'cooperation' })],
+    expect(targetVocabularyService.applyReview).not.toHaveBeenCalled();
+    expect(result.actualUses[0]).toMatchObject({
+      targetVocabularyId: 'word-function',
+      evidence: [
+        {
+          messageId: 'user-message',
+          quote: 'It depends on what kind of function the node tree needs.',
+        },
+      ],
     });
 
     const requestBody = JSON.parse(
@@ -338,6 +354,21 @@ describe('SpeakingService', () => {
       'An assistant saying, repeating, or explaining a word does not count',
     );
     expect(JSON.stringify(requestBody.messages)).not.toContain('input_audio');
+  });
+
+  it.each([
+    'A plain summary without review.',
+    JSON.stringify({ summary: 'I walk.', review: '', recommendations: [] }),
+    JSON.stringify({ summary: '', review: '表達建議', recommendations: [] }),
+    JSON.stringify({ summary: 'I walk.', review: '表達建議' }),
+  ])('Summary 缺少必要內容時拒絕保存成功假象：%s', async (content) => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ choices: [{ message: { content } }] }),
+    });
+    await expect(
+      service.summarizeConversation([{ role: 'user', text: 'I walk.' }]),
+    ).rejects.toThrow(InternalServerErrorException);
   });
 
   it('translateToTraditionalChinese 應回傳翻譯', async () => {

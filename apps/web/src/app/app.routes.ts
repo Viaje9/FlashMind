@@ -4,6 +4,11 @@ import { unsavedChangesGuard } from './guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   {
+    path: 'cli-login',
+    loadComponent: () =>
+      import('./pages/cli-login/cli-login.component').then((module) => module.CliLoginComponent),
+  },
+  {
     path: '',
     pathMatch: 'full',
     redirectTo: 'welcome',

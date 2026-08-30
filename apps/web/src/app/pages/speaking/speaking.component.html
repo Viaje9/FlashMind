@@ -42,6 +42,23 @@
   </fm-page-header>
 
   <main class="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col px-4 pb-4 pt-3">
+    @if (textSyncError()) {
+      <div
+        class="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900"
+        role="status"
+        data-testid="speaking-sync-pending"
+      >
+        <p>{{ textSyncError() }}</p>
+        <button
+          type="button"
+          class="mt-2 underline"
+          data-testid="speaking-sync-retry"
+          (click)="retryTextSync()"
+        >
+          重試文字同步
+        </button>
+      </div>
+    }
     @if (combinedError()) {
       <div class="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-base text-rose-700">
         <div class="flex items-center justify-between gap-3">
@@ -110,163 +127,11 @@
 
         @for (message of messages(); track message.id) {
           @if (message.role === 'summary') {
-            @if (getReviewSummaryView(message); as reviewSummary) {
-              <article
-                class="mb-4 overflow-hidden rounded-2xl border border-slate-200 border-t-4 border-t-orange-500 bg-white shadow-sm dark:border-white/10 dark:border-t-orange-500 dark:bg-slate-900"
-                data-testid="speaking-summary-card"
-              >
-                <div class="px-3.5 pb-4 pt-3 sm:px-5 sm:pb-5 sm:pt-4">
-                  <header class="mb-3 flex items-center justify-between gap-3 sm:mb-4">
-                    <div class="flex min-w-0 items-center gap-2.5">
-                      <span
-                        class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-orange-500 text-white"
-                      >
-                        <span class="material-symbols-outlined text-[20px]">auto_stories</span>
-                      </span>
-                      <div class="min-w-0">
-                        <p
-                          class="text-[10px] font-bold uppercase tracking-[0.14em] text-orange-600 dark:text-orange-400"
-                        >
-                          Review
-                        </p>
-                        <h2 class="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
-                          對話整理
-                        </h2>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="inline-flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-slate-200 bg-transparent transition hover:border-orange-300 hover:bg-orange-50 dark:border-white/10 dark:hover:bg-orange-500/10"
-                      [class.text-orange-600]="copiedSummaryMessageId() !== message.id"
-                      [class.text-emerald-600]="copiedSummaryMessageId() === message.id"
-                      [attr.aria-label]="
-                        copiedSummaryMessageId() === message.id ? '摘要已複製' : '複製摘要'
-                      "
-                      [attr.title]="
-                        copiedSummaryMessageId() === message.id ? '摘要已複製' : '複製摘要'
-                      "
-                      (click)="onCopySummary(message)"
-                      data-testid="speaking-summary-copy"
-                    >
-                      <span class="material-symbols-outlined text-[18px]">
-                        {{ copiedSummaryMessageId() === message.id ? 'check' : 'content_copy' }}
-                      </span>
-                    </button>
-                  </header>
-
-                  @if (reviewSummary.summary) {
-                    <section
-                      class="border-l-2 border-orange-500 bg-slate-50 px-3 py-2.5 dark:bg-slate-950/70 sm:px-4 sm:py-3"
-                      data-testid="speaking-summary-main"
-                    >
-                      <p
-                        class="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-600 dark:text-orange-300"
-                      >
-                        What you said
-                      </p>
-                      <p
-                        class="whitespace-pre-wrap text-[15px] leading-6 text-slate-800 dark:text-slate-200 sm:text-base sm:leading-7"
-                      >
-                        {{ reviewSummary.summary }}
-                      </p>
-                    </section>
-                  }
-
-                  @if (reviewSummary.review) {
-                    <section
-                      class="mt-4 border-t border-slate-200 pt-3.5 dark:border-white/10 sm:mt-5 sm:pt-4"
-                      data-testid="speaking-summary-review"
-                    >
-                      <div
-                        class="mb-1.5 flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300"
-                      >
-                        <span class="material-symbols-outlined text-[17px]">lightbulb</span>
-                        練習回顧
-                      </div>
-                      <p
-                        class="whitespace-pre-wrap text-[15px] leading-6 text-slate-700 dark:text-slate-300 sm:text-base sm:leading-7"
-                      >
-                        {{ reviewSummary.review }}
-                      </p>
-                    </section>
-                  }
-
-                  @if (
-                    reviewSummary.actualUses.length > 0 || reviewSummary.recommendations.length > 0
-                  ) {
-                    <div
-                      class="mt-4 grid gap-4 border-t border-slate-200 pt-3.5 dark:border-white/10 sm:mt-5 sm:grid-cols-2 sm:gap-5 sm:pt-4"
-                    >
-                      @if (reviewSummary.actualUses.length > 0) {
-                        <section data-testid="speaking-summary-actual-uses">
-                          <div
-                            class="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300"
-                          >
-                            <span class="material-symbols-outlined text-[17px]">verified</span>
-                            這次實際使用
-                          </div>
-                          <div class="flex flex-wrap gap-1.5">
-                            @for (item of reviewSummary.actualUses; track item) {
-                              <span
-                                class="rounded-md bg-emerald-100 px-2 py-1 text-[13px] font-medium leading-5 text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-200 sm:text-sm"
-                              >
-                                {{ item }}
-                              </span>
-                            }
-                          </div>
-                        </section>
-                      }
-
-                      @if (reviewSummary.recommendations.length > 0) {
-                        <section data-testid="speaking-summary-recommendations">
-                          <div
-                            class="mb-2 flex items-center gap-2 text-sm font-bold text-sky-700 dark:text-sky-300"
-                          >
-                            <span class="material-symbols-outlined text-[17px]">north_east</span>
-                            下次可以試試
-                          </div>
-                          <div class="flex flex-wrap gap-1.5">
-                            @for (item of reviewSummary.recommendations; track item) {
-                              <span
-                                class="rounded-md bg-sky-100 px-2 py-1 text-[13px] font-medium leading-5 text-sky-800 dark:bg-sky-400/10 dark:text-sky-200 sm:text-sm"
-                              >
-                                {{ item }}
-                              </span>
-                            }
-                          </div>
-                        </section>
-                      }
-                    </div>
-                  }
-
-                  @if (reviewSummary.nextTopic) {
-                    <section
-                      class="mt-4 flex items-start gap-2.5 border-t border-slate-200 pt-3.5 dark:border-white/10 sm:mt-5 sm:pt-4"
-                      data-testid="speaking-summary-next-topic"
-                    >
-                      <span
-                        class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-md bg-orange-500 text-white"
-                      >
-                        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-                      </span>
-                      <div class="min-w-0">
-                        <p
-                          class="text-[10px] font-bold uppercase tracking-[0.12em] text-orange-600 dark:text-orange-300"
-                        >
-                          下次主題
-                        </p>
-                        <p
-                          class="mt-0.5 text-[15px] font-semibold leading-6 text-slate-800 dark:text-slate-100 sm:text-base"
-                        >
-                          {{ reviewSummary.nextTopic }}
-                        </p>
-                      </div>
-                    </section>
-                  }
-                </div>
-              </article>
-            }
+            <app-speaking-summary
+              [content]="message.text ?? ''"
+              [copied]="copiedSummaryMessageId() === message.id"
+              (copyRequested)="onCopySummary(message)"
+            />
           } @else {
             <article
               class="mb-3 flex"
@@ -805,6 +670,7 @@
                   (click)="onSummarize()"
                   [disabled]="!canSummarize() || interactionLocked()"
                   aria-label="整理對話"
+                  data-testid="speaking-summarize"
                 >
                   <span class="material-symbols-outlined text-[18px]">description</span>
                 </button>

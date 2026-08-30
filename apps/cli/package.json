@@ -1,0 +1,21 @@
+{
+  "name": "@flashmind/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FlashMind 本機練習上下文與 Review 保存工具",
+  "bin": {
+    "flashmind": "bin/flashmind.cjs"
+  },
+  "scripts": {
+    "build": "pnpm --filter @flashmind/shared build && tsc -p tsconfig.json",
+    "test": "pnpm build && node --test test/*.test.cjs",
+    "skills:sync": "node scripts/sync-skills.mjs"
+  },
+  "dependencies": {
+    "@flashmind/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript": "^5.9.3"
+  }
+}

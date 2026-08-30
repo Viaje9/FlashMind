@@ -10,7 +10,6 @@ import {
   formatSpeakingReviewSummary,
   isSelectionTranslationResultStale,
   normalizeSelectionTranslationText,
-  parseSpeakingReviewSummary,
   toSpeakingHistory,
   updateConversationFromMessages,
   type SpeakingMessage,
@@ -53,74 +52,117 @@ describe('speaking.domain', () => {
     });
   });
 
-  it('應把 Review、實際使用、推薦與下次主題整理成可閱讀內容', () => {
+  it('Summary 依序保留具體表達建議、完整單字表格與英文朗讀稿', () => {
     const text = formatSpeakingReviewSummary({
-      summary: 'I explained how I work with an AI agent.',
-      review: '你有把先產生初稿、再檢查調整的流程說清楚。',
+      summary: 'My free time is limited, so I watch this series at a faster speed.',
+      review:
+        '### 說明播放速度\n\n你說 fast mode 是指加速播放。\n\n> I watch this series at a faster speed.\n\nat a faster speed 比較自然，不是快轉跳過片段。',
       actualUses: [
         {
-          term: 'function',
-          zhMeaning: '功能',
-          expressionContext: '描述 node tree 的需求。',
-          naturalSentence: 'It depends on what kind of function the node tree needs.',
+          term: 'task',
+          zhMeaning: '任務',
+          expressionContext: '工作事項',
+          naturalSentence: 'I finish a task.',
+          evidence: [{ messageId: 'user-1', quote: 'I finish task' }],
         },
       ],
       recommendations: [
         {
-          term: 'cooperation',
-          zhMeaning: '合作；協作',
-          expressionContext: '描述與 AI 一起工作。',
-          naturalSentence: 'This is cooperation between me and the AI agent.',
-          recommendationReason: '符合本次對話。',
+          term: 'limited',
+          zhMeaning: '有限的',
+          expressionContext: '有限的：說明空閒時間不多',
+          naturalSentence: 'My free time is limited.',
+          recommendationReason: '能替換反覆使用的 not enough time。',
         },
       ],
       nextPractice: {
-        topic: 'How I collaborate with AI',
-        speakingGoal: 'Explain one workflow.',
+        topic: 'Watching shows',
+        speakingGoal: '',
         guidingQuestions: [],
-        recallTargets: ['cooperation'],
+        recallTargets: ['limited'],
       },
     });
-
-    expect(text).toContain('練習回顧');
-    expect(text).toContain('function（功能）');
-    expect(text).toContain('cooperation（合作；協作）');
-    expect(text).toContain('How I collaborate with AI');
+    expect(text.match(/^## .+$/gm)?.slice(0, 4)).toEqual([
+      '## 可以說得更自然的地方',
+      '## 這次實際使用的單字',
+      '## 建議練習的單字',
+      '## 可朗讀的英文摘要',
+    ]);
+    expect(text).toContain('at a faster speed 比較自然');
+    expect(text).toContain(
+      '| limited | 有限的：說明空閒時間不多 | My free time is limited. | 能替換反覆使用的 not enough time。 |',
+    );
+    expect(text).toContain('My free time is limited, so I watch this series at a faster speed.');
+    expect(text).toContain('| task | 工作事項 | I finish task | I finish a task. |');
+    expect(text).not.toContain('**這次實際使用：');
+    expect(text).toContain('Watching shows');
   });
 
-  it('應把既有對話整理文字拆成可視覺化的固定區塊', () => {
-    expect(
-      parseSpeakingReviewSummary(`I explained my English-learning plan.
-
-練習回顧
-你有清楚說明目前的學習方向。
-
-這次實際使用
-• practice（練習）
-• website（網站）
-
-下次可以試試
-• confidence（信心）
-
-下次主題
-My English-learning website`),
-    ).toEqual({
-      summary: 'I explained my English-learning plan.',
-      review: '你有清楚說明目前的學習方向。',
-      actualUses: ['practice（練習）', 'website（網站）'],
-      recommendations: ['confidence（信心）'],
-      nextTopic: 'My English-learning website',
-    });
-  });
-
-  it('舊的非結構化摘要應完整保留為主摘要', () => {
-    expect(parseSpeakingReviewSummary('A legacy summary without headings.')).toEqual({
-      summary: 'A legacy summary without headings.',
-      review: '',
+  it('沒有合適推薦也保留單字區塊，不把實際使用的字冒充推薦', () => {
+    const text = formatSpeakingReviewSummary({
+      summary: 'I walk.',
+      review: '你的句子已能清楚表達散步。',
       actualUses: [],
       recommendations: [],
-      nextTopic: '',
+      nextPractice: { topic: '', speakingGoal: '', guidingQuestions: [], recallTargets: [] },
     });
+    expect(text).toContain('## 建議練習的單字');
+    expect(text).toContain('本次沒有需要額外推薦的目標單字');
+    expect(text).toContain('本次沒有可確認的實際使用目標單字');
+    expect(text).toContain('## 可朗讀的英文摘要');
+  });
+
+  it('表格欄位的分隔符號、換行與 HTML 不得破壞表格或插入標記', () => {
+    const text = formatSpeakingReviewSummary({
+      summary: 'I walk.',
+      review: '表達建議',
+      actualUses: [],
+      recommendations: [
+        {
+          term: 'walk',
+          zhMeaning: '',
+          expressionContext: '散步 | 工作\n休息',
+          naturalSentence: 'I walk <outside>.',
+          recommendationReason: '**不是額外欄位**',
+        },
+      ],
+      nextPractice: { topic: '', speakingGoal: '', guidingQuestions: [], recallTargets: [] },
+    });
+    const row = text.split('\n').find((line) => line.startsWith('| walk |'))!;
+    expect(row.split('|')).toHaveLength(6);
+    expect(row).toContain('&#124;');
+    expect(row).not.toContain('<outside>');
+    expect(row).not.toContain('**不是');
+  });
+
+  it('實際使用的原句保留證據文字；缺證據時不以自然句冒充', () => {
+    const text = formatSpeakingReviewSummary({
+      summary: 'I walk.',
+      review: '表達建議',
+      actualUses: [
+        {
+          term: 'walk',
+          zhMeaning: '',
+          expressionContext: '散步',
+          naturalSentence: 'I walk outside.',
+          evidence: [
+            { messageId: 'u1', quote: 'I walk | outside\nwith <friends>' },
+            { messageId: 'u2', quote: 'I walk again' },
+          ],
+        },
+        {
+          term: 'task',
+          zhMeaning: '',
+          expressionContext: '任務',
+          naturalSentence: 'I finish a task.',
+        },
+      ],
+      recommendations: [],
+      nextPractice: { topic: '', speakingGoal: '', guidingQuestions: [], recallTargets: [] },
+    });
+    expect(text).toContain('I walk &#124; outside&#10;with &#60;friends&#62;');
+    expect(text).toContain('I walk again');
+    expect(text).toContain('| task | 任務 | 未提供原句證據 | I finish a task. |');
   });
 
   it('應產生可用且不同的 id', () => {

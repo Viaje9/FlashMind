@@ -9,7 +9,16 @@ export class PrismaService
 {
   constructor() {
     super({
-      adapter: new PrismaPg({ connectionString: process.env['DATABASE_URL'] }),
+      adapter: new PrismaPg(
+        { connectionString: process.env['DATABASE_URL'] },
+        {
+          schema: process.env['DATABASE_URL']
+            ? (new URL(process.env['DATABASE_URL']).searchParams.get(
+                'schema',
+              ) ?? 'public')
+            : 'public',
+        },
+      ),
     });
   }
 

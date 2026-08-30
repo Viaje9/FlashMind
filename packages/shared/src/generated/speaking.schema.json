@@ -1,0 +1,678 @@
+{
+  "definitions": {
+    "SpeakingHistorySource": { "type": "string", "enum": ["APP", "LOCAL"] },
+    "SpeakingPracticePlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string", "minLength": 1, "maxLength": 100000 },
+        "speakingGoal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "guidingQuestions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 100000 },
+          "maxItems": 3
+        },
+        "recallTargets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "maxItems": 5
+        }
+      },
+      "required": ["topic", "speakingGoal", "guidingQuestions", "recallTargets"]
+    },
+    "SpeakingHistoryMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "text": { "type": "string", "maxLength": 100000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "translatedText": { "type": "string", "maxLength": 100000 },
+        "hasOriginalAudio": { "type": "boolean" },
+        "transcriptStatus": {
+          "type": "string",
+          "enum": ["available", "unavailable"]
+        }
+      },
+      "required": ["id", "role", "text", "createdAt"]
+    },
+    "SpeakingSourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "system": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "sessionKey": { "type": "string", "minLength": 1, "maxLength": 200 }
+      },
+      "required": ["system", "conversationId", "sessionKey"]
+    },
+    "SpeakingReviewEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "messageId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "quote": { "type": "string", "minLength": 1, "maxLength": 100000 }
+      },
+      "required": ["messageId", "quote"]
+    },
+    "SpeakingRecordedUse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "targetVocabularyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "term": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "expressionContext": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "naturalSentence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingReviewEvidence" },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "targetVocabularyId",
+        "term",
+        "expressionContext",
+        "naturalSentence",
+        "evidence"
+      ]
+    },
+    "SpeakingRecordedRecommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "targetVocabularyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "term": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "expressionContext": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "naturalSentence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "recommendationReason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        }
+      },
+      "required": [
+        "targetVocabularyId",
+        "term",
+        "expressionContext",
+        "naturalSentence",
+        "recommendationReason"
+      ]
+    },
+    "SpeakingRecordedResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string", "minLength": 1, "maxLength": 100000 },
+        "review": { "type": "string", "minLength": 1, "maxLength": 100000 },
+        "actualUses": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingRecordedUse" },
+          "maxItems": 2000
+        },
+        "recommendations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingRecordedRecommendation" },
+          "maxItems": 2000
+        },
+        "nextPractice": { "$ref": "#/definitions/SpeakingPracticePlan" },
+        "deckCandidates": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "uniqueItems": true,
+          "maxItems": 2000
+        }
+      },
+      "required": [
+        "summary",
+        "review",
+        "actualUses",
+        "recommendations",
+        "nextPractice",
+        "deckCandidates"
+      ]
+    },
+    "SpeakingReviewDraft": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "integer", "enum": [1] },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "apiOrigin": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 500
+            },
+            "userId": { "type": "string", "minLength": 1, "maxLength": 200 }
+          },
+          "required": ["apiOrigin", "userId"]
+        },
+        "contextVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "practice": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": { "$ref": "#/definitions/SpeakingHistorySource" },
+            "sourceRef": { "$ref": "#/definitions/SpeakingSourceRef" },
+            "sessionId": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "startedAt": { "type": "string", "format": "date-time" },
+            "endedAt": { "type": "string", "format": "date-time" },
+            "range": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "firstMessageId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "lastMessageId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              },
+              "required": ["firstMessageId", "lastMessageId"]
+            },
+            "messages": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/SpeakingHistoryMessage" },
+              "minItems": 1,
+              "maxItems": 2000
+            }
+          },
+          "required": [
+            "source",
+            "sourceRef",
+            "title",
+            "startedAt",
+            "endedAt",
+            "range",
+            "messages"
+          ]
+        },
+        "result": { "$ref": "#/definitions/SpeakingRecordedResult" }
+      },
+      "required": [
+        "schemaVersion",
+        "target",
+        "contextVersion",
+        "practice",
+        "result"
+      ]
+    },
+    "SpeakingValidationIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["path", "code", "message"]
+    },
+    "SpeakingReviewValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "valid": { "type": "boolean" },
+        "contentHash": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "errors": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingValidationIssue" }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingValidationIssue" }
+        }
+      },
+      "required": ["valid", "contentHash", "errors", "warnings"]
+    },
+    "SpeakingSavedReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sessionId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reviewId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "status": { "type": "string", "enum": ["saved", "alreadySaved"] },
+        "actualUseCount": { "type": "integer", "minimum": 0 },
+        "recommendationCount": { "type": "integer", "minimum": 0 }
+      },
+      "required": [
+        "sessionId",
+        "reviewId",
+        "status",
+        "actualUseCount",
+        "recommendationCount"
+      ]
+    },
+    "SpeakingContextWord": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "term": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "zhMeaning": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["UNSEEN", "PRACTICING", "USED", "ADDED"]
+        },
+        "useCount": { "type": "integer" },
+        "recommendationCount": { "type": "integer" },
+        "expressionContext": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "naturalSentence": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "recommendationReason": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "addedCardId": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      },
+      "required": [
+        "id",
+        "term",
+        "zhMeaning",
+        "status",
+        "useCount",
+        "recommendationCount",
+        "expressionContext",
+        "naturalSentence",
+        "recommendationReason",
+        "addedCardId"
+      ]
+    },
+    "SpeakingPracticeContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "integer", "enum": [1] },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "vocabularyVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "vocabularyCount": { "type": "integer", "minimum": 0 },
+        "targetVocabulary": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingContextWord" }
+        },
+        "lastPractice": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "sessionId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "source": { "$ref": "#/definitions/SpeakingHistorySource" },
+                "title": { "type": "string" },
+                "summary": { "type": "string" },
+                "startedAt": { "type": "string", "format": "date-time" },
+                "endedAt": { "type": "string", "format": "date-time" }
+              },
+              "required": [
+                "sessionId",
+                "source",
+                "title",
+                "summary",
+                "startedAt",
+                "endedAt"
+              ]
+            },
+            { "type": "null" }
+          ]
+        },
+        "nextPractice": {
+          "anyOf": [
+            { "$ref": "#/definitions/SpeakingPracticePlan" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "userId",
+        "generatedAt",
+        "vocabularyVersion",
+        "vocabularyCount",
+        "targetVocabulary",
+        "lastPractice",
+        "nextPractice"
+      ]
+    },
+    "SpeakingSessionCreate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clientSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "expectedUserId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫"
+        }
+      },
+      "required": ["clientSessionId", "title", "startedAt", "expectedUserId"]
+    },
+    "SpeakingMessagesAppend": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revision": { "type": "integer", "minimum": 0 },
+        "messages": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingHistoryMessage" },
+          "minItems": 1,
+          "maxItems": 2000
+        },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "expectedUserId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫"
+        }
+      },
+      "required": ["revision", "messages", "expectedUserId"]
+    },
+    "SpeakingLegacySummaryInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 100000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ordinal": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["id", "text", "createdAt", "ordinal"]
+    },
+    "SpeakingLegacySession": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clientSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "messages": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingHistoryMessage" },
+          "maxItems": 2000
+        },
+        "summaries": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingLegacySummaryInput" },
+          "maxItems": 100
+        },
+        "legacyPracticeContext": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "summaryId": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "plan": { "$ref": "#/definitions/SpeakingPracticePlan" }
+          },
+          "required": ["summaryId", "plan"]
+        }
+      },
+      "required": [
+        "clientSessionId",
+        "title",
+        "startedAt",
+        "endedAt",
+        "messages",
+        "summaries"
+      ]
+    },
+    "SpeakingHistoryMigration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingLegacySession" },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "expectedUserId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫"
+        }
+      },
+      "required": ["sessions", "expectedUserId"]
+    },
+    "SpeakingMigrationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clientSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "sessionId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "status": {
+          "type": "string",
+          "enum": ["imported", "alreadyImported", "conflict", "failed"]
+        },
+        "message": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      },
+      "required": ["clientSessionId", "sessionId", "status", "message"]
+    },
+    "SpeakingSessionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "clientSessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "source": { "$ref": "#/definitions/SpeakingHistorySource" },
+        "title": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": {
+          "anyOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "revision": { "type": "integer" },
+        "messageCount": { "type": "integer" },
+        "reviewed": { "type": "boolean" },
+        "summary": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      },
+      "required": [
+        "id",
+        "clientSessionId",
+        "source",
+        "title",
+        "startedAt",
+        "endedAt",
+        "createdAt",
+        "updatedAt",
+        "revision",
+        "messageCount",
+        "reviewed",
+        "summary"
+      ]
+    },
+    "SpeakingSessionDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "session": { "$ref": "#/definitions/SpeakingSessionRecord" },
+        "review": {
+          "anyOf": [
+            { "$ref": "#/definitions/SpeakingRecordedResult" },
+            { "type": "null" }
+          ]
+        },
+        "legacySummaries": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SpeakingLegacySummaryInput" }
+        }
+      },
+      "required": ["session", "review", "legacySummaries"]
+    },
+    "SpeakingHistoryPageMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nextCursor": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "hasMore": { "type": "boolean" }
+      },
+      "required": ["nextCursor", "hasMore"]
+    },
+    "CliAuthorizationCreate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verifierHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "required": ["verifierHash"]
+    },
+    "CliAuthorizationStarted": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authorizationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "verificationUrl": { "type": "string", "format": "uri" },
+        "pairingCode": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "pollIntervalMs": { "type": "integer" }
+      },
+      "required": [
+        "authorizationId",
+        "verificationUrl",
+        "pairingCode",
+        "expiresAt",
+        "pollIntervalMs"
+      ]
+    },
+    "CliAuthorizationApprove": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pairingCode": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "decision": { "type": "string", "enum": ["approve", "deny"] },
+        "expectedUserId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫"
+        }
+      },
+      "required": ["pairingCode", "decision", "expectedUserId"]
+    },
+    "CliAuthorizationExchange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verifier": { "type": "string", "minLength": 43, "maxLength": 128 }
+      },
+      "required": ["verifier"]
+    },
+    "CliAuthorizationStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "denied"]
+        },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "userId": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "email": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      },
+      "required": ["status", "expiresAt", "userId", "email"]
+    },
+    "SpeakingHistoryError": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" },
+            "details": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/SpeakingValidationIssue" }
+            }
+          },
+          "required": ["code", "message"]
+        }
+      },
+      "required": ["error"]
+    }
+  }
+}

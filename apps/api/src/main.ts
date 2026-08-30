@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import { json, type ErrorRequestHandler } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -9,6 +10,49 @@ async function bootstrap() {
     bodyParser: false,
   });
 
+  // 文字紀錄使用獨立上限，不影響既有語音端點的 parser。
+  const textPaths = [
+    '/api/speaking/sessions',
+    '/api/speaking/reviews',
+    '/api/speaking/history-migrations',
+    '/api/auth/cli/authorizations',
+  ];
+  app.use(
+    textPaths,
+    (
+      _req: import('express').Request,
+      res: import('express').Response,
+      next: import('express').NextFunction,
+    ) => {
+      res.setHeader('Cache-Control', 'no-store');
+      next();
+    },
+  );
+  app.use(textPaths, json({ limit: '2mb' }));
+  const textParserErrors: ErrorRequestHandler = (
+    error: unknown,
+    _req,
+    res,
+    next,
+  ) => {
+    const errorType =
+      error && typeof error === 'object' && 'type' in error
+        ? error.type
+        : undefined;
+    if (errorType === 'entity.too.large') {
+      res.status(413).json({
+        error: {
+          code: 'PAYLOAD_TOO_LARGE',
+          message: '文字請求超過 2 MiB 上限',
+        },
+      });
+    } else if (errorType === 'entity.parse.failed') {
+      res
+        .status(400)
+        .json({ error: { code: 'INVALID_JSON', message: 'JSON 格式錯誤' } });
+    } else next(error);
+  };
+  app.use(textPaths, textParserErrors);
   app.useBodyParser('json', { limit: '2gb' });
 
   app.setGlobalPrefix('api');

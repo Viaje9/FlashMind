@@ -22,9 +22,15 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      yaml:
+        specifier: 2.8.2
+        version: 2.8.2
 
   apps/api:
     dependencies:
+      "@flashmind/shared":
+        specifier: workspace:*
+        version: link:../../packages/shared
       "@nestjs/common":
         specifier: ^11.0.1
         version: 11.1.10(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -58,6 +64,9 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -159,6 +168,19 @@ importers:
         specifier: ^8.20.0
         version: 8.50.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
 
+  apps/cli:
+    dependencies:
+      "@flashmind/shared":
+        specifier: workspace:*
+        version: link:../../packages/shared
+    devDependencies:
+      "@types/node":
+        specifier: ^22.10.7
+        version: 22.19.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   apps/docs-viewer:
     dependencies:
       astro:
@@ -191,6 +213,9 @@ importers:
       "@flashmind/api-client":
         specifier: workspace:*
         version: link:../../packages/api-client
+      "@flashmind/shared":
+        specifier: workspace:*
+        version: link:../../packages/shared
       marked:
         specifier: ^18.0.9
         version: 18.0.9
@@ -285,7 +310,14 @@ importers:
 
   packages/config: {}
 
-  packages/shared: {}
+  packages/shared:
+    dependencies:
+      ajv:
+        specifier: 8.17.1
+        version: 8.17.1
+      ajv-formats:
+        specifier: 3.0.1
+        version: 3.0.1(ajv@8.17.1)
 
   packages/ui:
     devDependencies:

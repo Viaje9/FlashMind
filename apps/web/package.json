@@ -1,15 +1,15 @@
 {
   "name": "web",
-  "version": "0.1.102",
+  "version": "0.1.103",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
+    "start": "pnpm --filter @flashmind/shared build && ng serve",
+    "build": "pnpm --filter @flashmind/shared build && ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "pnpm --filter @flashmind/shared build && ng test",
     "storybook": "ng run web:storybook",
     "build-storybook": "ng run web:build-storybook",
-    "generate:api": "openapi-generator-cli generate -i ../../openapi/api.yaml -g typescript-angular -o ../../packages/api-client/src/generated",
+    "generate:api": "openapi-generator-cli generate -i ../../openapi/api.yaml -g typescript-angular -o ../../packages/api-client/src/generated --type-mappings=set=Array && node ../../node_modules/prettier/bin/prettier.cjs --write ../../packages/api-client/src/generated",
     "cert:generate": "node scripts/generate-dev-cert.mjs"
   },
   "prettier": {
@@ -37,7 +37,8 @@
     "@flashmind/api-client": "workspace:*",
     "marked": "^18.0.9",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "@flashmind/shared": "workspace:*"
   },
   "devDependencies": {
     "@angular/build": "^21.1.0",

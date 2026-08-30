@@ -1,0 +1,1698 @@
+openapi: 3.0.3
+info:
+  title: FlashMind Speaking 歷史與 CLI 契約
+  version: 1.0.0
+paths:
+  /speaking/sessions:
+    post:
+      operationId: createSpeakingSession
+      tags:
+        - SpeakingHistory
+      summary: 建立 App 文字練習場次
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SpeakingSessionRecord"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingSessionCreate"
+    get:
+      operationId: listSpeakingSessions
+      tags:
+        - SpeakingHistory
+      summary: 依練習時間列出 App 與本機歷史
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpeakingSessionRecord"
+                  meta:
+                    $ref: "#/components/schemas/SpeakingHistoryPageMeta"
+                required:
+                  - data
+                  - meta
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            maxLength: 1000
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+  /speaking/sessions/{id}:
+    get:
+      operationId: getSpeakingSession
+      tags:
+        - SpeakingHistory
+      summary: 取得自己的場次與已保存 Review
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SpeakingSessionDetail"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: &id001
+            type: string
+            minLength: 1
+            maxLength: 200
+    delete:
+      operationId: deleteSpeakingSession
+      tags:
+        - SpeakingHistory
+      summary: 刪除歷史但不回退學習狀態
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: 成功
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: *id001
+  /speaking/sessions/{id}/messages:
+    get:
+      operationId: listSpeakingMessages
+      tags:
+        - SpeakingHistory
+      summary: 依原始順序取得文字訊息
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpeakingHistoryMessage"
+                  meta:
+                    $ref: "#/components/schemas/SpeakingHistoryPageMeta"
+                required:
+                  - data
+                  - meta
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: *id001
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            maxLength: 1000
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+    post:
+      operationId: appendSpeakingMessages
+      tags:
+        - SpeakingHistory
+      summary: 保存最終文字，重送不重複
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SpeakingSessionRecord"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingMessagesAppend"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: *id001
+  /speaking/practice-context:
+    get:
+      operationId: getSpeakingPracticeContext
+      tags:
+        - SpeakingHistory
+      summary: 取得完整且唯讀的學習上下文
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SpeakingPracticeContext"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+  /speaking/reviews/validate:
+    post:
+      operationId: validateSpeakingReview
+      tags:
+        - SpeakingHistory
+      summary: 驗證草稿，不保存或呼叫 AI
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SpeakingReviewValidation"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingReviewDraft"
+  /speaking/reviews:
+    post:
+      operationId: saveSpeakingReview
+      tags:
+        - SpeakingHistory
+      summary: 保存確認過的文字與 Review，原子更新單字
+      security:
+        - cookieAuth: []
+      responses:
+        "201":
+          description: 成功
+          content: &id002
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SpeakingSavedReview"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "200":
+          description: 相同內容已保存，本次未重複計次
+          content: *id002
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingReviewDraft"
+  /speaking/history-migrations:
+    post:
+      operationId: migrateSpeakingHistory
+      tags:
+        - SpeakingHistory
+      summary: 搬移舊文字，不重新分析或計次
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpeakingMigrationResult"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakingHistoryMigration"
+  /auth/cli/authorizations:
+    post:
+      operationId: createCliLoginAuthorization
+      tags:
+        - CliAuth
+      summary: 建立短期 CLI 登入授權
+      security: []
+      responses:
+        "201":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CliAuthorizationStarted"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CliAuthorizationCreate"
+  /auth/cli/authorizations/{id}/approve:
+    post:
+      operationId: approveCliLoginAuthorization
+      tags:
+        - CliAuth
+      summary: 瀏覽器確認 CLI 帳號及配對碼
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CliAuthorizationStatus"
+                required:
+                  - data
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "410":
+          description: 授權已過期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CliAuthorizationApprove"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: *id001
+  /auth/cli/authorizations/{id}/exchange:
+    post:
+      operationId: exchangeCliLoginAuthorization
+      tags:
+        - CliAuth
+      summary: 由發起端單次兌換 session cookie
+      security: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CliAuthorizationStatus"
+                required:
+                  - data
+          headers:
+            Set-Cookie:
+              description: 授權完成時回傳新的 HttpOnly session；不得記錄或放入 JSON
+              schema:
+                type: string
+        "400":
+          description: 格式錯誤
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "401":
+          description: 未登入
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "403":
+          description: 禁止存取
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "404":
+          description: 找不到資源
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "409":
+          description: 內容或版本衝突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "413":
+          description: 資料超過限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "422":
+          description: 驗證不符
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "429":
+          description: 請求過於頻繁
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+        "410":
+          description: 授權已過期
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakingHistoryError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CliAuthorizationExchange"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: *id001
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+  schemas:
+    SpeakingHistorySource:
+      type: string
+      enum:
+        - APP
+        - LOCAL
+    SpeakingPracticePlan:
+      type: object
+      additionalProperties: false
+      properties:
+        topic: &id003
+          type: string
+          minLength: 1
+          maxLength: 100000
+        speakingGoal: *id003
+        guidingQuestions:
+          type: array
+          items: *id003
+          maxItems: 3
+        recallTargets:
+          type: array
+          items: *id001
+          maxItems: 5
+      required:
+        - topic
+        - speakingGoal
+        - guidingQuestions
+        - recallTargets
+    SpeakingHistoryMessage:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+        text:
+          type: string
+          maxLength: 100000
+        createdAt: &id004
+          type: string
+          format: date-time
+        translatedText:
+          type: string
+          maxLength: 100000
+        hasOriginalAudio:
+          type: boolean
+        transcriptStatus:
+          type: string
+          enum:
+            - available
+            - unavailable
+      required:
+        - id
+        - role
+        - text
+        - createdAt
+    SpeakingSourceRef:
+      type: object
+      additionalProperties: false
+      properties:
+        system: *id001
+        conversationId: *id001
+        sessionKey: *id001
+      required:
+        - system
+        - conversationId
+        - sessionKey
+    SpeakingReviewEvidence:
+      type: object
+      additionalProperties: false
+      properties:
+        messageId: *id001
+        quote: *id003
+      required:
+        - messageId
+        - quote
+    SpeakingRecordedUse:
+      type: object
+      additionalProperties: false
+      properties:
+        targetVocabularyId: *id001
+        term: *id001
+        expressionContext: *id003
+        naturalSentence: *id003
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingReviewEvidence"
+          minItems: 1
+          maxItems: 20
+      required:
+        - targetVocabularyId
+        - term
+        - expressionContext
+        - naturalSentence
+        - evidence
+    SpeakingRecordedRecommendation:
+      type: object
+      additionalProperties: false
+      properties:
+        targetVocabularyId: *id001
+        term: *id001
+        expressionContext: *id003
+        naturalSentence: *id003
+        recommendationReason: *id003
+      required:
+        - targetVocabularyId
+        - term
+        - expressionContext
+        - naturalSentence
+        - recommendationReason
+    SpeakingRecordedResult:
+      type: object
+      additionalProperties: false
+      properties:
+        summary: *id003
+        review: *id003
+        actualUses:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingRecordedUse"
+          maxItems: 2000
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingRecordedRecommendation"
+          maxItems: 2000
+        nextPractice:
+          $ref: "#/components/schemas/SpeakingPracticePlan"
+        deckCandidates:
+          type: array
+          items: *id001
+          uniqueItems: true
+          maxItems: 2000
+      required:
+        - summary
+        - review
+        - actualUses
+        - recommendations
+        - nextPractice
+        - deckCandidates
+    SpeakingReviewDraft:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          type: integer
+          enum:
+            - 1
+        target:
+          type: object
+          additionalProperties: false
+          properties:
+            apiOrigin:
+              type: string
+              format: uri
+              maxLength: 500
+            userId: *id001
+          required:
+            - apiOrigin
+            - userId
+        contextVersion: *id001
+        practice:
+          type: object
+          additionalProperties: false
+          properties:
+            source:
+              $ref: "#/components/schemas/SpeakingHistorySource"
+            sourceRef:
+              $ref: "#/components/schemas/SpeakingSourceRef"
+            sessionId: *id001
+            title:
+              type: string
+              minLength: 1
+              maxLength: 200
+            startedAt: *id004
+            endedAt: *id004
+            range:
+              type: object
+              additionalProperties: false
+              properties:
+                firstMessageId: *id001
+                lastMessageId: *id001
+              required:
+                - firstMessageId
+                - lastMessageId
+            messages:
+              type: array
+              items:
+                $ref: "#/components/schemas/SpeakingHistoryMessage"
+              minItems: 1
+              maxItems: 2000
+          required:
+            - source
+            - sourceRef
+            - title
+            - startedAt
+            - endedAt
+            - range
+            - messages
+        result:
+          $ref: "#/components/schemas/SpeakingRecordedResult"
+      required:
+        - schemaVersion
+        - target
+        - contextVersion
+        - practice
+        - result
+    SpeakingValidationIssue:
+      type: object
+      additionalProperties: false
+      properties:
+        path:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - path
+        - code
+        - message
+    SpeakingReviewValidation:
+      type: object
+      additionalProperties: false
+      properties:
+        valid:
+          type: boolean
+        contentHash:
+          type: string
+          nullable: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingValidationIssue"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingValidationIssue"
+      required:
+        - valid
+        - contentHash
+        - errors
+        - warnings
+    SpeakingSavedReview:
+      type: object
+      additionalProperties: false
+      properties:
+        sessionId: *id001
+        reviewId: *id001
+        status:
+          type: string
+          enum:
+            - saved
+            - alreadySaved
+        actualUseCount:
+          type: integer
+          minimum: 0
+        recommendationCount:
+          type: integer
+          minimum: 0
+      required:
+        - sessionId
+        - reviewId
+        - status
+        - actualUseCount
+        - recommendationCount
+    SpeakingContextWord:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        term: *id001
+        zhMeaning:
+          type: string
+        status:
+          type: string
+          enum:
+            - UNSEEN
+            - PRACTICING
+            - USED
+            - ADDED
+        useCount:
+          type: integer
+        recommendationCount:
+          type: integer
+        expressionContext:
+          type: string
+          nullable: true
+        naturalSentence:
+          type: string
+          nullable: true
+        recommendationReason:
+          type: string
+          nullable: true
+        addedCardId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - term
+        - zhMeaning
+        - status
+        - useCount
+        - recommendationCount
+        - expressionContext
+        - naturalSentence
+        - recommendationReason
+        - addedCardId
+    SpeakingPracticeContext:
+      type: object
+      additionalProperties: false
+      properties:
+        schemaVersion:
+          type: integer
+          enum:
+            - 1
+        userId: *id001
+        generatedAt: *id004
+        vocabularyVersion: *id001
+        vocabularyCount:
+          type: integer
+          minimum: 0
+        targetVocabulary:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingContextWord"
+        lastPractice:
+          type: object
+          additionalProperties: false
+          properties:
+            sessionId: *id001
+            source:
+              $ref: "#/components/schemas/SpeakingHistorySource"
+            title:
+              type: string
+            summary:
+              type: string
+            startedAt: *id004
+            endedAt: *id004
+          required:
+            - sessionId
+            - source
+            - title
+            - summary
+            - startedAt
+            - endedAt
+          nullable: true
+        nextPractice:
+          $ref: "#/components/schemas/SpeakingPracticePlan"
+          nullable: true
+      required:
+        - schemaVersion
+        - userId
+        - generatedAt
+        - vocabularyVersion
+        - vocabularyCount
+        - targetVocabulary
+        - lastPractice
+        - nextPractice
+    SpeakingSessionCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        clientSessionId: *id001
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        startedAt: *id004
+        expectedUserId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫
+      required:
+        - clientSessionId
+        - title
+        - startedAt
+        - expectedUserId
+    SpeakingMessagesAppend:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 0
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingHistoryMessage"
+          minItems: 1
+          maxItems: 2000
+        endedAt: *id004
+        expectedUserId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫
+      required:
+        - revision
+        - messages
+        - expectedUserId
+    SpeakingLegacySummaryInput:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        text: *id003
+        createdAt: *id004
+        ordinal:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - text
+        - createdAt
+        - ordinal
+    SpeakingLegacySession:
+      type: object
+      additionalProperties: false
+      properties:
+        clientSessionId: *id001
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        startedAt: *id004
+        endedAt: *id004
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingHistoryMessage"
+          maxItems: 2000
+        summaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingLegacySummaryInput"
+          maxItems: 100
+        legacyPracticeContext:
+          type: object
+          additionalProperties: false
+          properties:
+            summaryId: *id001
+            plan:
+              $ref: "#/components/schemas/SpeakingPracticePlan"
+          required:
+            - summaryId
+            - plan
+      required:
+        - clientSessionId
+        - title
+        - startedAt
+        - endedAt
+        - messages
+        - summaries
+    SpeakingHistoryMigration:
+      type: object
+      additionalProperties: false
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingLegacySession"
+          minItems: 1
+          maxItems: 20
+        expectedUserId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫
+      required:
+        - sessions
+        - expectedUserId
+    SpeakingMigrationResult:
+      type: object
+      additionalProperties: false
+      properties:
+        clientSessionId: *id001
+        sessionId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - imported
+            - alreadyImported
+            - conflict
+            - failed
+        message:
+          type: string
+          nullable: true
+      required:
+        - clientSessionId
+        - sessionId
+        - status
+        - message
+    SpeakingSessionRecord:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        clientSessionId: *id001
+        source:
+          $ref: "#/components/schemas/SpeakingHistorySource"
+        title:
+          type: string
+        startedAt: *id004
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt: *id004
+        updatedAt: *id004
+        revision:
+          type: integer
+        messageCount:
+          type: integer
+        reviewed:
+          type: boolean
+        summary:
+          type: string
+          nullable: true
+      required:
+        - id
+        - clientSessionId
+        - source
+        - title
+        - startedAt
+        - endedAt
+        - createdAt
+        - updatedAt
+        - revision
+        - messageCount
+        - reviewed
+        - summary
+    SpeakingSessionDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        session:
+          $ref: "#/components/schemas/SpeakingSessionRecord"
+        review:
+          $ref: "#/components/schemas/SpeakingRecordedResult"
+          nullable: true
+        legacySummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeakingLegacySummaryInput"
+      required:
+        - session
+        - review
+        - legacySummaries
+    SpeakingHistoryPageMeta:
+      type: object
+      additionalProperties: false
+      properties:
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+      required:
+        - nextCursor
+        - hasMore
+    CliAuthorizationCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        verifierHash:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+      required:
+        - verifierHash
+    CliAuthorizationStarted:
+      type: object
+      additionalProperties: false
+      properties:
+        authorizationId: *id001
+        verificationUrl:
+          type: string
+          format: uri
+        pairingCode: *id001
+        expiresAt: *id004
+        pollIntervalMs:
+          type: integer
+      required:
+        - authorizationId
+        - verificationUrl
+        - pairingCode
+        - expiresAt
+        - pollIntervalMs
+    CliAuthorizationApprove:
+      type: object
+      additionalProperties: false
+      properties:
+        pairingCode: *id001
+        decision:
+          type: string
+          enum:
+            - approve
+            - deny
+        expectedUserId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 頁面確認的帳號；須與當前 session 相同，避免另一分頁切換帳號後誤寫
+      required:
+        - pairingCode
+        - decision
+        - expectedUserId
+    CliAuthorizationExchange:
+      type: object
+      additionalProperties: false
+      properties:
+        verifier:
+          type: string
+          minLength: 43
+          maxLength: 128
+      required:
+        - verifier
+    CliAuthorizationStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - denied
+        expiresAt: *id004
+        userId:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+      required:
+        - status
+        - expiresAt
+        - userId
+        - email
+    SpeakingHistoryError:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                $ref: "#/components/schemas/SpeakingValidationIssue"
+          required:
+            - code
+            - message
+      required:
+        - error

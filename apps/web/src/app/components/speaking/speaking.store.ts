@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { HttpContext, HttpErrorResponse } from '@angular/common/http';
 import {
   SpeakingService as SpeakingApiService,
@@ -19,14 +19,12 @@ import {
   createSpeakingId,
   formatSpeakingReviewSummary,
   normalizeSelectionTranslationText,
-  toSpeakingHistory,
   updateConversationFromMessages,
   type SpeakingAssistantMessage as LocalAssistantMessage,
   type SpeakingConversation,
   type SpeakingMessage,
   type SpeakingSelectionTranslationRequest,
   type SpeakingSelectionTranslationResult,
-  type SpeakingSettings,
   type SpeakingStoreState,
 } from './speaking.domain';
 import { SpeakingRepository } from './speaking.repository';
@@ -70,6 +68,34 @@ export class SpeakingStore {
   private readonly fullDuplexActiveState = signal(false);
   private readonly liveTranscriptState = signal('');
   private fullDuplexStartSequence = 0;
+
+  private activeOwner: string | null | undefined;
+  constructor() {
+    effect(() => {
+      const owner = this.repository.ownerId();
+      if (this.activeOwner !== undefined && owner !== this.activeOwner) {
+        this.stopFullDuplexConversation();
+        this.realtime.disconnect();
+        this.audioPlayer.stop();
+        this.retryPayload = null;
+        this.state.update((state) => ({
+          ...state,
+          conversationId: null,
+          messages: [],
+          assistantMessages: [],
+          sending: false,
+          summarizing: false,
+          retryAvailable: false,
+          error: null,
+        }));
+      }
+      this.activeOwner = owner;
+    });
+  }
+  readonly syncError = this.repository.syncError;
+  async retryTextSync() {
+    await this.repository.retryPending();
+  }
 
   readonly conversationId = computed(() => this.state().conversationId);
   readonly messages = computed(() => this.state().messages);
@@ -119,6 +145,16 @@ export class SpeakingStore {
       retryAvailable: false,
       error: null,
     });
+    await this.repository.beginConversation(this.state().conversationId!);
+    try {
+      await this.repository.refreshPracticeContext();
+      this.speakingSettingsState.set(this.repository.loadSettings());
+    } catch {
+      this.state.update((state) => ({
+        ...state,
+        error: '無法取得最新練習上下文，請確認網路後重新開始。',
+      }));
+    }
   }
 
   async loadConversation(conversationId: string): Promise<boolean> {
@@ -133,10 +169,25 @@ export class SpeakingStore {
         return false;
       }
 
+      if (result.conversation.source === 'LOCAL' || result.conversation.reviewed) {
+        await this.startNewConversation();
+        this.repository.continueFrom(result.conversation);
+        this.speakingSettingsState.set(this.repository.loadSettings());
+        return true;
+      }
+      try {
+        await this.repository.refreshPracticeContext();
+      } catch {
+        this.state.update((state) => ({
+          ...state,
+          error: '無法取得最新練習上下文；本機對話仍保留。',
+        }));
+      }
+      this.speakingSettingsState.set(this.repository.loadSettings());
       this.retryPayload = null;
       this.state.update((state) => ({
         ...state,
-        conversationId,
+        conversationId: result.conversation.id,
         messages: result.messages,
         loadingConversation: false,
         retryAvailable: false,
@@ -160,6 +211,7 @@ export class SpeakingStore {
       this.state.update((state) => ({ ...state, conversationId }));
     }
 
+    await this.repository.beginConversation(conversationId);
     const settings = this.repository.loadSettings();
     this.speakingSettingsState.set(settings);
     try {
@@ -263,6 +315,7 @@ export class SpeakingStore {
     const currentState = this.state();
     const conversationId = currentState.conversationId ?? createSpeakingId();
     const historyBefore = [...currentState.messages];
+    await this.repository.beginConversation(conversationId);
 
     const normalizedAudioBlob = await this.safeConvertToWav(audioBlob);
     const userMessageId = createSpeakingId();
@@ -343,21 +396,30 @@ export class SpeakingStore {
     this.state.update((state) => ({ ...state, summarizing: true, error: null }));
 
     try {
-      const history = await toSpeakingHistory(
-        currentState.messages,
-        this.repository.getAudioBase64.bind(this.repository),
-      );
-
-      const response = await firstValueFrom(
-        this.speakingApi.summarizeSpeakingConversation({ history }),
-      );
+      const conversationId = currentState.conversationId!;
+      await this.repository.requireSync(conversationId);
+      const cached = await this.repository.pendingAnalysis(conversationId);
+      const analysis =
+        cached ??
+        (
+          await firstValueFrom(
+            this.speakingApi.summarizeSpeakingConversation({
+              history: currentState.messages.flatMap((message) =>
+                message.role !== 'summary' && message.text?.trim()
+                  ? [{ id: message.id, role: message.role, text: message.text }]
+                  : [],
+              ),
+            }),
+          )
+        ).data;
+      await this.repository.saveAnalysis(conversationId, analysis);
+      const response = { data: analysis };
       const summaryText = formatSpeakingReviewSummary(response.data).trim();
 
       if (!summaryText) {
         throw new Error('summary empty');
       }
 
-      const conversationId = currentState.conversationId ?? createSpeakingId();
       const summaryMessage: SpeakingMessage = {
         id: createSpeakingId(),
         conversationId,
@@ -377,16 +439,7 @@ export class SpeakingStore {
       }));
 
       await this.repository.saveMessage(summaryMessage);
-      const updatedSettings: SpeakingSettings = {
-        ...this.repository.loadSettings(),
-        lastPractice: {
-          title: response.data.title,
-          summary: response.data.summary,
-        },
-        nextPractice: response.data.nextPractice,
-      };
-      this.repository.saveSettings(updatedSettings);
-      this.speakingSettingsState.set(updatedSettings);
+      this.speakingSettingsState.set(this.repository.loadSettings());
       await this.persistConversation(conversationId, nextMessages, {
         title: response.data.title,
         summary: response.data.summary,
@@ -395,7 +448,7 @@ export class SpeakingStore {
       this.state.update((state) => ({
         ...state,
         summarizing: false,
-        error: '產生摘要失敗，請稍後再試',
+        error: 'Summary 尚未完成保存；若已產生分析會保留同一份結果，請稍後重試',
       }));
     }
   }
@@ -707,7 +760,13 @@ export class SpeakingStore {
       const ensuredMessages = userExists
         ? stateMessages.map((item) =>
             item.id === payload.userMessageId
-              ? { ...item, text: response.userTranscript.trim() }
+              ? {
+                  ...item,
+                  text: response.userTranscript.trim(),
+                  transcriptStatus: response.userTranscript.trim()
+                    ? ('available' as const)
+                    : ('unavailable' as const),
+                }
               : item,
           )
         : [
@@ -717,6 +776,9 @@ export class SpeakingStore {
               conversationId: payload.conversationId,
               role: 'user' as const,
               text: response.userTranscript.trim(),
+              transcriptStatus: response.userTranscript.trim()
+                ? ('available' as const)
+                : ('unavailable' as const),
               audioBlobKey: payload.userAudioKey,
               audioMimeType: payload.audioBlob.type || 'audio/webm',
               createdAt: new Date().toISOString(),
@@ -772,6 +834,7 @@ export class SpeakingStore {
     if (!userTranscript || !assistantTranscript) return;
 
     const conversationId = this.state().conversationId ?? createSpeakingId();
+    await this.repository.beginConversation(conversationId);
     const settings = this.repository.loadSettings();
     const userMessage: SpeakingMessage = {
       id: createSpeakingId(),
