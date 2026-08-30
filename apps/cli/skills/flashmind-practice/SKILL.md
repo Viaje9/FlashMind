@@ -12,11 +12,12 @@ description: 透過 FlashMind CLI 取得完整目標單字與最近練習計畫�
 CLI 已透過全域 link（`npm link` 或 `pnpm link --global`）安裝。直接呼叫 `flashmind`，不需要切換工作目錄，也不用指定 CLI 腳本的絕對路徑。若找不到指令，檢查目前 shell 的 PATH 與全域 link 設定。
 
 ```sh
-flashmind practice context --api-url <FlashMind-API-origin>
+flashmind status
+flashmind practice context
 ```
 
-- 沿用使用者指定或本次已確認的 FlashMind API origin；也可使用 `FLASHMIND_API_URL`。沒有設定時先詢問，不自行猜正式站或改用另一個環境。
-- 尚未登入時，請使用者執行 `flashmind login --api-url <origin>`，在瀏覽器確認帳號與配對碼。不得讀取或輸出憑證檔，也不需要 OpenAI key。
+- 先用 `status` 確認有效 API origin、來源及帳號。CLI 優先序為 `--api-url` > `FLASHMIND_API_URL` > 最近成功登入的環境；一般指令不必重複指定網址。只有 `unconfigured` 才詢問 origin，不自行猜環境。若使用者明確指定不同環境，本次指令一致帶該 `--api-url`。
+- 初次登入使用 `flashmind login --api-url <origin>`；已設定環境重新登入可直接 `flashmind login`。只有登入成功才更新預設環境。`status` 只反映本機狀態，`status --check` 才向 API 驗證；網路或 5xx 錯誤不要求換 URL 或帳號。不得讀取或輸出憑證檔，也不需要 OpenAI key。
 - CLI 成功輸出的是 context 本體 JSON，不另有 `data` 包裝。讀取 `userId`、`vocabularyVersion`、`vocabularyCount`、完整 `targetVocabulary`、`lastPractice` 與 `nextPractice`；保留四種狀態，不只取待練習字詞。
 - context 失敗或不完整時先處理錯誤；不得假裝成功、使用其他帳號資料，或回退到 English Study 的 `summary.md`／網站。
 

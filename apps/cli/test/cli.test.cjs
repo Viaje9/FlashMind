@@ -182,7 +182,7 @@ test("解析、驗證、401、409 與 redirect 分別失敗且不輸出原文", 
 test("login 交換 cookie、檔案 0600、不印 token，取消不覆蓋原登入", async (t) => {
   let hash,
     denied = false;
-  const { run, origin, credential } = await setup(t, (req, res, body) => {
+  const { run, origin, credential, dir } = await setup(t, (req, res, body) => {
     if (req.url.endsWith("/authorizations")) {
       hash = body.verifierHash;
       res.end(
@@ -228,10 +228,204 @@ test("login 交換 cookie、檔案 0600、不印 token，取消不覆蓋原登�
     JSON.parse(await fs.readFile(credential)).token,
     "new-private-token",
   );
+  const active = path.join(dir, "active.json");
+  assert.equal(JSON.parse(await fs.readFile(active)).apiOrigin, origin);
+  assert.equal((await fs.stat(active)).mode & 0o777, 0o600);
+  assert.equal(
+    (await run(["login", "--no-browser"], { FLASHMIND_API_URL: "" })).code,
+    0,
+  );
+  await fs.writeFile(
+    active,
+    JSON.stringify({ schemaVersion: 1, apiOrigin: "https://previous.example" }),
+  );
   denied = true;
   assert.equal((await run(["login", "--no-browser"])).code, 3);
   assert.equal(
+    JSON.parse(await fs.readFile(active)).apiOrigin,
+    "https://previous.example",
+  );
+  assert.equal(
     JSON.parse(await fs.readFile(credential)).token,
     "new-private-token",
+  );
+});
+
+test("status 離線顯示預設 API、帳號與過期狀態，不洩漏 token", async (t) => {
+  let calls = 0;
+  const { run, dir, origin, credential } = await setup(t, (_, res) => {
+    calls++;
+    res.end("{}");
+  });
+  const env = { FLASHMIND_API_URL: "" };
+  assert.equal((await run(["status"], env)).json().status, "unconfigured");
+  await fs.writeFile(
+    path.join(dir, "active.json"),
+    JSON.stringify({ schemaVersion: 1, apiOrigin: origin }),
+    { mode: 0o600 },
+  );
+  let result = await run(["status"], env);
+  assert.equal(result.code, 0);
+  assert.equal(result.json().apiOrigin, origin);
+  assert.equal(result.json().status, "authenticated");
+  assert.equal(result.json().checked, false);
+  assert.equal(result.json().email, "test@example.test");
+  assert.doesNotMatch(result.stdout, /private-session|token/);
+  const value = JSON.parse(await fs.readFile(credential));
+  value.expiresAt = "2000-01-01T00:00:00Z";
+  await fs.writeFile(credential, JSON.stringify(value));
+  assert.equal((await run(["status"], env)).json().status, "expired");
+  assert.equal(calls, 0);
+});
+
+test("status --check 核對帳號；401、500 不刪除預設環境或憑證", async (t) => {
+  let status = 200,
+    userId = "user-1";
+  const { run, origin, dir, credential } = await setup(t, (req, res) => {
+    assert.equal(req.url, "/api/auth/me");
+    assert.equal(req.headers.cookie, "session=private-session");
+    res.statusCode = status;
+    res.end(
+      JSON.stringify({ data: { id: userId, email: "test@example.test" } }),
+    );
+  });
+  const active = path.join(dir, "active.json");
+  await fs.writeFile(
+    active,
+    JSON.stringify({ schemaVersion: 1, apiOrigin: origin }),
+    { mode: 0o600 },
+  );
+  const before = await fs.readFile(active, "utf8"),
+    secret = await fs.readFile(credential, "utf8");
+  const env = { FLASHMIND_API_URL: "" };
+  const ok = await run(["status", "--check"], env);
+  assert.equal(ok.code, 0);
+  assert.equal(ok.json().checked, true);
+  userId = "another";
+  assert.equal(
+    (await run(["status", "--check"], env)).json().error.code,
+    "TARGET_MISMATCH",
+  );
+  for (status of [401, 500]) {
+    const result = await run(["status", "--check"], env);
+    assert.equal(result.json().apiOrigin, origin);
+    assert.equal(
+      result.json().error.code,
+      status === 401 ? "AUTH_REQUIRED" : "API_ERROR",
+    );
+  }
+  assert.equal(await fs.readFile(active, "utf8"), before);
+  assert.equal(await fs.readFile(credential, "utf8"), secret);
+});
+
+test("URL 覆寫不改預設；環境變數優先於預設，旗標優先於環境變數", async (t) => {
+  const { run, dir, origin } = await setup(t, (_, res) => res.end("{}"));
+  const active = path.join(dir, "active.json");
+  await fs.writeFile(
+    active,
+    JSON.stringify({ schemaVersion: 1, apiOrigin: "https://saved.example" }),
+    { mode: 0o600 },
+  );
+  assert.equal((await run(["status"])).json().apiOrigin, origin);
+  assert.equal(
+    (await run(["status", "--api-url", "https://override.example"])).json()
+      .apiOrigin,
+    "https://override.example",
+  );
+  assert.equal(
+    (await run(["status"], { FLASHMIND_API_URL: "" })).json().apiOrigin,
+    "https://saved.example",
+  );
+  assert.equal(
+    (await run(["status", "--api-url"])).json().error.code,
+    "USAGE_ERROR",
+  );
+  assert.equal(
+    JSON.parse(await fs.readFile(active)).apiOrigin,
+    "https://saved.example",
+  );
+});
+
+test("context 與 review 自動沿用已保存環境，明確 URL 覆寫不切換", async (t) => {
+  const context = {
+    schemaVersion: 1,
+    userId: "user-1",
+    generatedAt: new Date().toISOString(),
+    vocabularyVersion: "v1",
+    vocabularyCount: 0,
+    targetVocabulary: [],
+    lastPractice: null,
+    nextPractice: null,
+  };
+  const { run, dir, origin, file } = await setup(t, (req, res) => {
+    assert.equal(req.headers.cookie, "session=private-session");
+    res.end(
+      JSON.stringify({
+        data: req.url.endsWith("practice-context")
+          ? context
+          : req.url.endsWith("/validate")
+            ? { valid: true, errors: [], warnings: [], contentHash: "hash" }
+            : {
+                sessionId: "s1",
+                reviewId: "r1",
+                status: "saved",
+                actualUseCount: 1,
+                recommendationCount: 0,
+              },
+      }),
+    );
+  });
+  const active = path.join(dir, "active.json");
+  await fs.writeFile(
+    active,
+    JSON.stringify({ schemaVersion: 1, apiOrigin: origin }),
+    { mode: 0o600 },
+  );
+  for (const args of [
+    ["practice", "context"],
+    ["review", "validate", file],
+    ["review", "save", file],
+  ]) {
+    assert.equal((await run(args, { FLASHMIND_API_URL: "" })).code, 0);
+  }
+  const before = await fs.readFile(active, "utf8");
+  assert.equal(
+    (
+      await run([
+        "practice",
+        "context",
+        "--api-url",
+        "https://unconfigured.example",
+      ])
+    ).json().error.code,
+    "AUTH_REQUIRED",
+  );
+  assert.equal(await fs.readFile(active, "utf8"), before);
+});
+
+test("損壞與 symlink 的環境設定拒絕使用，沒有設定時不掃描或猜測帳號", async (t) => {
+  const { run, dir } = await setup(t, (_, res) => res.end("{}"));
+  const env = { FLASHMIND_API_URL: "" };
+  assert.equal(
+    (await run(["practice", "context"], env)).json().error.code,
+    "CONFIG_REQUIRED",
+  );
+  const active = path.join(dir, "active.json");
+  await fs.writeFile(active, "{broken", { mode: 0o600 });
+  assert.equal(
+    (await run(["status"], env)).json().error.code,
+    "CONFIG_INVALID",
+  );
+  await fs.unlink(active);
+  const target = path.join(dir, "target.json");
+  await fs.writeFile(
+    target,
+    JSON.stringify({ schemaVersion: 1, apiOrigin: "https://example.test" }),
+    { mode: 0o600 },
+  );
+  await fs.symlink(target, active);
+  assert.equal(
+    (await run(["status"], env)).json().error.code,
+    "CONFIG_INVALID",
   );
 });

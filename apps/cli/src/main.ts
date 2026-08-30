@@ -44,7 +44,7 @@ interface Credential {
 }
 const output = (value: unknown) =>
   process.stdout.write(JSON.stringify(value) + "\n");
-const help = `flashmind — 練習上下文與 Review 保存\n\n  flashmind login [--no-browser]\n  flashmind practice context\n  flashmind review validate <file>\n  flashmind review save <file>\n\n共用參數：--api-url <origin>（亦可設定 FLASHMIND_API_URL）\n憑證：FLASHMIND_CONFIG_DIR，預設 ~/.config/flashmind；不得放在 repo。\ncontext／validate 不保存學習紀錄；save 才正式寫入。\n`;
+const help = `flashmind — 練習上下文與 Review 保存\n\n  flashmind login [--no-browser]\n  flashmind status [--check]\n  flashmind practice context\n  flashmind transcript export <thread> --before-message <id> [--output-temp]\n  flashmind transcript export --current [--output-temp]\n  flashmind review validate <file>\n  flashmind review save <file>\n\nAPI 優先序：--api-url > FLASHMIND_API_URL > 最近成功登入的環境。登入成功才切換預設；其他指令覆寫只影響本次。\n憑證：FLASHMIND_CONFIG_DIR，預設 ~/.config/flashmind；不得放在 repo。\ncontext／validate 不保存學習紀錄；save 才正式寫入。\n`;
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -55,34 +55,38 @@ function parseArgs() {
   let rawOrigin = process.env.FLASHMIND_API_URL;
   const index = args.indexOf("--api-url");
   if (index >= 0) {
+    if (!args[index + 1] || args[index + 1].startsWith("-"))
+      throw new CliError("USAGE_ERROR", "--api-url 必須提供網址", 2);
     rawOrigin = args[index + 1];
     args.splice(index, 2);
   }
   const noBrowser = args.includes("--no-browser");
   if (noBrowser) args.splice(args.indexOf("--no-browser"), 1);
+  const check = args.includes("--check");
+  if (check) args.splice(args.indexOf("--check"), 1);
   const command =
-    args[0] === "login" && args.length === 1
-      ? "login"
-      : args[0] === "practice" && args[1] === "context" && args.length === 2
-        ? "context"
-        : args[0] === "review" &&
-            ["validate", "save"].includes(args[1]) &&
-            args.length === 3 &&
-            !args[2].startsWith("-")
-          ? args[1]
-          : null;
-  if (!command || (noBrowser && command !== "login"))
-    throw new CliError(
-      "USAGE_ERROR",
-      "請使用 --help 查看四個命令及必要參數",
-      2,
-    );
-  if (!rawOrigin)
-    throw new CliError(
-      "CONFIG_REQUIRED",
-      "請以 --api-url 或 FLASHMIND_API_URL 指定 FlashMind API origin",
-      2,
-    );
+    args[0] === "status" && args.length === 1
+      ? "status"
+      : args[0] === "login" && args.length === 1
+        ? "login"
+        : args[0] === "practice" && args[1] === "context" && args.length === 2
+          ? "context"
+          : args[0] === "review" &&
+              ["validate", "save"].includes(args[1]) &&
+              args.length === 3 &&
+              !args[2].startsWith("-")
+            ? args[1]
+            : null;
+  if (
+    !command ||
+    (noBrowser && command !== "login") ||
+    (check && command !== "status")
+  )
+    throw new CliError("USAGE_ERROR", "請使用 --help 查看命令及必要參數", 2);
+  return { command, rawOrigin, file: args[2], noBrowser, check };
+}
+
+function normalizeOrigin(rawOrigin: string): string {
   let url: URL;
   try {
     url = new URL(rawOrigin);
@@ -107,10 +111,10 @@ function parseArgs() {
       2,
     );
   }
-  return { command, origin: url.origin, file: args[2], noBrowser };
+  return url.origin;
 }
 
-async function credentialFile(origin: string): Promise<string> {
+async function configDirectory(): Promise<string> {
   const directory = resolve(
     process.env.FLASHMIND_CONFIG_DIR ?? join(homedir(), ".config", "flashmind"),
   );
@@ -124,12 +128,18 @@ async function credentialFile(origin: string): Promise<string> {
   if (!fromRepo || (!fromRepo.startsWith("..") && !isAbsolute(fromRepo)))
     throw new CliError("CONFIG_UNSAFE", "請將憑證目錄放在 repo 外", 2);
   await chmod(directory, 0o700);
+  return real;
+}
+async function credentialFile(origin: string): Promise<string> {
   return join(
-    real,
+    await configDirectory(),
     createHash("sha256").update(origin).digest("hex") + ".json",
   );
 }
-async function loadCredential(origin: string): Promise<Credential> {
+async function loadCredential(
+  origin: string,
+  allowExpired = false,
+): Promise<Credential> {
   try {
     const file = await open(
       await credentialFile(origin),
@@ -148,8 +158,10 @@ async function loadCredential(origin: string): Promise<Credential> {
         value.schemaVersion !== 1 ||
         value.apiOrigin !== origin ||
         !value.userId ||
+        typeof value.email !== "string" ||
         !/^[A-Za-z0-9._~-]+$/.test(value.token) ||
-        !(Date.parse(value.expiresAt) > Date.now())
+        !Number.isFinite(Date.parse(value.expiresAt)) ||
+        (!allowExpired && !(Date.parse(value.expiresAt) > Date.now()))
       )
         throw new Error("invalid credential");
       return value;
@@ -184,6 +196,122 @@ async function saveCredential(value: Credential) {
       "無法保存登入憑證，請重新登入",
       6,
     );
+  }
+}
+
+async function activeOrigin(): Promise<string | undefined> {
+  try {
+    const handle = await open(
+      join(await configDirectory(), "active.json"),
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    try {
+      const info = await handle.stat();
+      if (
+        !info.isFile() ||
+        info.size > 16384 ||
+        (info.mode & 0o077) !== 0 ||
+        (process.getuid && info.uid !== process.getuid())
+      )
+        throw new Error("unsafe config");
+      const value = JSON.parse(await handle.readFile("utf8"));
+      if (value.schemaVersion !== 1 || typeof value.apiOrigin !== "string")
+        throw new Error("invalid config");
+      return normalizeOrigin(value.apiOrigin);
+    } finally {
+      await handle.close();
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    if (error instanceof CliError) throw error;
+    throw new CliError(
+      "CONFIG_INVALID",
+      "目前環境設定損壞或權限不安全；請以 --api-url 重新登入",
+      2,
+    );
+  }
+}
+async function saveActiveOrigin(origin: string) {
+  const directory = await configDirectory();
+  const temp = join(directory, `.active-${randomBytes(12).toString("hex")}`);
+  const handle = await open(temp, "wx", 0o600);
+  try {
+    try {
+      await handle.writeFile(
+        JSON.stringify({ schemaVersion: 1, apiOrigin: origin }),
+      );
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await rename(temp, join(directory, "active.json"));
+  } catch {
+    await unlink(temp).catch(() => {});
+    throw new CliError(
+      "CONFIG_WRITE_FAILED",
+      "登入憑證已保存，但預設環境未更新；可帶 --api-url 使用",
+      6,
+    );
+  }
+}
+async function showStatus(
+  origin: string | undefined,
+  originSource: string,
+  check: boolean,
+) {
+  if (!origin) {
+    output({
+      status: "unconfigured",
+      apiOrigin: null,
+      checked: false,
+      message: "請先執行 flashmind login --api-url <origin>",
+    });
+    if (check) process.exitCode = 2;
+    return;
+  }
+  let credential: Credential | undefined;
+  try {
+    credential = await loadCredential(origin, true);
+    if (check) {
+      const { data } = await request(origin, "/auth/me", undefined, credential);
+      const user = data as { id?: string; email?: string } | null;
+      if (
+        !user ||
+        typeof user.id !== "string" ||
+        typeof user.email !== "string"
+      )
+        throw new CliError("RESPONSE_INVALID", "帳號檢查回應不完整", 6);
+      if (user.id !== credential.userId)
+        throw new CliError(
+          "TARGET_MISMATCH",
+          "伺服器帳號與本機登入不同，未切換帳號",
+          4,
+        );
+    }
+    output({
+      status:
+        !check && Date.parse(credential.expiresAt) <= Date.now()
+          ? "expired"
+          : "authenticated",
+      apiOrigin: origin,
+      originSource,
+      checked: check,
+      userId: credential.userId,
+      email: credential.email,
+      expiresAt: credential.expiresAt,
+    });
+  } catch (error) {
+    if (!(error instanceof CliError)) throw error;
+    output({
+      status:
+        error.code === "AUTH_REQUIRED" ? "login_required" : "check_failed",
+      apiOrigin: origin,
+      originSource,
+      checked: check && Boolean(credential),
+      error: { code: error.code, message: error.message },
+    });
+    if (check || error.code !== "AUTH_REQUIRED")
+      process.exitCode = error.exitCode;
   }
 }
 
@@ -337,6 +465,7 @@ async function login(origin: string, noBrowser: boolean) {
         token: cookie,
         expiresAt: status.expiresAt,
       });
+      await saveActiveOrigin(origin);
       output({
         status: "authenticated",
         apiOrigin: origin,
@@ -398,14 +527,32 @@ async function readDraft(
 async function main() {
   const args = parseArgs();
   if (!args) return;
-  if (args.command === "login") {
-    await login(args.origin, args.noBrowser);
+  const origin = args.rawOrigin
+    ? normalizeOrigin(args.rawOrigin)
+    : await activeOrigin();
+  const originSource = args.rawOrigin
+    ? process.argv.includes("--api-url")
+      ? "argument"
+      : "environment"
+    : "saved";
+  if (args.command === "status") {
+    await showStatus(origin, originSource, args.check);
     return;
   }
-  const credential = await loadCredential(args.origin);
+  if (!origin)
+    throw new CliError(
+      "CONFIG_REQUIRED",
+      "尚未設定環境，請先執行 flashmind login --api-url <origin>",
+      2,
+    );
+  if (args.command === "login") {
+    await login(origin, args.noBrowser);
+    return;
+  }
+  const credential = await loadCredential(origin);
   if (args.command === "context") {
     const { data } = await request(
-      args.origin,
+      origin,
       "/speaking/practice-context",
       undefined,
       credential,
@@ -429,7 +576,7 @@ async function main() {
   }
   const draft = await readDraft(args.file, credential);
   const { data } = await request(
-    args.origin,
+    origin,
     "/speaking/reviews/validate",
     draft,
     credential,
@@ -442,12 +589,7 @@ async function main() {
     if (!validation.valid) process.exitCode = 4;
     return;
   }
-  const saved = await request(
-    args.origin,
-    "/speaking/reviews",
-    draft,
-    credential,
-  );
+  const saved = await request(origin, "/speaking/reviews", draft, credential);
   if (validateStructure("SpeakingSavedReview", saved.data).length)
     throw new CliError(
       "RESPONSE_INVALID",

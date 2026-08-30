@@ -22,6 +22,7 @@ describe('Speaking 舊資料搬移', () => {
     api: Record<string, ReturnType<typeof vi.fn>>,
     store: SpeakingMigrationStore;
   beforeEach(() => {
+    localStorage.clear();
     user.set({ id: 'u1', email: 'u1@example.test' });
     local = {
       listConversations: vi.fn(async () => [conversation]),
@@ -92,5 +93,62 @@ describe('Speaking 舊資料搬移', () => {
     user.set({ id: 'u2', email: 'u2@example.test' });
     await store.migrate();
     expect(api['migrateSpeakingHistory']).not.toHaveBeenCalled();
+  });
+
+  it('收起後重新進入仍保持收起，可展開且不搬移或修改原紀錄', async () => {
+    await store.scan();
+    store.toggle('old-1');
+    store.confirmOwner(true);
+    store.setCollapsed(true);
+    expect(store.collapsed()).toBe(true);
+    expect(store.selected()).toEqual([]);
+    expect(store.confirmed()).toBe(false);
+    const reopened = TestBed.runInInjectionContext(() => new SpeakingMigrationStore());
+    await reopened.scan();
+    expect(reopened.collapsed()).toBe(true);
+    expect(reopened.entries()).toHaveLength(1);
+    reopened.setCollapsed(false);
+    expect(reopened.collapsed()).toBe(false);
+    expect(api['migrateSpeakingHistory']).not.toHaveBeenCalled();
+    expect(local['saveConversation']).not.toHaveBeenCalled();
+  });
+
+  it('收起偏好依帳號區分', async () => {
+    await store.scan();
+    store.setCollapsed(true);
+    user.set({ id: 'u2', email: 'u2@example.test' });
+    await store.scan();
+    expect(store.collapsed()).toBe(false);
+    user.set({ id: 'u1', email: 'u1@example.test' });
+    await store.scan();
+    expect(store.collapsed()).toBe(true);
+  });
+
+  it('只移除成功搬移項目，失敗項目保留選取供重試', async () => {
+    const second = { ...conversation, id: 'old-2', title: '其他紀錄' };
+    local['listConversations'].mockResolvedValue([conversation, second]);
+    local['getConversation'].mockImplementation(async (id: string) => ({
+      conversation: id === second.id ? second : conversation,
+      messages: [],
+    }));
+    api['migrateSpeakingHistory']
+      .mockReturnValueOnce(
+        of({ data: [{ clientSessionId: 'old-1', sessionId: 's1', status: 'imported' }] }),
+      )
+      .mockReturnValueOnce(throwError(() => new Error('offline')));
+    await store.scan();
+    store.toggle('old-1');
+    store.toggle('old-2');
+    store.confirmOwner(true);
+    await store.migrate();
+    expect(store.entries().map((entry) => entry.id)).toEqual(['old-2']);
+    expect(store.selected()).toEqual(['old-2']);
+    expect(store.results().map((result) => result.status)).toEqual(['imported', 'failed']);
+    api['migrateSpeakingHistory'].mockReturnValueOnce(
+      of({ data: [{ clientSessionId: 'old-2', sessionId: 's2', status: 'alreadyImported' }] }),
+    );
+    await store.migrate();
+    expect(store.entries()).toEqual([]);
+    expect(store.selected()).toEqual([]);
   });
 });

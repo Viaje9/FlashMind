@@ -21,8 +21,26 @@ export class SpeakingMigrationStore {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly results = signal<SpeakingMigrationResult[]>([]);
+  private readonly collapsedOwner = signal<string | null>(null);
+  readonly collapsed = computed(() => !!this.user() && this.collapsedOwner() === this.user()?.id);
   private readonly confirmedState = signal<string | null>(null);
   readonly confirmed = computed(() => !!this.user() && this.confirmedState() === this.user()?.id);
+  private collapseKey(owner: string) {
+    return `flashmind.speaking.migration.collapsed:${owner}`;
+  }
+  setCollapsed(value: boolean) {
+    const owner = this.user()?.id;
+    if (!owner || this.busy()) return;
+    this.collapsedOwner.set(value ? owner : null);
+    this.selected.set([]);
+    this.confirmOwner(false);
+    try {
+      if (value) localStorage.setItem(this.collapseKey(owner), '1');
+      else localStorage.removeItem(this.collapseKey(owner));
+    } catch {
+      // 儲存空間不可用時仍可收合，不影響原始紀錄與搬移。
+    }
+  }
   confirmOwner(value: boolean) {
     this.confirmedOwner = value ? (this.user()?.id ?? null) : null;
     this.confirmedState.set(this.confirmedOwner);
@@ -36,6 +54,11 @@ export class SpeakingMigrationStore {
   async scan() {
     const owner = this.user()?.id;
     if (!owner) return;
+    try {
+      this.collapsedOwner.set(localStorage.getItem(this.collapseKey(owner)) === '1' ? owner : null);
+    } catch {
+      this.collapsedOwner.set(null);
+    }
     this.scannedOwner = owner;
     this.confirmOwner(false);
     this.selected.set([]);
@@ -111,6 +134,12 @@ export class SpeakingMigrationStore {
               ...backedUp,
               migratedTo: { ...backedUp.migratedTo, [owner]: result.sessionId },
             });
+            if (this.user()?.id === owner) {
+              this.entries.update((entries) => entries.filter((entry) => entry.id !== id));
+              this.selected.update((selected) =>
+                selected.filter((selectedId) => selectedId !== id),
+              );
+            }
           }
         } catch {
           result = {
