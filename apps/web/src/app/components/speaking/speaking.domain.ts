@@ -27,6 +27,8 @@ export interface SpeakingMessage {
 }
 
 export interface SpeakingConversation {
+  startedAt?: string;
+  endedAt?: string | null;
   ownerId?: string;
   source?: 'APP' | 'LOCAL';
   reviewed?: boolean;

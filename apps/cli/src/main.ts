@@ -21,19 +21,18 @@ import {
   type CliAuthorizationStatus,
   type SpeakingPracticeContext,
   type SpeakingReviewDraft,
-  type SpeakingReviewValidation,
+  type SpeakingSavedReview,
 } from "@flashmind/shared";
-
-class CliError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly exitCode: number,
-    readonly details?: unknown,
-  ) {
-    super(message);
-  }
-}
+import { CliError } from "./errors";
+import {
+  checkContext,
+  isReviewId,
+  parseLocalCommand,
+  readManagedDraft,
+  recordReceipt,
+  runLocalCommand,
+  validateLocalReview,
+} from "./review-local";
 interface Credential {
   schemaVersion: 1;
   apiOrigin: string;
@@ -44,7 +43,32 @@ interface Credential {
 }
 const output = (value: unknown) =>
   process.stdout.write(JSON.stringify(value) + "\n");
-const help = `flashmind — 練習上下文與 Review 保存\n\n  flashmind login [--no-browser]\n  flashmind status [--check]\n  flashmind practice context\n  flashmind transcript export <thread> --before-message <id> [--output-temp]\n  flashmind transcript export --current [--output-temp]\n  flashmind review validate <file>\n  flashmind review save <file>\n\nAPI 優先序：--api-url > FLASHMIND_API_URL > 最近成功登入的環境。登入成功才切換預設；其他指令覆寫只影響本次。\n憑證：FLASHMIND_CONFIG_DIR，預設 ~/.config/flashmind；不得放在 repo。\ncontext／validate 不保存學習紀錄；save 才正式寫入。\n`;
+const help = `flashmind — 練習上下文與 Review 保存
+
+  flashmind login [--no-browser]
+  flashmind status [--check]
+  flashmind practice context
+  flashmind transcript export <thread> --before-message <id> [--output-temp]
+  flashmind transcript export --current [--output-temp]
+  flashmind transcript show <thread | --current> [--offset 0] [--limit 50]
+  flashmind review prepare <thread | --current> --before-message <id> [--from-message <id>] [--title <標題>]
+  flashmind review import --file <既有完整草稿.json>
+  flashmind review refresh <id>
+  flashmind review list [--offset 0] [--limit 50]
+  flashmind review show <id> [--section metadata|transcript|context|draft|result|review|summary|actualUses|recommendations|nextPractice|deckCandidates] [--offset 0] [--limit 50]
+  flashmind review vocabulary <id> [--terms task,limited] [--offset 0] [--limit 50]
+  flashmind review update <id> --result <回顧內容.json>
+  flashmind review validate <file | id>
+  flashmind review save <file | id>
+
+API 優先序：--api-url > FLASHMIND_API_URL > 最近成功登入的環境。登入成功才切換預設；其他指令覆寫只影響本次。
+憑證：FLASHMIND_CONFIG_DIR，預設 ~/.config/flashmind；不得放在 repo。
+本機資料：FLASHMIND_DATA_DIR，預設 ~/.local/share/flashmind；與 repo、憑證分開。
+prepare／import／refresh 只 GET 最新 context；list／show／vocabulary／update／validate 不需登入、不連線。
+show 的分頁只用於 transcript；vocabulary 和 list 支援分頁，limit 上限 200。
+validate 只做本機驗證、不寫檔；傳入 ID 可核對字庫快照，獨立草稿檔只檢查契約與原句證據。
+只有 save 上傳完整草稿，由保存 API 驗證後正式寫入；不另呼叫遠端 validate。
+`;
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -64,8 +88,10 @@ function parseArgs() {
   if (noBrowser) args.splice(args.indexOf("--no-browser"), 1);
   const check = args.includes("--check");
   if (check) args.splice(args.indexOf("--check"), 1);
-  const command =
-    args[0] === "status" && args.length === 1
+  const local = parseLocalCommand(args);
+  const command = local
+    ? "local"
+    : args[0] === "status" && args.length === 1
       ? "status"
       : args[0] === "login" && args.length === 1
         ? "login"
@@ -83,7 +109,7 @@ function parseArgs() {
     (check && command !== "status")
   )
     throw new CliError("USAGE_ERROR", "請使用 --help 查看命令及必要參數", 2);
-  return { command, rawOrigin, file: args[2], noBrowser, check };
+  return { command, rawOrigin, file: args[2], noBrowser, check, local };
 }
 
 function normalizeOrigin(rawOrigin: string): string {
@@ -527,6 +553,20 @@ async function readDraft(
 async function main() {
   const args = parseArgs();
   if (!args) return;
+  if (args.command === "validate") {
+    const result = await validateLocalReview(args.file);
+    output(result);
+    if (!result.valid) process.exitCode = 4;
+    return;
+  }
+  if (
+    args.local &&
+    !["prepare", "refresh", "import"].includes(args.local.command)
+  ) {
+    const result = await runLocalCommand(args.local);
+    output(result);
+    return;
+  }
   const origin = args.rawOrigin
     ? normalizeOrigin(args.rawOrigin)
     : await activeOrigin();
@@ -550,7 +590,17 @@ async function main() {
     return;
   }
   const credential = await loadCredential(origin);
-  if (args.command === "context") {
+  const getContext = async (target?: SpeakingReviewDraft["target"]) => {
+    const currentTarget = { apiOrigin: origin, userId: credential.userId };
+    if (
+      target &&
+      (target.apiOrigin !== origin || target.userId !== credential.userId)
+    )
+      throw new CliError(
+        "TARGET_MISMATCH",
+        "草稿帳號或 API origin 與本機登入不同，未傳送資料",
+        4,
+      );
     const { data } = await request(
       origin,
       "/speaking/practice-context",
@@ -558,37 +608,25 @@ async function main() {
       credential,
     );
     const context = data as SpeakingPracticeContext;
-    if (
-      validateStructure("SpeakingPracticeContext", data).length ||
-      context.userId !== credential.userId ||
-      context.vocabularyCount !== context.targetVocabulary.length ||
-      !context.vocabularyVersion ||
-      new Set(context.targetVocabulary.map((word) => word.id)).size !==
-        context.vocabularyCount
-    )
-      throw new CliError(
-        "CONTEXT_INVALID",
-        "上下文不完整、總數不符或帳號不同，不會輸出部分字表",
-        4,
-      );
-    output(context);
+    checkContext(context, currentTarget);
+    return { target: currentTarget, email: credential.email, context };
+  };
+  if (args.local) {
+    output(await runLocalCommand(args.local, getContext));
     return;
   }
-  const draft = await readDraft(args.file, credential);
-  const { data } = await request(
-    origin,
-    "/speaking/reviews/validate",
-    draft,
-    credential,
-  );
-  if (validateStructure("SpeakingReviewValidation", data).length)
-    throw new CliError("RESPONSE_INVALID", "驗證回應格式錯誤", 6);
-  const validation = data as SpeakingReviewValidation;
-  if (args.command === "validate" || !validation.valid) {
-    output(validation);
-    if (!validation.valid) process.exitCode = 4;
+  if (args.command === "context") {
+    output((await getContext()).context);
     return;
   }
+  const managed = isReviewId(args.file);
+  const draft = managed
+    ? await readManagedDraft(args.file, {
+        apiOrigin: origin,
+        userId: credential.userId,
+      })
+    : await readDraft(args.file, credential);
+  // 保存 API 會在交易中核對即時帳號、字庫及重複來源，不預先上傳到驗證 endpoint。
   const saved = await request(origin, "/speaking/reviews", draft, credential);
   if (validateStructure("SpeakingSavedReview", saved.data).length)
     throw new CliError(
@@ -596,6 +634,18 @@ async function main() {
       "保存回應格式錯誤，可使用同一草稿重試",
       6,
     );
+  if (managed) {
+    try {
+      await recordReceipt(args.file, draft, saved.data as SpeakingSavedReview);
+    } catch {
+      // 正式保存已成功，不能將本機收據失敗描述成遠端保存失敗。
+      output(saved.data);
+      process.stderr.write(
+        "API 已保存成功，但本機收據未更新；請保留上方場次 ID，勿另建來源識別。\n",
+      );
+      return;
+    }
+  }
   output(saved.data);
 }
 main().catch((error) => {

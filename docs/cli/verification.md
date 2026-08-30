@@ -2,6 +2,19 @@
 
 日期：2026-08-30。測試使用 `speaking_cli_test`，未使用使用者學習資料。
 
+## 本機 Review 管理追加驗收（2026-08-30）
+
+- [x] CLI／shared 建置與全部 34 項 CLI 測試通過，其中本次新增 9 項本機 Review 流程測試、1 項逐字稿分頁測試。
+- [x] 驗證 prepare、import、refresh 僅 GET context；list、show、vocabulary、update、validate 不連線，不依賴登入。
+- [x] validate 支援 ID 與舊草稿檔，兩者均零連線、零寫入；即使環境無效或沒有登入憑證也可操作。ID 核對字庫快照，獨立檔案明示較窄的 draft-only 驗證範圍。
+- [x] 使用 localhost 假 API 驗證 save 僅 POST 一次至保存 endpoint，不再呼叫遠端 validate，也不夾帶本機 context 或管理收據。
+- [x] 同來源 ID 穩定、舊草稿來源保留、環境帳號隔離、引文錯誤保留原稿、context 過期阻擋上傳、已保存來源禁止改寫。
+- [x] 私有權限、符號連結、repo 內資料根目錄、路徑越界、寫入鎖、大小上限與分頁結束資訊均有測試。
+- [x] Review 技能通過格式驗證並同步全域安裝，來源與安裝後的 SKILL.md、草稿參考文件一致。
+- [x] 經使用者要求，以新 import 命令將其既有 76 則訊息草稿保存至固定本機位置；以 CLI 完成本機驗證、單字查詢、最後一頁逐字稿查閱。原暫存稿保留。
+
+上述自動測試使用虛構逐字稿、臨時憑證與 localhost 假 API；真實草稿的 import 只 GET 已確認帳號的最新字庫並寫入本機，validate 完全離線。未上傳真實逐字稿、未執行該草稿的 save、未計次或建卡。App 使用的後端驗證 endpoint 保留，本次沒有修改後端契約，也未重跑完整產品瀏覽器 E2E；下方既有產品驗收結果不代表本次重新執行。
+
 ## 已完成的驗證
 
 - API 全套非 DB 測試：319 項通過；19 項隔離 PostgreSQL 測試另行執行並通過。

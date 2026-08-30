@@ -19,7 +19,7 @@ safeRenderer.html = ({ text }) => escapeHtml(text);
  * 只修正已知的鬆散格式，並避開 fenced code 與 inline code，讓實際的
  * Markdown 語意仍交由 marked 處理。
  */
-export function normalizeStudyAssistantMarkdown(content: string): string {
+export function normalizeAssistantMarkdown(content: string): string {
   const lines = content.split('\n');
   const normalized: string[] = [];
   let fenceMarker: string | null = null;
@@ -62,8 +62,8 @@ export function normalizeStudyAssistantMarkdown(content: string): string {
   return normalized.join('\n');
 }
 
-export function renderStudyAssistantMarkdown(content: string): string {
-  const rendered = marked.parse(normalizeStudyAssistantMarkdown(content), {
+export function renderAssistantMarkdown(content: string): string {
+  const rendered = marked.parse(normalizeAssistantMarkdown(content), {
     async: false,
     breaks: true,
     gfm: true,
@@ -73,7 +73,7 @@ export function renderStudyAssistantMarkdown(content: string): string {
   return rendered.replace(
     /<table>([\s\S]*?)<\/table>/g,
     (_match, tableContent: string) =>
-      `<div class="study-assistant-markdown-table-wrap"><table>${tableContent}</table></div>`,
+      `<div class="assistant-markdown-table-wrap"><table>${tableContent}</table></div>`,
   );
 }
 

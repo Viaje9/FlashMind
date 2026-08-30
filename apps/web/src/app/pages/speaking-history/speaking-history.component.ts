@@ -9,11 +9,14 @@ import {
   type SpeakingMessage,
 } from '../../components/speaking/speaking.domain';
 import { SpeakingSummaryComponent } from '../../components/speaking/speaking-summary.component';
+import { SpeakingReviewDiscussionComponent } from '../../components/speaking/speaking-review-discussion.component';
 import { SpeakingRepository } from '../../components/speaking/speaking.repository';
+import { estimateSpeakingDurationMinutes } from '@flashmind/shared/speaking-duration';
 
 @Component({
   selector: 'app-speaking-history-page',
   imports: [
+    SpeakingReviewDiscussionComponent,
     RouterLink,
     A11yModule,
     FmPageHeaderComponent,
@@ -46,9 +49,10 @@ export class SpeakingHistoryComponent implements OnInit {
   get continueLabel(): string {
     return this.selectedConversation?.source === 'APP' && !this.selectedConversation.reviewed
       ? '繼續對話'
-      : '延續為新練習';
+      : '討論改進方向';
   }
 
+  readonly discussing = signal(false);
   readonly loading = signal(true);
   readonly deletingId = signal<string | null>(null);
   readonly copiedConversationId = signal<string | null>(null);
@@ -86,6 +90,7 @@ export class SpeakingHistoryComponent implements OnInit {
   }
 
   closeDetail(): void {
+    this.discussing.set(false);
     this.detailRequest++;
     this.audio.stop();
     this.selectedConversationId.set(null);
@@ -98,6 +103,12 @@ export class SpeakingHistoryComponent implements OnInit {
       return;
     }
 
+    if (this.loadingDetail() || this.error() || !this.selectedConversation) return;
+    if (this.selectedConversation.source !== 'APP' || this.selectedConversation.reviewed) {
+      this.audio.stop();
+      this.discussing.set(true);
+      return;
+    }
     await this.router.navigate(['/speaking'], { queryParams: { conversationId } });
   }
 
@@ -162,11 +173,18 @@ export class SpeakingHistoryComponent implements OnInit {
 
   formatUpdatedAt(value: string): string {
     return new Intl.DateTimeFormat('zh-TW', {
+      year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(value));
+  }
+
+  formatDuration(conversation: SpeakingConversation): string | null {
+    const minutes = estimateSpeakingDurationMinutes(conversation.startedAt, conversation.endedAt);
+    if (minutes === null) return null;
+    return minutes === 0 ? '練習時間：不到 1 分鐘' : `練習時間：${minutes} 分鐘`;
   }
 
   async loadConversations(append = false): Promise<void> {

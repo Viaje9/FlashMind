@@ -1,0 +1,170 @@
+app-assistant-markdown {
+  display: block;
+  min-width: 0;
+}
+.assistant-markdown {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.assistant-markdown {
+  font-size: 0.9rem;
+  letter-spacing: 0.008em;
+  line-height: 1.72;
+}
+
+.assistant-markdown :where(p) {
+  margin: 0 0 0.75rem;
+}
+
+.assistant-markdown :where(p:last-child) {
+  margin-bottom: 0;
+}
+
+.assistant-markdown :where(strong) {
+  font-weight: 750;
+}
+
+.assistant-markdown :where(em) {
+  font-style: italic;
+}
+
+.assistant-markdown :where(del) {
+  text-decoration: line-through;
+}
+
+.assistant-markdown :where(h1, h2, h3, h4, h5, h6) {
+  margin: 1rem 0 0.55rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.assistant-markdown :where(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}
+
+.assistant-markdown :where(h1) {
+  font-size: 1.15rem;
+}
+
+.assistant-markdown :where(h2) {
+  font-size: 1.05rem;
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.assistant-markdown :where(h3, h4, h5, h6) {
+  font-size: 0.95rem;
+}
+
+.assistant-markdown :where(ul, ol) {
+  margin: 0.45rem 0 0.85rem;
+  padding-left: 1.35rem;
+}
+
+.assistant-markdown :where(ul) {
+  list-style: disc;
+}
+
+.assistant-markdown :where(ol) {
+  list-style: decimal;
+}
+
+.assistant-markdown :where(li) {
+  margin: 0.35rem 0;
+}
+
+.assistant-markdown :where(br) {
+  display: block;
+  margin-top: 0.25rem;
+  content: '';
+}
+
+.assistant-markdown :where(blockquote) {
+  margin: 0.7rem 0;
+  border-left: 3px solid color-mix(in srgb, var(--color-primary) 45%, rgb(148 163 184));
+  padding-left: 0.7rem;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+.assistant-markdown :where(hr) {
+  margin: 0.95rem 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.assistant-markdown :where(code) {
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  padding: 0.08rem 0.28rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.assistant-markdown :where(pre) {
+  margin: 0.7rem 0;
+  overflow-x: auto;
+  border-radius: 0.55rem;
+  background: rgb(15 23 42 / 0.92);
+  padding: 0.65rem 0.75rem;
+  color: rgb(226 232 240);
+}
+
+.assistant-markdown :where(pre code) {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.assistant-markdown :where(a) {
+  color: color-mix(in srgb, var(--color-primary) 85%, rgb(2 132 199));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.assistant-markdown-table-wrap {
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.assistant-markdown :where(table) {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, rgb(203 213 225));
+  border-radius: 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.assistant-markdown :where(th, td) {
+  min-width: 5.5rem;
+  border-right: 1px solid color-mix(in srgb, var(--color-primary) 12%, rgb(226 232 240));
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 12%, rgb(226 232 240));
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.assistant-markdown :where(th:last-child, td:last-child) {
+  border-right: 0;
+}
+
+.assistant-markdown :where(tbody tr:last-child td) {
+  border-bottom: 0;
+}
+
+.assistant-markdown :where(th) {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.assistant-markdown :where(tbody tr:nth-child(even) td) {
+  background: color-mix(in srgb, currentColor 3%, transparent);
+}

@@ -180,3 +180,31 @@ test("--current 缺少或不合法的環境 ID 不猜最近任務；指定任務
     assert.equal(run().status, 2);
   }
 });
+
+test("show 分頁保留原文與邊界訊息，最後一頁明確結束且拒絕非法參數", async (t) => {
+  const { root } = await fixture(t);
+  const run = (...args) =>
+    spawnSync(process.execPath, [bin, "transcript", "show", id, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, CODEX_HOME: root },
+    });
+  const first = JSON.parse(run("--limit", "2").stdout);
+  assert.equal(first.total, 4);
+  assert.equal(first.nextOffset, 2);
+  assert.equal(first.reviewReady, false);
+  assert.equal(first.messages[1].text, " I check another task. ");
+  const last = JSON.parse(run("--offset", "2", "--limit", "2").stdout);
+  assert.deepEqual(
+    last.messages.map((m) => m.id),
+    ["end", "review"],
+  );
+  assert.equal(last.nextOffset, null);
+  for (const args of [
+    ["--limit", "0"],
+    ["--limit", "201"],
+    ["--offset", "-1"],
+    ["--output", "file"],
+    ["--offset", "0", "--offset", "1"],
+  ])
+    assert.equal(run(...args).status, 2);
+});

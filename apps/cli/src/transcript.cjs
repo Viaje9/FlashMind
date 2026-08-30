@@ -15,6 +15,10 @@ const help = `flashmind transcript export <--current | thread-id 或 codex://thr
 未指定 --before-message 時含全部語音訊息（可能含 Review），reviewReady=false。
 只支援本機 Codex 語音紀錄；讀取 CODEX_HOME（預設 ~/.codex）。
 不需要 API origin 或登入，不保存學習紀錄，不覆蓋檔案。
+
+分頁核對原始語音與起訖訊息：
+  flashmind transcript show <--current | thread> [--offset 0] [--limit 50]
+回傳 total 與 nextOffset；不是已選定範圍的 Review，不建立暫存檔。
 `;
 function fail(code, message) {
   throw Object.assign(new Error(message), { code });
@@ -36,11 +40,8 @@ async function findFiles(dir, id) {
   }
   return result;
 }
-async function run(args) {
-  if (args.includes("--help") || args.includes("-h")) {
-    process.stdout.write(help);
-    return;
-  }
+async function buildExport(input) {
+  const args = [...input];
   if (args.shift() !== "export") fail("USAGE_ERROR", help);
   let raw;
   const opts = {};
@@ -202,6 +203,49 @@ async function run(args) {
   const json = JSON.stringify(result, null, 2) + "\n";
   if (Buffer.byteLength(json) > 2 * 1024 * 1024)
     fail("PAYLOAD_TOO_LARGE", "輸出超過 2 MiB，不截斷資料");
+  return { result, opts };
+}
+async function run(args) {
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(help);
+    return;
+  }
+  if (args[0] === "show") {
+    const source = [],
+      options = {};
+    for (let i = 1; i < args.length; i++) {
+      const arg = args[i];
+      if (["--offset", "--limit"].includes(arg)) {
+        if (options[arg] !== undefined || !/^\d+$/.test(args[i + 1] || ""))
+          fail("USAGE_ERROR", "分頁參數須為整數且不可重複");
+        options[arg] = Number(args[++i]);
+      } else if (arg === "--current" || !arg.startsWith("-")) source.push(arg);
+      else fail("USAGE_ERROR", "transcript show 只接受來源與分頁選項");
+    }
+    const offset = options["--offset"] ?? 0,
+      limit = options["--limit"] ?? 50;
+    if (
+      !Number.isSafeInteger(offset) ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 200
+    )
+      fail("USAGE_ERROR", "offset 須為非負整數，limit 須為 1 至 200");
+    const { result } = await buildExport(["export", ...source]);
+    process.stdout.write(
+      JSON.stringify({
+        ...result,
+        messages: result.messages.slice(offset, offset + limit),
+        total: result.messages.length,
+        offset,
+        nextOffset:
+          offset + limit < result.messages.length ? offset + limit : null,
+      }) + "\n",
+    );
+    return;
+  }
+  const { result, opts } = await buildExport(args);
+  const json = JSON.stringify(result, null, 2) + "\n";
   let file = opts["--output"];
   if (opts["--output-temp"])
     file = join(
@@ -224,6 +268,7 @@ async function run(args) {
     );
   } else process.stdout.write(json);
 }
+exports.buildExport = buildExport;
 exports.main = () =>
   run(process.argv.slice(3)).catch((e) => {
     const known =

@@ -16,7 +16,7 @@ import {
   type SpeakingAssistantChatRequest,
   type SpeakingAssistantMessage,
 } from '@flashmind/api-client';
-import { renderStudyAssistantMarkdown } from './study-assistant-markdown.domain';
+import { AssistantMarkdownComponent } from '../../../../components/shared/assistant-markdown/assistant-markdown.component';
 
 const ASSISTANT_PANEL_INITIAL_TOP = 96;
 const ASSISTANT_PANEL_HEIGHT = 380;
@@ -55,7 +55,7 @@ interface StudyAssistantEffortOption {
 
 @Component({
   selector: 'fm-study-assistant-panel',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AssistantMarkdownComponent],
   templateUrl: './study-assistant-panel.component.html',
   styleUrl: './study-assistant-panel.component.css',
   encapsulation: ViewEncapsulation.None,
@@ -615,10 +615,6 @@ export class StudyAssistantPanelComponent {
     this.persistPosition(ASSISTANT_PANEL_HEIGHT_STORAGE_KEY, this.assistantPanelHeight());
     const handle = event.currentTarget as HTMLElement | null;
     if (handle?.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
-  }
-
-  renderMarkdown(content: string): string {
-    return renderStudyAssistantMarkdown(content);
   }
 
   private buildAssistantPrompt(content: string): string {

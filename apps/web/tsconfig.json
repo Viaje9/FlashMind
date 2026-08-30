@@ -16,6 +16,7 @@
     "module": "preserve",
     "baseUrl": ".",
     "paths": {
+      "@flashmind/shared/speaking-duration": ["../../packages/shared/src/speaking-duration.ts"],
       "@flashmind/api-client": ["../../packages/api-client/src/generated/index.ts"],
       "@flashmind/api-client/*": ["../../packages/api-client/src/generated/*"],
       "@flashmind/ui": ["../../packages/ui/src/index.ts"],

@@ -121,7 +121,7 @@ test("拒絕不完整 context 與不同帳號", async (t) => {
   assert.equal(result.code, 4);
   assert.equal(result.json().error.code, "CONTEXT_INVALID");
 });
-test("validate 唯讀；save 固定快照，線上驗證後才送保存", async (t) => {
+test("validate 檔案不需登入且零連線；save 固定快照，只送保存 API", async (t) => {
   const requests = [];
   const { run, file, draft } = await setup(t, (req, res, body) => {
     requests.push({ url: req.url, body });
@@ -139,18 +139,21 @@ test("validate 唯讀；save 固定快照，線上驗證後才送保存", async 
       }),
     );
   });
-  assert.equal((await run(["review", "validate", file])).code, 0);
-  assert.equal(requests.length, 1);
+  const validation = await run(["review", "validate", file], {
+    FLASHMIND_CONFIG_DIR: "/not-accessible/config",
+    FLASHMIND_API_URL: "invalid",
+  });
+  assert.equal(validation.code, 0, validation.stdout);
+  assert.equal(validation.json().valid, true);
+  assert.equal(validation.json().scope, "draft-only");
+  assert.equal(validation.json().uploaded, false);
+  assert.equal(requests.length, 0);
   const result = await run(["review", "save", file]);
   assert.equal(result.code, 0);
   assert.equal(result.json().status, "saved");
   assert.deepEqual(
     requests.map((r) => r.url),
-    [
-      "/api/speaking/reviews/validate",
-      "/api/speaking/reviews/validate",
-      "/api/speaking/reviews",
-    ],
+    ["/api/speaking/reviews"],
   );
   requests.forEach((req) => assert.deepEqual(req.body, draft));
   assert.deepEqual(JSON.parse(await fs.readFile(file)), draft);
@@ -166,7 +169,7 @@ test("解析、驗證、401、409 與 redirect 分別失敗且不輸出原文", 
       }),
     );
   });
-  let result = await run(["review", "validate", file]);
+  let result = await run(["review", "save", file]);
   assert.equal(result.code, 3);
   assert.doesNotMatch(result.stdout, /不得回顯/);
   status = 409;

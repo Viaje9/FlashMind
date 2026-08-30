@@ -6,7 +6,7 @@ import {
   input,
   output,
 } from '@angular/core';
-import { marked, Renderer } from 'marked';
+import { marked, Renderer, type Token } from 'marked';
 
 const renderer = new Renderer();
 // Review 只需要文字；原始 HTML 與圖片不得變成可執行內容或連外資源。
@@ -54,11 +54,32 @@ renderer.table = function (token) {
             </button>
           }
         </header>
-        <div
-          class="speaking-summary-content"
-          data-testid="speaking-summary-content"
-          [innerHTML]="html()"
-        ></div>
+        <div class="speaking-summary-content" data-testid="speaking-summary-content">
+          @for (section of sections(); track $index) {
+            @if (section.headingHtml) {
+              <details
+                class="speaking-summary-section"
+                [open]="!initiallyCollapsed()"
+                [attr.data-testid]="'speaking-summary-section-' + $index"
+              >
+                <summary [attr.data-testid]="'speaking-summary-toggle-' + $index">
+                  <span
+                    class="speaking-summary-section-title"
+                    [innerHTML]="section.headingHtml"
+                  ></span>
+                  <span
+                    class="material-symbols-outlined speaking-summary-chevron"
+                    aria-hidden="true"
+                    >expand_more</span
+                  >
+                </summary>
+                <div [innerHTML]="section.bodyHtml"></div>
+              </details>
+            } @else {
+              <div [innerHTML]="section.bodyHtml"></div>
+            }
+          }
+        </div>
       </div>
     </article>
   `,
@@ -71,9 +92,24 @@ export class SpeakingSummaryComponent {
   readonly content = input.required<string>();
   readonly copied = input(false);
   readonly showCopy = input(true);
+  readonly initiallyCollapsed = input(false);
   readonly copyRequested = output<void>();
   // 不使用 bypassSecurityTrustHtml，交由 Angular 再做 HTML sanitization。
-  readonly html = computed(() =>
-    marked.parse(this.content(), { async: false, gfm: true, renderer }),
-  );
+  readonly sections = computed(() => {
+    const blocks: { heading: Token | null; body: Token[] }[] = [{ heading: null, body: [] }];
+    // 依 Markdown 的第二層標題分區，保留表格、引言與標題前的舊版摘要。
+    for (const token of marked.lexer(this.content(), { gfm: true })) {
+      if (token.type === 'heading' && token.depth === 2) {
+        blocks.push({ heading: token, body: [] });
+      } else {
+        blocks[blocks.length - 1].body.push(token);
+      }
+    }
+    return blocks
+      .filter((block) => block.heading || block.body.some((token) => token.type !== 'space'))
+      .map((block) => ({
+        headingHtml: block.heading ? marked.parser([block.heading], { renderer }) : null,
+        bodyHtml: marked.parser(block.body, { renderer }),
+      }));
+  });
 }

@@ -298,6 +298,8 @@ export class SpeakingRepository {
       reviewed: session.reviewed,
       title: session.title,
       summary: session.summary ?? undefined,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
       createdAt: session.startedAt,
       updatedAt: session.endedAt ?? session.updatedAt,
       messageCount: session.messageCount,

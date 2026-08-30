@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { AssistantMarkdownComponent } from '../../../components/shared/assistant-markdown/assistant-markdown.component';
 import { TopicConversationRole } from '@flashmind/api-client';
 import type { TopicConversationMessageView } from '../../../components/topic-conversation/topic-conversation.domain';
 
 @Component({
   selector: 'app-topic-conversation-message',
+  imports: [AssistantMarkdownComponent],
   template: `
     <article
       class="flex flex-col gap-2"
@@ -27,15 +29,17 @@ import type { TopicConversationMessageView } from '../../../components/topic-con
         [class.dark:text-slate-100]="!isUser()"
       >
         @if (message().content) {
-          <p class="whitespace-pre-wrap">
-            {{ message().content }}
-            @if (message().streaming) {
-              <span
-                class="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-current align-middle"
-                aria-hidden="true"
-              ></span>
-            }
-          </p>
+          @if (isUser()) {
+            <p class="whitespace-pre-wrap">{{ message().content }}</p>
+          } @else {
+            <app-assistant-markdown [content]="message().content" />
+          }
+          @if (message().streaming) {
+            <span
+              class="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-current align-middle"
+              aria-hidden="true"
+            ></span>
+          }
         } @else if (message().streaming) {
           <div class="flex h-7 items-center gap-1.5" aria-label="AI 正在回覆">
             <span class="size-1.5 animate-pulse rounded-full bg-emerald-500"></span>

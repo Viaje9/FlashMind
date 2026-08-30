@@ -2,6 +2,14 @@
 
 這是 `SpeakingReviewDraft` 第一版的 Agent 寫作指引；正式規則由 CLI 與後端共用的 OpenAPI schema 驗證。不要替草稿增加未定義欄位。
 
+## 本機 CLI 組裝
+
+一般 Review 用 `review prepare` 建立本機資料、`review vocabulary` 核對單字。Agent 只撰寫下方完整範例中的 `result` 物件，再執行 `review update <id> --result <result.json>`；CLI 自動帶入原始 practice、target、contextVersion，無須用 Python／JS 讀取並組裝快照。
+
+本機 `review.json` 是含 context、draft、保存收據的管理資料檔，不是 API payload；不可直接把此檔當作 `review validate <file>` 的輸入。`review validate <id>` 完全離線，核對其中的 draft 與 context；只有 `review save <id>` 傳送符合原契約的 draft，由保存 API 驗證後寫入。明確要匯出完整 API 草稿時可用 `review show <id> --section draft`。直接驗證獨立草稿檔時沒有字庫快照，結果會標示 `draft-only`，不代表已確認單字 ID 或目前帳號。
+
+舊完整草稿用 `review import --file <draft.json>` 納入管理，保留既有 sourceRef。context 版本改變時重新核對 result；只有 `update` 會重新綁定版本，不可手改版本以略過檢查。
+
 ## 必要結構
 
 ```json

@@ -64,20 +64,22 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 
 同步後，可在本機 Agent 明確使用 `$flashmind-practice`，例如：「使用 `$flashmind-practice`，API 是 `http://localhost:3280`，開始今天的練習。」第一次需登入同一個 API 環境；不要因 localhost 無法連線就自行改成正式站。
 
-結束練習後交給 `$flashmind-review`，自動產生暫存草稿、驗證、展示，等使用者明確說「儲存」才執行 save。獨立 Review 也可直接使用 `$flashmind-review` 並提供完整原始對話。
+結束練習後交給 `$flashmind-review`，使用 CLI 建立本機草稿、檢查、驗證並展示，等使用者明確說「儲存」才執行 save。獨立 Review 也可直接使用 `$flashmind-review` 並提供任務連結或完整原始對話。
 
 依 [OpenAI 的 skill 說明](https://developers.openai.com/codex/skills)，skill 更新通常會自動偵測；如果清單尚未出現，重新啟動 Codex。這兩個 skill 需要能執行本機 CLI 的環境，不會擷取無法存取的聊天紀錄。
 
-## 四個命令
+## 核心命令
 
-| 命令                                    | 用途                                                  | 是否保存學習紀錄 |
-| --------------------------------------- | ----------------------------------------------------- | ---------------- |
-| `flashmind login`                       | 瀏覽器確認帳號、取得 session                          | 否，只有登入授權 |
-| `flashmind practice context`            | 完整四狀態目標字表、最近 Summary、下次計畫            | 否               |
-| `flashmind review validate review.json` | 本機格式檢查，再傳至 API 驗證最新字表、帳號與證據     | 否               |
-| `flashmind review save review.json`     | 重驗同一份檔案快照後，原子保存對話、Review 與單字事件 | 是               |
+| 命令                                      | 用途                                                         | 是否保存學習紀錄 |
+| ----------------------------------------- | ------------------------------------------------------------ | ---------------- |
+| `flashmind login`                         | 瀏覽器確認帳號、取得 session                                 | 否，只有登入授權 |
+| `flashmind practice context`              | 完整四狀態目標字表、最近 Summary、下次計畫                   | 否               |
+| `flashmind review validate <id 或草稿檔>` | 純本機驗證，不需登入、不連線、不寫檔                         | 否               |
+| `flashmind review save <id 或草稿檔>`     | 本機檢查後送保存 API，由後端驗證並原子保存 Review 與單字事件 | 是               |
 
-`validate` 會把文字傳給 API，但不保存遠端草稿、不呼叫 AI、不計次。檔案仍由你控制。輸出預設是一份完整 JSON；提示寫在 stderr。help 輸出說明文字。
+`validate <id>` 核對完整本機字庫快照、原句證據、來源與契約，回傳 `scope: local-snapshot`。`validate <file>` 保留舊檔案用法，但只有 `scope: draft-only` 的契約與原句檢查，會明示缺少字庫與目前帳號核對。兩者都完全離線，不會刷新 context；沒有 `review check` 指令。`status --check` 仍保留，供明確要求檢查登入時使用。
+
+只有 `save` 會上傳草稿，直接 POST `/speaking/reviews`，不先 POST `/speaking/reviews/validate`。保存 API 在交易中驗證當下字庫、帳號、環境與來源衝突，再寫入紀錄；本機通過不保證 API 一定接受。App 使用的獨立驗證 endpoint 保持不變。輸出預設為 JSON，提示寫在 stderr，help 輸出說明文字。
 
 | Exit code | 意義                                   |
 | --------- | -------------------------------------- |
@@ -87,6 +89,60 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 | 4         | 驗證失敗、上下文不完整或超過上限       |
 | 5         | 相同來源已有不同內容、授權已兌換等衝突 |
 | 6         | 網路／伺服器／非預期回應錯誤           |
+
+## 本機草稿管理
+
+`review list` 與 `review show <id> --section metadata` 會保留起訖時間，並回傳 `estimatedDurationMinutes`：用 `endedAt - startedAt` 估算、四捨五入至分鐘，未滿一分鐘為 `0`，缺少或無效時間為 `null`。這是整場對話涵蓋時間，包含 AI 回話與停頓，不代表使用者實際開口秒數。數值在查詢時推算，不修改既有草稿或上傳契約。
+
+資料預設位於 `~/.local/share/flashmind/reviews/<環境帳號雜湊>/<來源雜湊>/review.json`，可以用 `FLASHMIND_DATA_DIR` 改變資料根目錄。路徑必須在 repo 外，且不能與登入憑證目錄重疊。目錄為 `0700`、檔案為 `0600`；拒絕不安全權限、符號連結及不同擁有者。檔案不含登入 token，但包含完整練習原文與個人學習資料，仍應當作私人檔案保護。
+
+一份 `review.json` 保存 practice、context、draft 與 API 收據，採暫存檔加 rename 原子更新，避免多個檔案只更新成功一半。固定 ID 由 target 和 sourceRef 決定，同場重試不另建來源。資料會持續保留，不因系統清除暫存而消失，也不自動清除；本機保存不代表已寫回學習紀錄。第一版沒有自動保留期限或清理命令。
+
+| 命令                                                                                              | 用途                                                                | 連線／副作用                      |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------- |
+| `transcript show <thread 或 --current> --offset 0 --limit 50`                                     | 分頁核對完整原始語音，找出練習起訖                                  | 完全離線，不寫檔                  |
+| `review prepare <thread 或 --current> --before-message <id> [--from-message <id>] [--title 主題]` | 保存指定練習與最新 context，回傳草稿 ID／路徑                       | GET context、本機寫檔，不上傳原文 |
+| `review import --file <舊完整草稿.json>`                                                          | 納管既有草稿，保留原始 sourceRef                                    | GET context、本機寫檔，不上傳原文 |
+| `review refresh <id>`                                                                             | 重新取得最新 context，不改原文或草稿                                | GET context、本機寫檔             |
+| `review list [--offset 0] [--limit 50]`                                                           | 顯示本機草稿的環境、帳號、來源與狀態                                | 離線，不需登入                    |
+| `review show <id> --section transcript`                                                           | 分頁讀取指定練習原文與訊息 ID                                       | 離線，不需登入                    |
+| `review show <id> --section context`                                                              | 最近練習、下次計畫與 context 時間，不輸出完整字庫                   | 離線，不需登入                    |
+| `review vocabulary <id> --terms task,limited`                                                     | 查單字 ID、狀態與釋義；省略 terms 可分頁瀏覽全部字庫                | 離線，不需登入                    |
+| `review update <id> --result <result.json>`                                                       | 接收 Agent 撰寫的 result，自動帶入 target、practice、contextVersion | 本機檢查通過才原子寫檔            |
+| `review show <id> --section result`                                                               | 讀取草稿的完整回顧                                                  | 離線，不需登入                    |
+| `review validate <id>`                                                                            | 檢查契約、字庫 ID、證據、context 版本與原文一致性                   | 完全離線，不代表 API 驗證         |
+
+`show` 預設為 metadata；另支援 `draft`（完整 API payload）、`review`、`summary`、`actualUses`、`recommendations`、`nextPractice`、`deckCandidates`。逐字稿、字庫和列表使用 `offset`／`limit` 分頁，每頁預設 50、上限 200，回傳 `total` 與 `nextOffset`，最後一頁為 null；讀取分頁不會截斷保存或上傳的逐字稿。
+
+狀態為 `prepared`（尚未撰寫）、`draft`（本機檢查不符）、`validated`（目前本機快照檢查通過）、`saved`；context 版本變更但草稿未更新時顯示 `context-stale`。狀態查閱會重新計算本機檢查結果，`validationScope` 明示為 `local-snapshot`；`update` 本來就會驗證，因此成功後可以直接顯示 `validated`，不表示已上傳。舊版 API 驗證收據不再決定這個狀態；新的 validate 不寫收據。正式保存收據仍綁定草稿雜湊。
+
+刷新失敗保留原檔但命令失敗，不把舊快照說成最新；確認最新字庫後再 `update`。正式保存成功後不允許將同來源改成另一份內容。
+
+同草稿寫入以 `.lock` 目錄互斥，競爭時回報 `REVIEW_BUSY` 並保留原檔。若程序異常終止留下鎖，先確認沒有程序仍在更新該草稿，才能移除該草稿目錄內的 `.lock`；不要直接刪除 `review.json` 或整份資料目錄。
+
+### Agent 的典型流程
+
+```sh
+flashmind status
+flashmind review list
+flashmind transcript show <thread> --limit 50
+# Agent 依 nextOffset 讀完，確認結束訊息；CLI 不自動猜測邊界。
+flashmind review prepare <thread> --before-message <結束訊息ID> --title "本次主題"
+# 以下使用 prepare 回傳的 id；已有 id 的場次改用 review refresh。
+flashmind review show <id> --section transcript --limit 50
+flashmind review show <id> --section context
+flashmind review vocabulary <id> --terms task,limited
+# Agent 只寫 result JSON，CLI 組裝完整草稿。
+flashmind review update <id> --result <result.json>
+flashmind review validate <id>
+flashmind review show <id> --section result
+# 展示後，只有使用者明確要求儲存才執行下列上傳。
+flashmind review save <id>
+```
+
+`result.json` 僅包含原本 `SpeakingReviewDraft.result` 的欄位，不包在另一個 result 屬性內。可用私有暫存檔交給 update，之後以固定 ID 讀寫，Agent 不需用 Python／JS 讀取與拼接資料。純文字場次仍可依真實原文和時間製作完整契約草稿再 import；不得編造缺失逐字稿。
+
+validate／save 接受舊草稿路徑以維持相容。管理資料檔 `review.json` 本身不是 API 草稿，請用 ID，勿把包含 context 的整份資料檔當作 payload。CLI 不呼叫 AI、不自動建卡、不更動 FSRS。移除遠端預驗證不會放寬 save 的資料外傳與正式保存批准。
 
 ## 草稿契約
 
@@ -116,9 +172,9 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 
 ## Review skill 整合
 
-1. 取得本次完整對話。若 Review 是獨立呼叫，先重新執行 `practice context`。
-2. Agent 產生本機暫存 JSON，包含摘要、建議、真實使用證據和候選。
-3. Skill 自動執行 `review validate`，不需要使用者另外說「驗證」。失敗時修正草稿再驗證。
+1. 取得本次完整對話，透過 `review prepare` 或 `review refresh` 重新取得 context。
+2. Agent 撰寫 result，CLI `review update` 組裝草稿。
+3. Skill 執行 `review validate` 在本機檢查原文與字庫快照；不連線也不需額外傳送許可。失敗時修正草稿再驗證。
 4. 在對話窗展示草稿內容、單字變化與驗證結果，讓使用者 review。驗證通過不代表取得保存許可。
 5. 只有使用者明確要求儲存，才執行 `review save`。
 6. 若使用者修改草稿，重新驗證；保存失敗不重新生成、不換帳號、不改來源識別，以同一份草稿重試。

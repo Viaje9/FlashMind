@@ -8,7 +8,7 @@
 4. 建置 shared、API、Web、CLI；API 的 runtime 必須包含 `packages/shared/dist` 和依賴。專案建置指令已包含 shared build，API Docker runtime 也複製 shared dist。
 5. 協調更新 API 與 Web：新 Summary 只分析，不再直接 applyReview；新 Web 先同步文字，再保存 Review。CLI save 使用同一交易規則。
 6. 發佈時提示尚未更新的舊分頁／PWA 重新整理。舊頁面仍可取得 Summary 文字，但不會計次；不要宣稱舊前端也已完成雲端保存。必要時使用維護公告，要求口說使用者更新後再開始。
-7. 以測試帳號驗證 CLI 登入、讀 context、validate 零寫入、save 冪等、兩種來源回顧、搬移不重算次數及跨帳號 404。
+7. 以測試帳號驗證 CLI 登入、讀 context、validate 離線零寫入、save 由保存 API 驗證且維持冪等、兩種來源回顧、搬移不重算次數及跨帳號 404。CLI 不再呼叫遠端 validate endpoint，App 的既有呼叫保持不變。
 
 ## 回滾原則
 

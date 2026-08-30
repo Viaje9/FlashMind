@@ -10,7 +10,13 @@
       {{ error() }}
     </p>
   }
-  @if (!selectedConversationId()) {
+  @if (discussing() && selectedConversation; as conversation) {
+    <app-speaking-review-discussion
+      [conversation]="conversation"
+      [sourceMessages]="detailMessages()"
+      (closed)="discussing.set(false)"
+    />
+  } @else if (!selectedConversationId()) {
     <fm-page-header title="口說歷史" layout="center">
       <fm-button class="fm-header-left" variant="ghost" size="sm" routerLink="/speaking">
         <span class="material-symbols-outlined text-[20px]">chevron_left</span>
@@ -76,6 +82,9 @@
 
                 <p class="mt-2 text-xs text-slate-600 dark:text-slate-300">
                   共 {{ conversation.messageCount }} 則訊息
+                  @if (formatDuration(conversation); as duration) {
+                    <span data-testid="speaking-history-duration"> · {{ duration }}</span>
+                  }
                 </p>
               </button>
 
@@ -138,6 +147,22 @@
         >
           來源：{{ selectedConversation?.source === 'LOCAL' ? '本機' : 'App' }}
         </p>
+        @if (selectedConversation; as conversation) {
+          @if (formatDuration(conversation); as duration) {
+            <div
+              class="mb-4 text-sm text-slate-600 dark:text-slate-300"
+              data-testid="speaking-history-detail-duration"
+            >
+              <p>{{ duration }}</p>
+              @if (conversation.startedAt && conversation.endedAt) {
+                <p>
+                  {{ formatUpdatedAt(conversation.startedAt) }} ～
+                  {{ formatUpdatedAt(conversation.endedAt) }}
+                </p>
+              }
+            </div>
+          }
+        }
         @if (detailMessages().length === 0) {
           <div
             class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500 dark:border-slate-600 dark:bg-surface-dark dark:text-slate-300"
