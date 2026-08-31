@@ -38,6 +38,29 @@ interface SelectionTextNodeEntry {
   end: number;
 }
 
+interface MobileSelectionDraft {
+  messageId: string;
+  start: number;
+  end: number;
+  selectedText: string;
+}
+
+interface MobileSelectionGesture {
+  pointerId: number;
+  host: HTMLElement;
+  messageId: string;
+  startOffset: number;
+  lastOffset: number;
+  startPoint: { x: number; y: number };
+  active: boolean;
+  longPressTimer: number | null;
+}
+
+interface DocumentWithCaretApi {
+  caretPositionFromPoint?: (x: number, y: number) => CaretPosition | null;
+  caretRangeFromPoint?: (x: number, y: number) => Range | null;
+}
+
 @Component({
   selector: 'app-speaking-review-discussion',
   imports: [
@@ -51,7 +74,12 @@ interface SelectionTextNodeEntry {
   providers: [SpeakingReviewDiscussionStore],
   styleUrl: './speaking-review-discussion.component.css',
   template: `
-    <div class="flex min-h-dvh flex-col" data-testid="speaking-review-discussion">
+    <div
+      class="flex min-h-dvh flex-col"
+      [class.mobile-selection-enabled]="mobileSelectionEnabled()"
+      [class.mobile-selection-active]="mobileSelectionActive()"
+      data-testid="speaking-review-discussion"
+    >
       <fm-page-header title="討論改進方向" layout="center">
         <fm-button
           class="fm-header-left"
@@ -382,13 +410,17 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   readonly selectionTooltipText = signal('');
   readonly selectionTooltipError = signal<string | null>(null);
   readonly selectionNoteTarget = signal<SelectionTranslateTarget | null>(null);
+  readonly mobileSelectionDraft = signal<MobileSelectionDraft | null>(null);
+  readonly mobileSelectionActive = signal(false);
   readonly selectionNoteEditorVisible = signal(false);
   readonly selectionNotePosition = signal({ left: 0, top: 0 });
   readonly selectionNoteComposing = signal(false);
   readonly selectionMarkNote = signal('');
   readonly selectionNoteContextId = signal<string | null>(null);
   readonly selectionActionVisible = computed(() => !!this.selectionTranslateTarget()?.selectedText);
+  readonly mobileSelectionEnabled = computed(() => this.canUseMobileSelection());
   private selectionRequestToken = 0;
+  private mobileSelectionGesture: MobileSelectionGesture | null = null;
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly composer = viewChild(TopicConversationComposerComponent);
   private readonly sourceStart = viewChild<ElementRef<HTMLElement>>('sourceStart');
@@ -406,6 +438,13 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     this.store.messages();
     this.sourceMessages();
     this.decorateMarkedSelections(contexts);
+  });
+  private readonly mobileSelectionDecoration = afterRenderEffect(() => {
+    const draft = this.mobileSelectionDraft();
+    this.store.markedContexts();
+    this.store.messages();
+    this.sourceMessages();
+    this.decorateMobileSelection(draft);
   });
   private readonly focusSelectionNoteInput = afterRenderEffect(() => {
     if (this.selectionNoteEditorVisible()) {
@@ -439,6 +478,13 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   onDocumentSelectionChange(): void {
     if (typeof window === 'undefined') return;
     if (this.selectionNoteEditorVisible()) return;
+
+    // 行動裝置使用自訂長按／拖曳選取，避免瀏覽器原生 selection toolbar
+    // 蓋住畫面或在不同平台產生不一致的操作列。
+    if (this.mobileSelectionEnabled()) {
+      if (window.getSelection()?.rangeCount) window.getSelection()?.removeAllRanges();
+      return;
+    }
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
@@ -478,8 +524,50 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     if (!target) return;
     if (target.closest('[data-speaking-selection-overlay="true"]')) return;
     if (this.selectionNoteEditorVisible()) this.onSelectionNoteEditorClose();
+
+    if (this.mobileSelectionEnabled() && this.startMobileSelection(event, target)) return;
     if (target.closest('[data-speaking-selection-context="review-discussion"]')) return;
     this.dismissSelectionTranslation(false);
+  }
+
+  @HostListener('document:pointermove', ['$event'])
+  onDocumentPointerMove(event: PointerEvent): void {
+    const gesture = this.mobileSelectionGesture;
+    if (!gesture || event.pointerId !== gesture.pointerId) return;
+
+    const movedDistance = Math.hypot(
+      event.clientX - gesture.startPoint.x,
+      event.clientY - gesture.startPoint.y,
+    );
+    if (!gesture.active) {
+      if (movedDistance > 10) this.cancelMobileSelectionGesture(true);
+      return;
+    }
+
+    event.preventDefault();
+    const caret = this.resolveMobileCaret(gesture.host, event.clientX, event.clientY);
+    if (!caret) return;
+
+    gesture.lastOffset = caret.offset;
+    this.updateMobileSelectionDraft(gesture, gesture.startOffset, gesture.lastOffset);
+  }
+
+  @HostListener('document:pointerup', ['$event'])
+  onDocumentPointerUp(event: PointerEvent): void {
+    const gesture = this.mobileSelectionGesture;
+    if (!gesture || event.pointerId !== gesture.pointerId) return;
+
+    if (gesture.active) event.preventDefault();
+    this.clearMobileSelectionTimer(gesture);
+    this.mobileSelectionGesture = null;
+    this.mobileSelectionActive.set(false);
+  }
+
+  @HostListener('document:pointercancel', ['$event'])
+  onDocumentPointerCancel(event: PointerEvent): void {
+    const gesture = this.mobileSelectionGesture;
+    if (!gesture || event.pointerId !== gesture.pointerId) return;
+    this.cancelMobileSelectionGesture(true);
   }
 
   @HostListener('document:click', ['$event'])
@@ -512,6 +600,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
+    if (this.mobileSelectionGesture) this.cancelMobileSelectionGesture(true);
     if (this.selectionNoteEditorVisible()) {
       if (this.selectionNoteContextId()) {
         this.updateMarkedContextEditorPosition();
@@ -524,6 +613,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   @HostListener('window:blur')
   onWindowBlur(): void {
+    if (this.mobileSelectionGesture) this.cancelMobileSelectionGesture(true);
     this.dismissSelectionTranslation(true);
   }
 
@@ -696,6 +786,243 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   onSelectionModalBackdropClick(): void {
     this.dismissSelectionTranslation(true);
+  }
+
+  private startMobileSelection(event: PointerEvent, target: HTMLElement): boolean {
+    if (!this.isTouchPointer(event)) return false;
+    if (target.closest('.speaking-marked-text')) return false;
+
+    const host = this.resolveSelectionHost(target);
+    if (!host) return false;
+
+    const messageId =
+      host.dataset['speakingSelectionMessageId'] ?? host.dataset['speakingAssistantMessageId'];
+    if (!messageId) return false;
+
+    const caret = this.resolveMobileCaret(host, event.clientX, event.clientY);
+    if (!caret) return false;
+
+    this.dismissSelectionTranslation(false);
+    const gesture: MobileSelectionGesture = {
+      pointerId: event.pointerId,
+      host,
+      messageId,
+      startOffset: caret.offset,
+      lastOffset: caret.offset,
+      startPoint: { x: event.clientX, y: event.clientY },
+      active: false,
+      longPressTimer: null,
+    };
+    this.mobileSelectionGesture = gesture;
+    this.mobileSelectionActive.set(false);
+    gesture.longPressTimer = window.setTimeout(() => {
+      if (this.mobileSelectionGesture !== gesture) return;
+      gesture.active = true;
+      this.mobileSelectionActive.set(true);
+      gesture.longPressTimer = null;
+      const wordRange = this.findMobileWordRange(host, gesture.startOffset);
+      if (wordRange) {
+        gesture.lastOffset = wordRange.end;
+        this.updateMobileSelectionDraft(gesture, wordRange.start, wordRange.end);
+      } else {
+        this.updateMobileSelectionDraft(gesture, gesture.startOffset, gesture.lastOffset);
+      }
+    }, 320);
+    return true;
+  }
+
+  private cancelMobileSelectionGesture(clearSelection: boolean): void {
+    const gesture = this.mobileSelectionGesture;
+    if (gesture) this.clearMobileSelectionTimer(gesture);
+    this.mobileSelectionGesture = null;
+    this.mobileSelectionActive.set(false);
+    if (clearSelection) this.dismissSelectionTranslation(false);
+  }
+
+  private clearMobileSelectionTimer(gesture: MobileSelectionGesture): void {
+    if (gesture.longPressTimer === null) return;
+    window.clearTimeout(gesture.longPressTimer);
+    gesture.longPressTimer = null;
+  }
+
+  private updateMobileSelectionDraft(
+    gesture: MobileSelectionGesture,
+    startOffset: number,
+    endOffset: number,
+  ): void {
+    const entries = this.collectSelectionTextNodes(gesture.host);
+    const fullText = entries.map((entry) => entry.node.data).join('');
+    const selectedRange = this.normalizeMobileSelectionRange(fullText, startOffset, endOffset);
+    if (!selectedRange) {
+      this.mobileSelectionDraft.set(null);
+      this.selectionTranslateTarget.set(null);
+      return;
+    }
+
+    const range = this.createTextRange(entries, selectedRange.start, selectedRange.end);
+    if (!range) return;
+    const rect = range.getBoundingClientRect();
+    if (rect.width <= 0 && rect.height <= 0) return;
+
+    this.mobileSelectionDraft.set({
+      messageId: gesture.messageId,
+      start: selectedRange.start,
+      end: selectedRange.end,
+      selectedText: selectedRange.selectedText,
+    });
+    this.selectionTranslateTarget.set({
+      messageId: gesture.messageId,
+      selectedText: selectedRange.selectedText,
+    });
+    this.updateSelectionActionPosition(rect);
+  }
+
+  private normalizeMobileSelectionRange(
+    fullText: string,
+    startOffset: number,
+    endOffset: number,
+  ): { start: number; end: number; selectedText: string } | null {
+    const start = Math.max(0, Math.min(startOffset, endOffset));
+    const end = Math.min(fullText.length, Math.max(startOffset, endOffset));
+    const rawText = fullText.slice(start, end);
+    const selectedText = rawText.trim();
+    if (!selectedText) return null;
+
+    const leadingWhitespace = rawText.indexOf(selectedText);
+    return {
+      start: start + Math.max(0, leadingWhitespace),
+      end: start + Math.max(0, leadingWhitespace) + selectedText.length,
+      selectedText,
+    };
+  }
+
+  private findMobileWordRange(
+    host: HTMLElement,
+    offset: number,
+  ): { start: number; end: number } | null {
+    const entries = this.collectSelectionTextNodes(host);
+    const fullText = entries.map((entry) => entry.node.data).join('');
+    if (!fullText) return null;
+
+    let cursor = Math.min(Math.max(offset, 0), fullText.length - 1);
+    if (!this.isMobileWordCharacter(fullText[cursor]) && cursor > 0) cursor -= 1;
+    if (!this.isMobileWordCharacter(fullText[cursor])) return null;
+
+    let start = cursor;
+    while (start > 0 && this.isMobileWordCharacter(fullText[start - 1])) start -= 1;
+    let end = cursor + 1;
+    while (end < fullText.length && this.isMobileWordCharacter(fullText[end])) end += 1;
+    return { start, end };
+  }
+
+  private isMobileWordCharacter(value: string | undefined): boolean {
+    return !!value && /[\p{L}\p{N}_'-]/u.test(value);
+  }
+
+  private resolveMobileCaret(host: HTMLElement, x: number, y: number): { offset: number } | null {
+    const documentWithCaret = document as DocumentWithCaretApi;
+    let range = documentWithCaret.caretRangeFromPoint?.(x, y) ?? null;
+    if (!range && documentWithCaret.caretPositionFromPoint) {
+      const position = documentWithCaret.caretPositionFromPoint(x, y);
+      if (position) {
+        range = document.createRange();
+        range.setStart(position.offsetNode, position.offset);
+        range.collapse(true);
+      }
+    }
+    if (!range || !host.contains(range.startContainer)) return null;
+
+    const prefix = document.createRange();
+    try {
+      prefix.selectNodeContents(host);
+      prefix.setEnd(range.startContainer, range.startOffset);
+    } catch {
+      return null;
+    }
+    return { offset: prefix.toString().length };
+  }
+
+  private createTextRange(
+    entries: SelectionTextNodeEntry[],
+    start: number,
+    end: number,
+  ): Range | null {
+    const startEntry = entries.find((entry) => start >= entry.start && start <= entry.end);
+    const endEntry = entries.find((entry) => end > entry.start && end <= entry.end);
+    if (!startEntry || !endEntry || end <= start) return null;
+
+    const range = document.createRange();
+    range.setStart(startEntry.node, start - startEntry.start);
+    range.setEnd(endEntry.node, end - endEntry.start);
+    return range;
+  }
+
+  private decorateMobileSelection(draft: MobileSelectionDraft | null): void {
+    if (typeof document === 'undefined') return;
+
+    const root = this.hostElement.nativeElement;
+    this.clearMobileSelection(root);
+    if (!draft) return;
+
+    const host = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        '[data-speaking-selection-context="review-discussion"][data-speaking-selection-message-id], ' +
+          '[data-speaking-selection-context="review-discussion"][data-speaking-assistant-message-id]',
+      ),
+    ).find(
+      (candidate) =>
+        (candidate.dataset['speakingSelectionMessageId'] ??
+          candidate.dataset['speakingAssistantMessageId']) === draft.messageId,
+    );
+    if (!host) return;
+
+    const entries = this.collectSelectionTextNodes(host);
+    const range = this.createTextRange(entries, draft.start, draft.end);
+    if (!range) return;
+
+    const overlappingEntries = entries
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => entry.end > draft.start && entry.start < draft.end);
+    for (let index = overlappingEntries.length - 1; index >= 0; index -= 1) {
+      const { entry } = overlappingEntries[index];
+      const segmentStart = Math.max(draft.start, entry.start) - entry.start;
+      const segmentEnd = Math.min(draft.end, entry.end) - entry.start;
+      if (segmentEnd <= segmentStart) continue;
+
+      const selectionRange = document.createRange();
+      selectionRange.setStart(entry.node, segmentStart);
+      selectionRange.setEnd(entry.node, segmentEnd);
+      const highlight = document.createElement('span');
+      highlight.className = 'speaking-mobile-selection';
+      highlight.style.pointerEvents = 'none';
+      highlight.appendChild(selectionRange.extractContents());
+      selectionRange.insertNode(highlight);
+    }
+  }
+
+  private clearMobileSelection(root: HTMLElement): void {
+    const highlights = Array.from(root.querySelectorAll('.speaking-mobile-selection')).reverse();
+    for (const highlight of highlights) {
+      const parent = highlight.parentNode;
+      if (!parent) continue;
+      while (highlight.firstChild) parent.insertBefore(highlight.firstChild, highlight);
+      highlight.remove();
+    }
+    root.normalize();
+  }
+
+  private isTouchPointer(event: PointerEvent): boolean {
+    return event.pointerType === 'touch' || event.pointerType === 'pen';
+  }
+
+  private canUseMobileSelection(): boolean {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+    const pointerCoarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const documentWithCaret = document as DocumentWithCaretApi;
+    const hasCaretApi =
+      typeof documentWithCaret.caretRangeFromPoint === 'function' ||
+      typeof documentWithCaret.caretPositionFromPoint === 'function';
+    return pointerCoarse && hasCaretApi;
   }
 
   private resolveSelectionHost(node: Node | null): HTMLElement | null {
@@ -927,6 +1254,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   private dismissSelectionTranslation(clearNativeSelection: boolean): void {
     this.selectionRequestToken++;
+    this.mobileSelectionDraft.set(null);
     this.selectionTranslateTarget.set(null);
     this.selectionTooltipVisible.set(false);
     this.selectionTooltipStatus.set('idle');
