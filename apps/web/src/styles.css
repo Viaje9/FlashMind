@@ -78,14 +78,6 @@ html {
   user-select: none;
 }
 
-.mobile-selection-enabled.mobile-selection-active
-  [data-speaking-selection-context='review-discussion'],
-.mobile-selection-enabled.mobile-selection-active
-  [data-speaking-selection-context='review-discussion']
-  * {
-  touch-action: none;
-}
-
 .speaking-mobile-selection {
   border-radius: 0.2rem;
   background: color-mix(in srgb, var(--color-primary) 34%, transparent);

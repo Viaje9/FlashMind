@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   OnInit,
@@ -452,6 +453,45 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     }
   });
 
+  constructor() {
+    const root = this.hostElement.nativeElement;
+    // touch-action 在手指落下時已決定；長按後才改 CSS 或取消 pointermove
+    // 無法阻止當次捲動。必須預先註冊非 passive 的 touchmove listener。
+    const onTouchMove = (event: TouchEvent) => this.onSelectionTouchMove(event);
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length > 1) this.cancelMobileSelectionGesture(true);
+    };
+    root.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+    root.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+    inject(DestroyRef).onDestroy(() => {
+      root.removeEventListener('touchmove', onTouchMove, true);
+      root.removeEventListener('touchstart', onTouchStart, true);
+      this.cancelMobileSelectionGesture(true);
+    });
+  }
+
+  private onSelectionTouchMove(event: TouchEvent): void {
+    const gesture = this.mobileSelectionGesture;
+    if (!gesture) return;
+    if (event.touches.length !== 1 || !event.cancelable) {
+      this.cancelMobileSelectionGesture(true);
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (
+      !gesture.active &&
+      Math.hypot(touch.clientX - gesture.startPoint.x, touch.clientY - gesture.startPoint.y) > 10
+    ) {
+      // 長按前明確滑動，將這次手勢交還原生捲頁，不再啟動選字。
+      this.cancelMobileSelectionGesture(true);
+      return;
+    }
+
+    // 包含等待長按時的小幅晃動，避免瀏覽器提早開始捲動並送出 pointercancel。
+    event.preventDefault();
+  }
+
   ngOnInit(): void {
     this.selectionNoteEditorVisible.set(false);
     this.selectionNoteContextId.set(null);
@@ -790,10 +830,14 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   private startMobileSelection(event: PointerEvent, target: HTMLElement): boolean {
     if (!this.isTouchPointer(event)) return false;
+    if (!event.isPrimary) {
+      this.cancelMobileSelectionGesture(true);
+      return false;
+    }
     if (target.closest('.speaking-marked-text')) return false;
 
     const host = this.resolveSelectionHost(target);
-    if (!host) return false;
+    if (!host || !this.hostElement.nativeElement.contains(host)) return false;
 
     const messageId =
       host.dataset['speakingSelectionMessageId'] ?? host.dataset['speakingAssistantMessageId'];
@@ -802,7 +846,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     const caret = this.resolveMobileCaret(host, event.clientX, event.clientY);
     if (!caret) return false;
 
-    this.dismissSelectionTranslation(false);
+    this.cancelMobileSelectionGesture(true);
     const gesture: MobileSelectionGesture = {
       pointerId: event.pointerId,
       host,
