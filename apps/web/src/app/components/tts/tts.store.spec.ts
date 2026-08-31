@@ -2,7 +2,7 @@ import '@angular/compiler';
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TTSService } from '@flashmind/api-client';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SpeakingAudioPlayerService } from '../speaking/speaking-audio-player.service';
 import { createAudioCacheKey } from './tts.domain';
@@ -77,5 +77,29 @@ describe('TtsStore', () => {
 
     expect(store.isPlaying('No sauce, please.')).toBe(false);
     expect(store.playingText()).toBeNull();
+  });
+
+  it('停止後才完成的語音請求不能開始播放', async () => {
+    const response = new Subject<Blob>();
+    vi.mocked(TestBed.inject(TTSService).synthesizeSpeech).mockReturnValue(response as never);
+    const pending = store.play('Hello');
+    store.stop();
+    response.next(new Blob(['audio']));
+    response.complete();
+    await pending;
+    expect(audioPlayer.play).not.toHaveBeenCalled();
+    expect(store.playingText()).toBeNull();
+  });
+
+  it('新片段播放後，舊請求不能覆蓋播放狀態', async () => {
+    const response = new Subject<Blob>();
+    vi.mocked(TestBed.inject(TTSService).synthesizeSpeech).mockReturnValueOnce(response as never);
+    const pending = store.play('Old text');
+    await store.play('New text');
+    response.next(new Blob(['old audio']));
+    response.complete();
+    await pending;
+    expect(audioPlayer.play).toHaveBeenCalledTimes(1);
+    expect(store.playingText()).toBe('New text');
   });
 });

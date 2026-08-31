@@ -43,6 +43,25 @@
   color: rgb(253 186 116);
 }
 
+.selection-speech-action:hover {
+  background: rgb(16 185 129 / 0.18);
+  color: rgb(110 231 183);
+}
+
+.selection-speech-feedback {
+  position: fixed;
+  z-index: 71;
+  inset-inline: 0.75rem;
+  width: fit-content;
+  max-width: calc(100vw - 1.5rem);
+  margin-inline: auto;
+  border-radius: 0.7rem;
+  background: rgb(15 23 42 / 0.96);
+  padding: 0.65rem 0.85rem;
+  color: rgb(253 186 116);
+  font-size: 0.85rem;
+}
+
 .selection-action-button:active {
   transform: translateY(0) scale(0.94);
 }

@@ -5,16 +5,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SpeakingReviewDiscussionComponent } from './speaking-review-discussion.component';
 import { SpeakingReviewDiscussionStore } from './speaking-review-discussion.store';
 import { SpeakingStore } from './speaking.store';
+import { TtsStore } from '../tts/tts.store';
 
 describe('Speaking 回顧行動版選字手勢', () => {
   let fixture: ComponentFixture<SpeakingReviewDiscussionComponent>;
   let component: SpeakingReviewDiscussionComponent;
   let text: HTMLElement;
   let caretOffset: number;
+  let tts: ReturnType<typeof createTtsMock>;
+
+  function createTtsMock() {
+    return {
+      play: vi.fn().mockResolvedValue(undefined),
+      playWord: vi.fn(),
+      stop: vi.fn(),
+      clearError: vi.fn(),
+      loadingText: signal<string | null>(null),
+      playingText: signal<string | null>(null),
+      error: signal<string | null>(null),
+    };
+  }
 
   beforeEach(async () => {
     await resolveComponentResources(async () => '');
     vi.useFakeTimers();
+    tts = createTtsMock();
     vi.stubGlobal('matchMedia', () => ({ matches: true }));
     // jsdom 不做排版；只替換座標查字 API，手勢由真正的 DOM event listener 處理。
     Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
@@ -40,6 +55,7 @@ describe('Speaking 回顧行動版選字手勢', () => {
           styleUrl: undefined,
           providers: [
             { provide: SpeakingStore, useValue: {} },
+            { provide: TtsStore, useValue: tts },
             {
               provide: SpeakingReviewDiscussionStore,
               useValue: {
@@ -198,5 +214,53 @@ describe('Speaking 回顧行動版選字手勢', () => {
     vi.advanceTimersByTime(400);
     expect(component.mobileSelectionActive()).toBe(false);
     expect(touch('touchmove', 20, 150).defaultPrevented).toBe(false);
+  });
+
+  it('選取單字也使用句子 TTS，不走 Google 單字語音', async () => {
+    component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'Hello' });
+    await component.onSelectionSpeechActionClick();
+    expect(tts.play).toHaveBeenCalledWith('Hello');
+    expect(tts.playWord).not.toHaveBeenCalled();
+  });
+
+  it('沒有選字或相同文字正在載入時不重複請求', async () => {
+    await component.onSelectionSpeechActionClick();
+    component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'Hello' });
+    tts.loadingText.set('Hello');
+    expect(component.selectionSpeechLoading()).toBe(true);
+    await component.onSelectionSpeechActionClick();
+    expect(tts.play).not.toHaveBeenCalled();
+  });
+
+  it('朗讀中再次按下交由播放器暫停，且不清除選取', async () => {
+    component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'Hello' });
+    tts.playingText.set('Hello');
+    expect(component.selectionSpeechPlaying()).toBe(true);
+    await component.onSelectionSpeechActionClick();
+    expect(tts.play).toHaveBeenCalledWith('Hello');
+    expect(component.selectionActionVisible()).toBe(true);
+  });
+
+  it('超過 500 字顯示提示，不截斷送出', async () => {
+    component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'a'.repeat(501) });
+    await component.onSelectionSpeechActionClick();
+    expect(tts.play).not.toHaveBeenCalled();
+    expect(component.selectionSpeechError()).toContain('500');
+  });
+
+  it('播放失敗會顯示錯誤且可重新點擊重試', async () => {
+    component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'Hello' });
+    tts.play.mockImplementationOnce(async () => tts.error.set('語音播放失敗'));
+    await component.onSelectionSpeechActionClick();
+    expect(component.selectionSpeechError()).toBe('語音播放失敗');
+    tts.error.set(null);
+    await component.onSelectionSpeechActionClick();
+    expect(component.selectionSpeechError()).toBeNull();
+    expect(tts.play).toHaveBeenCalledTimes(2);
+  });
+
+  it('離開頁面時停止這個討論的朗讀', () => {
+    fixture.destroy();
+    expect(tts.stop).toHaveBeenCalled();
   });
 });

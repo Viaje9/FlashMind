@@ -1,5 +1,7 @@
 <div
-  class="min-h-screen bg-background-light text-slate-900 dark:text-slate-100 pb-8 [&_.bg-primary]:bg-sky-800 [&_button.bg-primary:hover]:bg-sky-900 dark:bg-background-dark"
+  data-testid="speaking-history-page"
+  class="min-h-screen bg-background-light text-slate-900 dark:text-slate-100 [&_.bg-primary]:bg-sky-800 [&_button.bg-primary:hover]:bg-sky-900 dark:bg-background-dark"
+  [class.pb-8]="!discussing() || !selectedConversation"
 >
   @if (error()) {
     <p

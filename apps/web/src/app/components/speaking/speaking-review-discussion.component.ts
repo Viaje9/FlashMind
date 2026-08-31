@@ -25,6 +25,7 @@ import {
 import { SpeakingSummaryComponent } from './speaking-summary.component';
 import { SpeakingReviewDiscussionStore } from './speaking-review-discussion.store';
 import { SpeakingStore } from './speaking.store';
+import { TtsStore } from '../tts/tts.store';
 
 type SelectionTooltipStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -72,7 +73,7 @@ interface DocumentWithCaretApi {
     TopicConversationComposerComponent,
     TopicConversationMessageComponent,
   ],
-  providers: [SpeakingReviewDiscussionStore],
+  providers: [SpeakingReviewDiscussionStore, TtsStore],
   styleUrl: './speaking-review-discussion.component.css',
   template: `
     <div
@@ -199,6 +200,43 @@ interface DocumentWithCaretApi {
             </button>
             <button
               type="button"
+              class="selection-action-button selection-speech-action"
+              [attr.aria-label]="
+                selectionSpeechLoading()
+                  ? '正在產生語音'
+                  : selectionSpeechPlaying()
+                    ? '暫停朗讀'
+                    : '朗讀選取文字'
+              "
+              [attr.title]="
+                selectionSpeechLoading()
+                  ? '正在產生語音'
+                  : selectionSpeechPlaying()
+                    ? '暫停朗讀'
+                    : '朗讀'
+              "
+              [disabled]="selectionSpeechLoading()"
+              [attr.aria-busy]="selectionSpeechLoading()"
+              data-testid="speaking-discussion-selection-speech-action"
+              data-speaking-selection-overlay="true"
+              (mousedown)="onSelectionOverlayMouseDown($event)"
+              (click)="onSelectionSpeechActionClick()"
+            >
+              <span
+                class="material-symbols-outlined text-[18px]"
+                aria-hidden="true"
+                [class.animate-spin]="selectionSpeechLoading()"
+                >{{
+                  selectionSpeechLoading()
+                    ? 'progress_activity'
+                    : selectionSpeechPlaying()
+                      ? 'pause'
+                      : 'volume_up'
+                }}</span
+              >
+            </button>
+            <button
+              type="button"
               class="selection-action-button selection-mark-action"
               aria-label="標記選取文字"
               title="標記"
@@ -212,6 +250,17 @@ interface DocumentWithCaretApi {
               >
             </button>
           </div>
+          @if (selectionSpeechError(); as error) {
+            <p
+              class="selection-speech-feedback"
+              role="alert"
+              data-speaking-selection-overlay="true"
+              data-testid="speaking-discussion-selection-speech-error"
+              [style.top.px]="selectionActionPosition().top + 46"
+            >
+              {{ error }}
+            </p>
+          }
         }
         @if (selectionTooltipVisible() && selectionTranslateTarget(); as selectionTarget) {
           <div
@@ -404,6 +453,16 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   readonly closed = output<void>();
   readonly store = inject(SpeakingReviewDiscussionStore);
   private readonly speakingStore = inject(SpeakingStore);
+  private readonly tts = inject(TtsStore);
+  readonly selectionSpeechError = signal<string | null>(null);
+  readonly selectionSpeechLoading = computed(() => {
+    const text = this.selectionTranslateTarget()?.selectedText;
+    return !!text && this.tts.loadingText() === text;
+  });
+  readonly selectionSpeechPlaying = computed(() => {
+    const text = this.selectionTranslateTarget()?.selectedText;
+    return !!text && this.tts.playingText() === text;
+  });
   readonly selectionTranslateTarget = signal<SelectionTranslateTarget | null>(null);
   readonly selectionActionPosition = signal({ left: 0, top: 0 });
   readonly selectionTooltipStatus = signal<SelectionTooltipStatus>('idle');
@@ -467,6 +526,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
       root.removeEventListener('touchmove', onTouchMove, true);
       root.removeEventListener('touchstart', onTouchStart, true);
       this.cancelMobileSelectionGesture(true);
+      this.tts.stop();
     });
   }
 
@@ -547,6 +607,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
     const current = this.selectionTranslateTarget();
     if (current?.messageId !== messageId || current.selectedText !== selectedText) {
+      this.selectionSpeechError.set(null);
       this.selectionRequestToken++;
       this.selectionTooltipVisible.set(false);
       this.selectionTooltipStatus.set('idle');
@@ -668,6 +729,23 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     const rect = selection.getRangeAt(0).getBoundingClientRect();
     if (this.selectionTranslateTarget()) {
       this.updateSelectionActionPosition(rect);
+    }
+  }
+
+  async onSelectionSpeechActionClick(): Promise<void> {
+    const target = this.selectionTranslateTarget();
+    if (!target?.selectedText || this.selectionSpeechLoading()) return;
+    this.selectionSpeechError.set(null);
+    if (target.selectedText.length > 500) {
+      this.selectionSpeechError.set('每次最多朗讀 500 字，請縮小選取範圍。');
+      return;
+    }
+    this.tts.clearError();
+    // 一律走 Azure 的句子 TTS，即使只選到單字也不使用 Google playWord。
+    await this.tts.play(target.selectedText);
+    const current = this.selectionTranslateTarget();
+    if (current?.messageId === target.messageId && current.selectedText === target.selectedText) {
+      this.selectionSpeechError.set(this.tts.error());
     }
   }
 
@@ -1080,7 +1158,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   }
 
   private updateSelectionActionPosition(rect: DOMRect): void {
-    const width = 88;
+    const width = 124;
     const height = 44;
     const gap = 10;
     const safe = 8;
@@ -1297,6 +1375,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   }
 
   private dismissSelectionTranslation(clearNativeSelection: boolean): void {
+    this.selectionSpeechError.set(null);
     this.selectionRequestToken++;
     this.mobileSelectionDraft.set(null);
     this.selectionTranslateTarget.set(null);

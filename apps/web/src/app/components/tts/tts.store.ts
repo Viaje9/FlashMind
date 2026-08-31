@@ -16,6 +16,7 @@ export class TtsStore {
   private readonly audioPlayer = inject(SpeakingAudioPlayerService);
   private readonly audioCache = new Map<string, Blob>();
   private readonly currentPlaybackKey = signal<string | null>(null);
+  private playbackRequestToken = 0;
 
   private readonly state = signal<TtsStoreState>({
     playingText: null,
@@ -75,6 +76,7 @@ export class TtsStore {
     }
 
     this.stop();
+    const requestToken = this.playbackRequestToken;
 
     this.state.update((s) => ({
       ...s,
@@ -84,17 +86,20 @@ export class TtsStore {
 
     try {
       const audioBlob = await this.getSentenceAudioBlob(trimmedText);
+      if (requestToken !== this.playbackRequestToken) return;
       this.state.update((s) => ({
         ...s,
         loadingText: null,
       }));
-      await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
       this.currentPlaybackKey.set(cacheKey);
+      await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
+      if (requestToken !== this.playbackRequestToken) return;
       this.state.update((s) => ({
         ...s,
         playingText: trimmedText,
       }));
     } catch {
+      if (requestToken !== this.playbackRequestToken) return;
       this.state.update((s) => ({
         ...s,
         loadingText: null,
@@ -125,6 +130,7 @@ export class TtsStore {
     }
 
     this.stop();
+    const requestToken = this.playbackRequestToken;
 
     this.state.update((s) => ({
       ...s,
@@ -134,17 +140,20 @@ export class TtsStore {
 
     try {
       const audioBlob = await this.getWordAudioBlob(trimmedText);
+      if (requestToken !== this.playbackRequestToken) return;
       this.state.update((s) => ({
         ...s,
         loadingText: null,
       }));
-      await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
       this.currentPlaybackKey.set(cacheKey);
+      await this.audioPlayer.play(audioBlob, cacheKey, { auto: false });
+      if (requestToken !== this.playbackRequestToken) return;
       this.state.update((s) => ({
         ...s,
         playingText: trimmedText,
       }));
     } catch {
+      if (requestToken !== this.playbackRequestToken) return;
       this.state.update((s) => ({
         ...s,
         loadingText: null,
@@ -156,6 +165,7 @@ export class TtsStore {
   }
 
   stop(): void {
+    this.playbackRequestToken++;
     const activeKey = this.currentPlaybackKey();
     if (activeKey) {
       const playingKey = this.audioPlayer.playingKey();
