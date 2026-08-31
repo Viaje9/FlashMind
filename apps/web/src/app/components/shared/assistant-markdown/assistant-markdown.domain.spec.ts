@@ -24,6 +24,17 @@ describe('assistant-markdown.domain', () => {
     expect(html).not.toContain('**');
   });
 
+  it('應修正中文文字後粗體起始標記黏字且在標記後多留空白的格式', () => {
+    const html = renderAssistantMarkdown(
+      '還有** “Maybe today I will stop, and tomorrow maybe I will keep going.”**，也很自然。',
+    );
+
+    expect(html).toContain(
+      '<strong>“Maybe today I will stop, and tomorrow maybe I will keep going.”</strong>',
+    );
+    expect(html).not.toContain('**');
+  });
+
   it('表格後缺少空行時仍應將結論解析成表格外的段落', () => {
     const html = renderAssistantMarkdown(
       ['| 單字 | 用法 |', '| --- | --- |', '| happen | 日常口語 |', '**結論**：依語境選字。'].join(

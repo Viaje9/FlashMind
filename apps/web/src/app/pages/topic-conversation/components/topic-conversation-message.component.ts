@@ -15,17 +15,32 @@ import type { TopicConversationMessageView } from '../../../components/topic-con
       [attr.data-testid]="'topic-conversation-message-' + message().id"
     >
       <div
-        class="max-w-[88%] px-4 py-3 text-[15px] leading-7"
+        class="relative max-w-[88%] px-4 py-3 text-[15px] leading-7"
+        [class.px-0]="isSource() && !isUser()"
+        [class.py-2]="isSource() && !isUser()"
+        [class.w-full]="isDiscussion() && !isUser()"
+        [style.max-width]="isDiscussion() && !isUser() ? '100%' : null"
+        [attr.data-speaking-assistant-message-id]="
+          isDiscussion() || isSource() ? message().id : null
+        "
+        [attr.data-speaking-selection-context]="
+          isDiscussion() || isSource() ? 'review-discussion' : null
+        "
+        [attr.data-speaking-selection-message-id]="
+          isDiscussion() || isSource() ? message().id : null
+        "
         [class.rounded-2xl]="isUser()"
+        [class.rounded-xl]="isDiscussion() && !isUser()"
         [class.rounded-br-md]="isUser()"
         [class.bg-emerald-700]="isUser()"
         [class.text-white]="isUser()"
         [class.shadow-sm]="isUser()"
-        [class.border-l-2]="!isUser()"
-        [class.border-amber-400]="!isUser()"
-        [class.bg-white]="!isUser()"
-        [class.text-slate-800]="!isUser()"
-        [class.dark:bg-slate-900]="!isUser()"
+        [class.border-l-2]="!isUser() && !isDiscussion() && !isSource()"
+        [class.border-amber-400]="!isUser() && !isDiscussion() && !isSource()"
+        [class.bg-white]="!isUser() && !isDiscussion() && !isSource()"
+        [class.bg-primary/10]="isDiscussion() && !isUser()"
+        [class.text-slate-800]="!isUser() && !isDiscussion()"
+        [class.dark:bg-slate-900]="!isUser() && !isDiscussion() && !isSource()"
         [class.dark:text-slate-100]="!isUser()"
       >
         @if (message().content) {
@@ -105,5 +120,12 @@ import type { TopicConversationMessageView } from '../../../components/topic-con
 })
 export class TopicConversationMessageComponent {
   readonly message = input.required<TopicConversationMessageView>();
+  /**
+   * 回顧討論使用獨立的訊息呈現，避免把原始口說紀錄誤認成同一段對話。
+   * 預設值維持主題對話頁既有外觀。
+   */
+  readonly presentation = input<'default' | 'discussion' | 'source'>('default');
   readonly isUser = computed(() => this.message().role === TopicConversationRole.User);
+  readonly isDiscussion = computed(() => this.presentation() === 'discussion');
+  readonly isSource = computed(() => this.presentation() === 'source');
 }

@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "../../../packages/ui/src/styles/index.css";
+@import 'tailwindcss';
+@import '../../../packages/ui/src/styles/index.css';
 
 @source "./**/*.{html,ts}";
 @source "../../../packages/ui/**/*.{html,ts}";
@@ -18,6 +18,71 @@ html {
 /* 移除預設 focus outline，由各元件自行處理 focus 樣式 */
 *:focus-visible {
   outline: none;
+}
+
+/* Speaking review：標記包在訊息／摘要的 DOM 文字節點內，需使用全域樣式跨過子元件邊界。 */
+.speaking-marked-text {
+  position: relative;
+  border-radius: 0.22rem;
+  background: color-mix(in srgb, var(--color-sky-300) 28%, transparent);
+  box-shadow: inset 0 -0.12rem 0 color-mix(in srgb, var(--color-sky-400) 72%, transparent);
+  color: color-mix(in srgb, currentColor 78%, var(--color-sky-700));
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-sky-500) 78%, transparent);
+  text-decoration-thickness: 0.12rem;
+  text-underline-offset: 0.18em;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.speaking-marked-text:hover {
+  background: color-mix(in srgb, var(--color-sky-300) 42%, transparent);
+  box-shadow: inset 0 -0.16rem 0 color-mix(in srgb, var(--color-sky-400) 88%, transparent);
+}
+
+.speaking-marked-text[data-speaking-marked-context-anchor='true']::after {
+  position: absolute;
+  top: -0.78rem;
+  right: -0.28rem;
+  display: grid;
+  width: 1.22rem;
+  height: 1.22rem;
+  place-items: center;
+  border: 2px solid var(--color-background-light);
+  border-radius: 9999px;
+  background: var(--color-sky-600);
+  color: white;
+  content: attr(data-speaking-marked-context-number);
+  font-size: 0.64rem;
+  font-weight: 750;
+  line-height: 1;
+  pointer-events: auto;
+  box-shadow: 0 3px 8px rgb(15 23 42 / 0.26);
+}
+
+.speaking-marked-text[data-speaking-marked-context-anchor='true']:focus-visible {
+  outline: 2px solid var(--color-sky-400);
+  outline-offset: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .speaking-marked-text {
+    background: color-mix(in srgb, var(--color-sky-400) 22%, transparent);
+    box-shadow: inset 0 -0.12rem 0 color-mix(in srgb, var(--color-sky-300) 76%, transparent);
+    color: color-mix(in srgb, currentColor 78%, var(--color-sky-100));
+  }
+
+  .speaking-marked-text[data-speaking-marked-context-anchor='true']::after {
+    border-color: var(--color-background-dark);
+  }
+
+  .speaking-marked-text:hover {
+    background: color-mix(in srgb, var(--color-sky-400) 34%, transparent);
+  }
 }
 
 /* Dialog backdrop 樣式 */

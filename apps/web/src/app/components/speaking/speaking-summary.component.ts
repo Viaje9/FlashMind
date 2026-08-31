@@ -24,7 +24,11 @@ renderer.table = function (token) {
 @Component({
   selector: 'app-speaking-summary',
   template: `
-    <article class="mb-4 min-w-0 border-t-2 border-orange-400" data-testid="speaking-summary-card">
+    <article
+      class="mb-4 min-w-0 border-t-2 border-orange-400"
+      [class.speaking-summary-flat]="flat()"
+      data-testid="speaking-summary-card"
+    >
       <div class="py-5 sm:py-6">
         <header class="mb-4 flex items-center justify-between gap-3">
           <h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -46,7 +50,12 @@ renderer.table = function (token) {
             </button>
           }
         </header>
-        <div class="speaking-summary-content" data-testid="speaking-summary-content">
+        <div
+          class="speaking-summary-content relative"
+          data-testid="speaking-summary-content"
+          [attr.data-speaking-selection-context]="selectionMessageId() ? 'review-discussion' : null"
+          [attr.data-speaking-selection-message-id]="selectionMessageId()"
+        >
           @for (section of sections(); track $index) {
             @if (section.headingHtml) {
               <details
@@ -85,6 +94,8 @@ export class SpeakingSummaryComponent {
   readonly copied = input(false);
   readonly showCopy = input(true);
   readonly initiallyCollapsed = input(false);
+  readonly flat = input(false);
+  readonly selectionMessageId = input<string | null>(null);
   readonly copyRequested = output<void>();
   // 不使用 bypassSecurityTrustHtml，交由 Angular 再做 HTML sanitization。
   readonly sections = computed(() => {

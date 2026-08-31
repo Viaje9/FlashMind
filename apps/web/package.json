@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "0.1.106",
+  "version": "0.1.107",
   "scripts": {
     "ng": "ng",
     "start": "pnpm --filter @flashmind/shared build && ng serve",

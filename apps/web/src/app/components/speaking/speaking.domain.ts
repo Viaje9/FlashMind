@@ -96,6 +96,13 @@ export interface SpeakingSelectionTranslationRequest {
   requestToken: number;
 }
 
+export interface SpeakingReviewMarkedContext {
+  id: string;
+  messageId: string;
+  selectedText: string;
+  note: string | null;
+}
+
 export interface SpeakingSelectionTranslationSuccessResult {
   status: 'success';
   requestToken: number;

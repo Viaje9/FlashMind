@@ -76,6 +76,66 @@ describe('SpeakingReviewDiscussionStore', () => {
     expect(store.messages().filter((m) => m.role === 'user')).toHaveLength(1);
   });
 
+  it('標記片段可只保留或加入備註，並帶入下一次回顧上下文', async () => {
+    store.start(conversation, []);
+
+    const marked = store.addMarkedContext({
+      messageId: 'm1',
+      selectedText: 'I watch yesterday.',
+    });
+    expect(marked).toEqual(
+      expect.objectContaining({
+        messageId: 'm1',
+        selectedText: 'I watch yesterday.',
+        note: null,
+      }),
+    );
+
+    const updated = store.addMarkedContext({
+      messageId: 'm1',
+      selectedText: ' I watch yesterday. ',
+      note: '想確認過去式',
+    });
+    expect(updated?.id).toBe(marked?.id);
+    expect(store.markedContexts()).toEqual([
+      expect.objectContaining({
+        selectedText: 'I watch yesterday.',
+        note: '想確認過去式',
+      }),
+    ]);
+
+    await store.sendMessage('請說明這句');
+    const history = reply.mock.calls[0][0].history as { content: string }[];
+    expect(history.map((message) => message.content).join('')).toContain('I watch yesterday.');
+    expect(history.map((message) => message.content).join('')).toContain('想確認過去式');
+
+    store.removeMarkedContext(marked?.id ?? '');
+    expect(store.markedContexts()).toEqual([]);
+  });
+
+  it('可由標記位置重新編輯備註，也能清空備註只保留標記', () => {
+    store.start(conversation, []);
+    const marked = store.addMarkedContext({
+      messageId: 'm1',
+      selectedText: 'I watch yesterday.',
+      note: '先記下原句',
+    });
+
+    const updated = store.updateMarkedContext(marked?.id ?? '', '改成想複習過去式');
+    expect(updated).toEqual(
+      expect.objectContaining({
+        id: marked?.id,
+        messageId: 'm1',
+        selectedText: 'I watch yesterday.',
+        note: '改成想複習過去式',
+      }),
+    );
+
+    const cleared = store.updateMarkedContext(marked?.id ?? '', '   ');
+    expect(cleared?.note).toBeNull();
+    expect(store.updateMarkedContext('missing', '不應存在')).toBeNull();
+  });
+
   it('離開立即取消請求並清除內容，重新進入沒有後續討論', async () => {
     const pending = new Subject();
     reply.mockReturnValue(pending);
@@ -88,5 +148,6 @@ describe('SpeakingReviewDiscussionStore', () => {
     expect(store.messages()).toEqual([]);
     store.start(conversation, []);
     expect(store.messages().some((m) => m.content.includes('暫時問題'))).toBe(false);
+    expect(store.markedContexts()).toEqual([]);
   });
 });
