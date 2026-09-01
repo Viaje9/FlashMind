@@ -98,6 +98,16 @@
     inset 0 1px rgb(255 255 255 / 0.025),
     0 14px 35px rgb(2 8 23 / 0.12);
 }
+.word-card.is-selected {
+  border-color: rgb(56 189 248 / 0.62);
+  background:
+    linear-gradient(90deg, rgb(14 165 233 / 0.1), transparent 24%),
+    linear-gradient(145deg, rgb(15 43 59 / 0.98), rgb(8 30 43 / 0.98));
+  box-shadow:
+    inset 3px 0 #38bdf8,
+    inset 0 1px rgb(255 255 255 / 0.04),
+    0 14px 35px rgb(2 8 23 / 0.16);
+}
 .word-card h2 {
   color: #f8fafc;
   font-size: 1.42rem;
@@ -386,6 +396,15 @@
   .word-card {
     background: linear-gradient(145deg, #fff, #f8fafc);
     border-color: #dbeafe;
+  }
+  .word-card.is-selected {
+    border-color: #7dd3fc;
+    background:
+      linear-gradient(90deg, rgb(14 165 233 / 0.07), transparent 24%),
+      linear-gradient(145deg, #fff, #f8fafc);
+    box-shadow:
+      inset 3px 0 #0ea5e9,
+      0 14px 35px rgb(2 8 23 / 0.1);
   }
   .word-card h2,
   .meaning,

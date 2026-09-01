@@ -27,12 +27,24 @@ import {
   AddToDeckDialogComponent,
   type AddToDeckDialogData,
 } from './components/add-to-deck-dialog/add-to-deck-dialog.component';
+import {
+  BatchAddToDeckDialogComponent,
+  type BatchAddToDeckDialogData,
+} from './components/batch-add-to-deck-dialog/batch-add-to-deck-dialog.component';
+import { SelectionToolbarComponent } from './components/selection-toolbar/selection-toolbar.component';
+import { SelectionCheckComponent } from './components/selection-check/selection-check.component';
 
 const TARGET_VOCABULARY_FILTER_STORAGE_KEY = 'flashmind.target-vocabulary.filter';
 
 @Component({
   selector: 'app-target-vocabulary-page',
-  imports: [RouterLink, FmPageHeaderComponent, FmIconButtonComponent],
+  imports: [
+    RouterLink,
+    FmPageHeaderComponent,
+    FmIconButtonComponent,
+    SelectionToolbarComponent,
+    SelectionCheckComponent,
+  ],
   templateUrl: './target-vocabulary.component.html',
   styleUrl: './target-vocabulary.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,6 +62,7 @@ export class TargetVocabularyComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal('');
   readonly notice = signal('');
+  readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly rejectingId = signal<string | null>(null);
   readonly ttsError = this.ttsStore.error;
   readonly backNavigation = getTargetVocabularyBackNavigation(
@@ -60,6 +73,12 @@ export class TargetVocabularyComponent implements OnInit {
   readonly counts = computed(() => getTargetVocabularyStatusCounts(this.items()));
   readonly visibleItems = computed(() =>
     filterTargetVocabulary(this.items(), this.activeFilter(), this.query()),
+  );
+  readonly selectableItems = computed(() =>
+    this.visibleItems().filter((item) => item.status === 'USED'),
+  );
+  readonly selectedItems = computed(() =>
+    this.selectableItems().filter((item) => this.selectedIds().has(item.id)),
   );
 
   readonly filters: ReadonlyArray<{ value: TargetVocabularyFilter; label: string }> = [
@@ -74,17 +93,64 @@ export class TargetVocabularyComponent implements OnInit {
   }
 
   setFilter(filter: TargetVocabularyFilter): void {
+    this.clearSelection();
     this.activeFilter.set(filter);
     this.saveFilterPreference(filter);
   }
 
   onSearch(event: Event): void {
+    this.clearSelection();
     this.query.set((event.target as HTMLInputElement).value);
   }
 
   onPlayWordAudio(text: string): void {
     if (!text.trim()) return;
     void this.ttsStore.playWord(text);
+  }
+
+  toggleSelection(item: TargetVocabularyItem): void {
+    if (item.status !== 'USED' || this.rejectingId() === item.id) return;
+    this.selectedIds.update((ids) => {
+      const next = new Set(ids);
+      if (next.has(item.id)) next.delete(item.id);
+      else next.add(item.id);
+      return next;
+    });
+  }
+
+  toggleSelectAll(): void {
+    this.selectedIds.set(
+      this.selectedItems().length === this.selectableItems().length
+        ? new Set()
+        : new Set(this.selectableItems().map((item) => item.id)),
+    );
+  }
+
+  clearSelection(): void {
+    this.selectedIds.set(new Set());
+  }
+
+  openBatchAddToDeck(): void {
+    const items = this.selectedItems();
+    if (!items.length) return;
+    const dialog = this.dialogService.open<
+      BatchAddToDeckDialogComponent,
+      BatchAddToDeckDialogData,
+      TargetVocabularyItem[]
+    >(BatchAddToDeckDialogComponent, {
+      data: { items },
+      maxWidth: '32rem',
+      closeOnBackdropClick: false,
+      closeOnEsc: false,
+      ariaLabel: '批次加入牌組',
+    });
+    dialog.afterClosed().subscribe((updated) => {
+      if (!updated?.length) return;
+      const byId = new Map(updated.map((item) => [item.id, item]));
+      this.items.update((items) => items.map((item) => byId.get(item.id) ?? item));
+      this.selectedIds.update((ids) => new Set([...ids].filter((id) => !byId.has(id))));
+      this.notice.set(`已將 ${updated.length} 個單字加入牌組`);
+    });
   }
 
   onPlaySentenceAudio(text: string): void {
@@ -127,7 +193,7 @@ export class TargetVocabularyComponent implements OnInit {
       this.items.update((items) =>
         items.map((current) => (current.id === updated.id ? updated : current)),
       );
-      this.setFilter('ADDED');
+      this.selectedIds.update((ids) => new Set([...ids].filter((id) => id !== updated.id)));
       this.notice.set(`${updated.term} 已加入牌組`);
     });
   }

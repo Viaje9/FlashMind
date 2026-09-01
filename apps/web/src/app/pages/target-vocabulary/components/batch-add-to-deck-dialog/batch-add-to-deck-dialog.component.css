@@ -1,0 +1,126 @@
+:host {
+  display: block;
+  min-width: 0;
+  width: min(32rem, 90vw);
+}
+fm-dialog-content {
+  min-height: 0;
+  overflow-y: auto;
+}
+fm-dialog-actions {
+  flex: none;
+}
+.deck-field,
+.translation-field {
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.deck-field select,
+.translation-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 400;
+}
+.deck-field select:focus-visible,
+.translation-field textarea:focus-visible {
+  outline: 2px solid #0284c7;
+  outline-offset: 2px;
+}
+.deck-field select:disabled,
+.translation-field textarea:disabled {
+  opacity: 0.65;
+}
+.translation-field textarea {
+  resize: vertical;
+}
+.translation-action {
+  display: grid;
+  gap: 0.5rem;
+}
+.translation-action p {
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.batch-word {
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 1rem;
+  background: #f8fafc;
+}
+.batch-word header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: start;
+}
+.batch-word h3 {
+  font-weight: 800;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+.batch-word header p {
+  font-size: 0.85rem;
+  color: #475569;
+}
+.english-sentence {
+  margin: 0.85rem 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.completed-label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  color: #047857;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.batch-word.is-complete {
+  border-color: #6ee7b7;
+}
+.row-error {
+  margin-top: 0.5rem;
+  color: #be123c;
+  font-size: 0.8rem;
+}
+.batch-actions {
+  display: grid;
+  gap: 0.6rem;
+  width: 100%;
+}
+@media (prefers-color-scheme: dark) {
+  .deck-field select,
+  .translation-field textarea {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+  }
+  .batch-word {
+    border-color: rgb(56 189 248 / 0.2);
+    background: rgb(14 165 233 / 0.04);
+  }
+  .batch-word header p,
+  .translation-action p {
+    color: #94a3b8;
+  }
+  .batch-word.is-complete {
+    border-color: rgb(52 211 153 / 0.4);
+  }
+  .completed-label {
+    color: #6ee7b7;
+  }
+  .row-error {
+    color: #fda4af;
+  }
+}

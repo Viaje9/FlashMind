@@ -64,6 +64,16 @@
       />
     </label>
 
+    @if (activeFilter() === 'USED' && selectableItems().length) {
+      <app-target-vocabulary-selection-toolbar
+        [selectedCount]="selectedItems().length"
+        [total]="selectableItems().length"
+        (toggleAll)="toggleSelectAll()"
+        (clear)="clearSelection()"
+        (add)="openBatchAddToDeck()"
+      />
+    }
+
     @if (ttsError()) {
       <div class="audio-error" role="alert" data-testid="target-vocabulary-audio-error">
         <span class="material-symbols-outlined" aria-hidden="true">error</span>
@@ -106,10 +116,23 @@
         data-testid="target-vocabulary-list"
       >
         @for (item of visibleItems(); track item.id) {
-          <article class="word-card" [attr.data-testid]="'target-vocabulary-item-' + item.id">
+          <article
+            class="word-card"
+            [class.is-selected]="selectedIds().has(item.id)"
+            [attr.data-testid]="'target-vocabulary-item-' + item.id"
+          >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="term-heading">
+                  @if (item.status === 'USED') {
+                    <app-target-vocabulary-selection-check
+                      [checked]="selectedIds().has(item.id)"
+                      [disabled]="rejectingId() === item.id"
+                      [ariaLabel]="'勾選 ' + item.term"
+                      [testId]="'target-vocabulary-select-' + item.id"
+                      (changed)="toggleSelection(item)"
+                    />
+                  }
                   <h2>{{ item.term }}</h2>
                   <button
                     type="button"
@@ -299,11 +322,13 @@
     }
   </main>
 
-  <a
-    class="import-fab"
-    routerLink="/target-vocabulary/import"
-    aria-label="匯入目標單字"
-    data-testid="target-vocabulary-import-fab"
-    ><span class="material-symbols-outlined">add</span></a
-  >
+  @if (!selectedItems().length) {
+    <a
+      class="import-fab"
+      routerLink="/target-vocabulary/import"
+      aria-label="匯入目標單字"
+      data-testid="target-vocabulary-import-fab"
+      ><span class="material-symbols-outlined">add</span></a
+    >
+  }
 </div>

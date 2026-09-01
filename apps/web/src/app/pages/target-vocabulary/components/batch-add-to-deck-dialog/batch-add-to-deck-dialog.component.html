@@ -1,0 +1,121 @@
+<fm-dialog>
+  <fm-dialog-title>批次加入牌組</fm-dialog-title>
+  <fm-dialog-content>
+    <form class="space-y-4" (submit)="$event.preventDefault(); onConfirm()">
+      <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        已選 {{ model().entries.length }} 個單字。可先翻譯例句、確認中文，再一起加入。
+      </p>
+      <label class="deck-field">
+        <span>加入牌組</span>
+        <select [formField]="batchForm.deckId" data-testid="target-vocabulary-batch-deck">
+          @if (loadingDecks()) {
+            <option value="">正在載入牌組...</option>
+          } @else if (!decks().length) {
+            <option value="">目前沒有可用牌組，請先建立牌組</option>
+          } @else {
+            @for (deck of decks(); track deck.id) {
+              <option [value]="deck.id">{{ deck.name }}</option>
+            }
+          }
+        </select>
+      </label>
+
+      <div class="translation-action">
+        <fm-button
+          variant="secondary"
+          [disabled]="busy() || !untranslatedCount()"
+          (click)="translateAll()"
+          testId="target-vocabulary-batch-translate"
+        >
+          <span class="material-symbols-outlined text-lg" aria-hidden="true">translate</span>
+          {{ translating() ? '翻譯中...' : '一鍵翻譯例句' }}
+        </fm-button>
+        <p>只翻譯空白的中文例句，不會覆蓋你修改的內容。</p>
+      </div>
+
+      @for (entry of model().entries; track entry.id; let index = $index) {
+        <article class="batch-word" [class.is-complete]="isCompleted(entry.id)">
+          <header>
+            <div>
+              <h3>{{ entry.term }}</h3>
+              <p>{{ entry.zhMeaning }}</p>
+            </div>
+            @if (isCompleted(entry.id)) {
+              <span class="completed-label"
+                ><span class="material-symbols-outlined text-base" aria-hidden="true"
+                  >check_circle</span
+                >已加入</span
+              >
+            }
+          </header>
+          @if (entry.naturalSentence) {
+            <p class="english-sentence">{{ entry.naturalSentence }}</p>
+            <label class="translation-field">
+              <span>中文例句</span>
+              <textarea
+                rows="2"
+                [formField]="batchForm.entries[index].zhExample"
+                [readOnly]="isCompleted(entry.id)"
+                placeholder="可一鍵翻譯，也可以自行輸入（選填）"
+                [attr.data-testid]="'target-vocabulary-batch-zh-' + entry.id"
+              ></textarea>
+            </label>
+            @if (batchForm.entries[index].zhExample().invalid()) {
+              <p class="row-error" role="alert">中文例句最多 2000 字。</p>
+            }
+          } @else {
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+              沒有英文例句，將只加入單字與中文意思。
+            </p>
+          }
+          @if (rowErrors()[entry.id]) {
+            <p class="row-error" role="alert">{{ rowErrors()[entry.id] }}</p>
+          }
+        </article>
+      }
+      @if (error()) {
+        <fm-alert [message]="error()" testId="target-vocabulary-batch-error" />
+      }
+      <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+        若已有同字卡，會連結既有卡片，不覆蓋原卡片內容。
+      </p>
+    </form>
+  </fm-dialog-content>
+  <fm-dialog-actions>
+    <div class="batch-actions">
+      @if (progress()) {
+        <p class="text-center text-xs text-sky-600 dark:text-sky-300" role="status">
+          {{ progress() }}
+        </p>
+      }
+      <div class="flex justify-end gap-2">
+        <fm-button
+          variant="ghost"
+          [disabled]="busy()"
+          (click)="onCancel()"
+          testId="target-vocabulary-batch-cancel"
+          >{{ completed().length ? '完成並返回' : '取消' }}</fm-button
+        >
+        <fm-button
+          [disabled]="
+            busy() ||
+            loadingDecks() ||
+            !decks().length ||
+            batchForm().invalid() ||
+            !pendingEntries().length
+          "
+          (click)="onConfirm()"
+          testId="target-vocabulary-batch-confirm"
+        >
+          {{
+            submitting()
+              ? '加入中...'
+              : completed().length
+                ? '重試剩下 ' + pendingEntries().length + ' 個'
+                : '加入 ' + pendingEntries().length + ' 個單字'
+          }}
+        </fm-button>
+      </div>
+    </div>
+  </fm-dialog-actions>
+</fm-dialog>

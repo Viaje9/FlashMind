@@ -74,7 +74,8 @@ html {
 .mobile-selection-enabled [data-speaking-selection-context='review-discussion'] * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
-  touch-action: pan-y;
+  /* 一般手勢保留雙軸捲動；長按選字由非 passive touchmove listener 阻止捲動。 */
+  touch-action: pan-x pan-y pinch-zoom;
   user-select: none;
 }
 

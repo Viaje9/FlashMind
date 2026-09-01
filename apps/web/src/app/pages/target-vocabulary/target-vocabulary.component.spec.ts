@@ -149,4 +149,46 @@ describe('TargetVocabularyComponent audio', () => {
     );
     expect(targetVocabularyApiMock.rejectTargetVocabularyUse).not.toHaveBeenCalled();
   });
+
+  it('單筆加入後保留已使用分頁與偏好', () => {
+    const item = { id: 'word', term: 'watch', status: 'USED' } as TargetVocabularyItem;
+    const added = { ...item, status: 'ADDED' } as TargetVocabularyItem;
+    component.setFilter('USED');
+    component.items.set([item]);
+    dialogServiceMock.open.mockReturnValue({ afterClosed: () => of(added) });
+    component.openAddToDeck(item);
+    expect(component.items()).toEqual([added]);
+    expect(component.activeFilter()).toBe('USED');
+    expect(localStorage.getItem('flashmind.target-vocabulary.filter')).toBe('USED');
+  });
+
+  it('全選只包含目前搜尋的已使用單字，切分頁清除勾選', () => {
+    component.setFilter('USED');
+    component.items.set([
+      { id: '1', term: 'watch', zhMeaning: '觀看', status: 'USED' },
+      { id: '2', term: 'normal', zhMeaning: '正常的', status: 'USED' },
+      { id: '3', term: 'watchful', zhMeaning: '警覺的', status: 'PRACTICING' },
+    ] as TargetVocabularyItem[]);
+    component.query.set('watch');
+    component.toggleSelectAll();
+    expect([...component.selectedIds()]).toEqual(['1']);
+    component.setFilter('ADDED');
+    expect(component.selectedIds().size).toBe(0);
+  });
+
+  it('批次部分完成返回時只移除成功勾選，失敗項目保留', () => {
+    const items = [
+      { id: '1', term: 'watch', zhMeaning: '觀看', status: 'USED' },
+      { id: '2', term: 'normal', zhMeaning: '正常的', status: 'USED' },
+    ] as TargetVocabularyItem[];
+    component.setFilter('USED');
+    component.items.set(items);
+    component.toggleSelectAll();
+    dialogServiceMock.open.mockReturnValue({
+      afterClosed: () => of([{ ...items[0], status: 'ADDED' }]),
+    });
+    component.openBatchAddToDeck();
+    expect(component.selectedItems().map((item) => item.id)).toEqual(['2']);
+    expect(component.activeFilter()).toBe('USED');
+  });
 });

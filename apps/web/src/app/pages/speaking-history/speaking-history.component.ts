@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Injector,
+  OnInit,
+  afterNextRender,
+  inject,
+  signal,
+} from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { SpeakingHistoryMigrationComponent } from '../../components/speaking/speaking-history-migration.component';
 import { SpeakingAudioPlayerService } from '../../components/speaking/speaking-audio-player.service';
@@ -32,6 +40,8 @@ export class SpeakingHistoryComponent implements OnInit {
   private readonly repository = inject(SpeakingRepository);
   private readonly router = inject(Router);
   private readonly audio = inject(SpeakingAudioPlayerService);
+  private readonly injector = inject(Injector);
+  private historyScrollY = 0;
   private detailRequest = 0;
   readonly error = signal<string | null>(null);
   readonly nextCursor = signal<string | null>(null);
@@ -68,6 +78,7 @@ export class SpeakingHistoryComponent implements OnInit {
   }
 
   async openConversation(conversationId: string): Promise<void> {
+    if (!this.selectedConversationId()) this.historyScrollY = window.scrollY;
     this.selectedConversationId.set(conversationId);
     this.loadingDetail.set(true);
 
@@ -95,6 +106,15 @@ export class SpeakingHistoryComponent implements OnInit {
     this.audio.stop();
     this.selectedConversationId.set(null);
     this.detailMessages.set([]);
+    // 等列表重新建立後再還原，避免短版詳情頁把位置限制在頁首。
+    afterNextRender(
+      () => {
+        if (!this.selectedConversationId()) {
+          window.scrollTo({ top: this.historyScrollY, behavior: 'instant' });
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   async continueConversation(): Promise<void> {
