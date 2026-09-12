@@ -3,6 +3,7 @@ export default defineConfig({
   testDir: "./tests/speaking",
   testMatch: [
     "speaking-history-cli.spec.ts",
+    "speaking-gpt-live.spec.ts",
     "speaking-selection-translate-tooltip.spec.ts",
   ],
   workers: 1,
@@ -17,7 +18,7 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     channel: "chrome",
-    baseURL: "http://localhost:4380",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4380",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     actionTimeout: 15000,

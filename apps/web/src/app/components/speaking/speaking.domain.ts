@@ -8,7 +8,7 @@ import {
 
 export type SpeakingRole = 'user' | 'assistant' | 'summary';
 export type SpeakingAssistantRole = 'user' | 'assistant';
-export type SpeakingInteractionMode = 'TURN_BASED' | 'REALTIME' | 'FULL_DUPLEX';
+export type SpeakingInteractionMode = 'TURN_BASED' | 'REALTIME' | 'FULL_DUPLEX' | 'GPT_LIVE';
 
 export interface SpeakingMessage {
   hasOriginalAudio?: boolean;

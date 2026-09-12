@@ -77,11 +77,14 @@ importers:
         specifier: ^5.2.3
         version: 5.2.3
       ws:
-        specifier: ^8.18.3
-        version: 8.18.3
+        specifier: ^8.21.3
+        version: 8.21.3
       zod:
         specifier: ^4.3.5
         version: 4.3.5
+      openai:
+        specifier: 7.15.0
+        version: 7.15.0(undici@7.18.0)(ws@8.21.3)(zod@4.3.5)
     devDependencies:
       "@eslint/eslintrc":
         specifier: ^3.2.0
@@ -15011,6 +15014,32 @@ packages:
         integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==,
       }
 
+  openai@7.15.0:
+    resolution:
+      integrity: sha512-2DIwesnPSduw68MFx7nAdgvshrgvS8WOan5W8+tgUMlAy/tY+Q41g80Pa+w/v64rHA6rtn+dketa8QvMVxU96w==
+    engines:
+      node: ">=22.0.0"
+    peerDependencies:
+      "@aws-sdk/credential-provider-node": ">=3.972.0 <4"
+      "@smithy/hash-node": ">=4.3.0 <5"
+      "@smithy/signature-v4": ">=5.4.0 <6"
+      undici: ">=5 <9"
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      "@aws-sdk/credential-provider-node":
+        optional: true
+      "@smithy/hash-node":
+        optional: true
+      "@smithy/signature-v4":
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
 snapshots:
   "@acemir/cssom@0.9.30": {}
 
@@ -25946,3 +25975,9 @@ snapshots:
   zod@4.3.5: {}
 
   zwitch@2.0.4: {}
+
+  openai@7.15.0(undici@7.18.0)(ws@8.21.3)(zod@4.3.5):
+    optionalDependencies:
+      undici: 7.18.0
+      ws: 8.21.3
+      zod: 4.3.5

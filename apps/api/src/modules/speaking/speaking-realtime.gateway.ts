@@ -7,12 +7,13 @@ import {
 } from '@nestjs/common';
 import type { Server as HttpServer, IncomingMessage } from 'node:http';
 import WebSocket, { type RawData, WebSocketServer } from 'ws';
+import { SpeakingLiveConnection } from './speaking-live';
 import { SessionService } from '../auth/session.service';
 
 interface ConfigureEvent {
   type: 'session.configure';
   voice: string;
-  interactionMode?: 'TURN_BASED' | 'REALTIME' | 'FULL_DUPLEX';
+  interactionMode?: 'TURN_BASED' | 'REALTIME' | 'FULL_DUPLEX' | 'GPT_LIVE';
   instructions?: string;
   memory?: string;
   history?: Array<{ role: 'user' | 'assistant'; text: string }>;
@@ -34,6 +35,7 @@ type ClientEvent =
   | { type: 'input_audio_buffer.append'; audio: string }
   | { type: 'input_audio_buffer.commit' }
   | { type: 'response.cancel' }
+  | { type: 'session.close' }
   | {
       type: 'conversation.item.truncate';
       item_id: string;
@@ -258,11 +260,11 @@ export class SpeakingRealtimeGateway
       return;
     }
 
-    let upstream: WebSocket | undefined;
+    let upstream: WebSocket | SpeakingLiveConnection | undefined;
     let configured = false;
 
     const closeBoth = () => {
-      if (upstream?.readyState === WebSocket.OPEN) upstream.close();
+      upstream?.close();
       if (client.readyState === WebSocket.OPEN) client.close();
     };
 
@@ -290,7 +292,22 @@ export class SpeakingRealtimeGateway
           return;
         }
         configured = true;
-        upstream = this.openUpstream(client, event, closeBoth);
+        upstream =
+          event.interactionMode === 'GPT_LIVE'
+            ? new SpeakingLiveConnection(
+                this.apiKey,
+                {
+                  ...event,
+                  instructions: (
+                    this.buildSessionUpdate(event)['session'] as {
+                      instructions?: string;
+                    }
+                  ).instructions,
+                },
+                client,
+                closeBoth,
+              )
+            : this.openUpstream(client, event, closeBoth);
         return;
       }
 

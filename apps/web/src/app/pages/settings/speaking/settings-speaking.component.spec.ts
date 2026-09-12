@@ -98,6 +98,15 @@ describe('SettingsSpeakingComponent', () => {
       expect.objectContaining({ interactionMode: 'FULL_DUPLEX' }),
     );
   });
+  it('可切換並保存可打斷的GPT Live對話模式', async () => {
+    component.interactionModeControl.setValue('GPT_LIVE');
+
+    await component.onSave();
+
+    expect(repositoryMock.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ interactionMode: 'GPT_LIVE' }),
+    );
+  });
 
   it('可關閉 Speaking 花費顯示', async () => {
     component.showCostControl.setValue(false);

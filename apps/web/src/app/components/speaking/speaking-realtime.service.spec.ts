@@ -52,3 +52,62 @@ describe('SpeakingRealtimeService live transcription', () => {
     expect(onUserTranscriptCompleted).toHaveBeenCalledWith('Hello world.');
   });
 });
+
+describe('GPT Live 事件', () => {
+  it('持續播放與轉錄不依賴 Realtime 回合，停止時仍接收最後文字', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        SpeakingRealtimeService,
+        { provide: Configuration, useValue: new Configuration({ basePath: '/api' }) },
+      ],
+    });
+    const service = TestBed.inject(SpeakingRealtimeService);
+    const internals = service as unknown as {
+      gptLive: boolean;
+      socket: {
+        readyState: number;
+        send: ReturnType<typeof vi.fn>;
+        close: ReturnType<typeof vi.fn>;
+      };
+      handleEvent: (event: Record<string, unknown>) => void;
+    };
+    internals.gptLive = true;
+    const socket = { readyState: 1, send: vi.fn(), close: vi.fn() };
+    internals.socket = socket;
+    const handlers = {
+      onSpeechStarted: vi.fn(),
+      onUserTranscriptDelta: vi.fn(),
+      onUserTranscriptCompleted: vi.fn(),
+      onAssistantItem: vi.fn(),
+      onAudioDelta: vi.fn(),
+      onTurnCompleted: vi.fn(),
+      onError: vi.fn(),
+      onTranscriptFragment: vi.fn(),
+    };
+    service.startLive(handlers);
+    internals.handleEvent({ type: 'session.output_audio.delta', delta: 'AAAA' });
+    expect(handlers.onAudioDelta).toHaveBeenCalledWith('AAAA');
+    service.stopLive();
+    service.disconnect();
+    expect(socket.send).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({ type: 'session.close' });
+    expect(socket.close).not.toHaveBeenCalled();
+    internals.handleEvent({
+      type: 'session.output_transcript.delta',
+      event_id: 'last',
+      delta: 'Goodbye',
+      start_ms: 100,
+      end_ms: 300,
+    });
+    expect(handlers.onTranscriptFragment).toHaveBeenCalledWith({
+      eventId: 'last',
+      role: 'assistant',
+      delta: 'Goodbye',
+      startMs: 100,
+      endMs: 300,
+    });
+    internals.handleEvent({ type: 'session.closed' });
+    expect(socket.close).toHaveBeenCalledTimes(1);
+    expect(handlers.onTurnCompleted).not.toHaveBeenCalled();
+  });
+});

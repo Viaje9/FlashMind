@@ -177,7 +177,9 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly stoppingAndSending = signal(false);
   readonly realtimeConversationActive = signal(false);
   readonly fullDuplexConversationActive = computed(
-    () => this.realtimeConversationActive() && this.settings().interactionMode === 'FULL_DUPLEX',
+    () =>
+      this.realtimeConversationActive() &&
+      ['FULL_DUPLEX', 'GPT_LIVE'].includes(this.settings().interactionMode),
   );
   readonly copiedSummaryMessageId = signal<string | null>(null);
 
@@ -203,6 +205,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   readonly recorderDurationMs = this.recorder.durationMs;
   readonly recorderBlob = this.recorder.recordedBlob;
   readonly recorderError = this.recorder.error;
+  readonly liveConversationDurationMs = signal(0);
   readonly isRecorderActive = computed(() => {
     const status = this.recorderStatus();
     return status === 'recording' || status === 'paused';
@@ -301,6 +304,8 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   private safeAreaInsetMeasured = false;
   private selectionRequestToken = 0;
   private copySummaryResetTimer: ReturnType<typeof setTimeout> | null = null;
+  private liveConversationStartedAt = 0;
+  private liveConversationTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     effect(() => {
@@ -350,6 +355,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopLiveConversationTimer();
     if (this.copySummaryResetTimer) {
       clearTimeout(this.copySummaryResetTimer);
       this.copySummaryResetTimer = null;
@@ -480,10 +486,11 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.settings().interactionMode === 'FULL_DUPLEX') {
+    if (['FULL_DUPLEX', 'GPT_LIVE'].includes(this.settings().interactionMode)) {
       try {
         await this.speakingStore.startFullDuplexConversation();
         this.realtimeConversationActive.set(true);
+        this.startLiveConversationTimer();
       } catch {
         this.realtimeConversationActive.set(false);
       }
@@ -521,10 +528,11 @@ export class SpeakingComponent implements OnInit, OnDestroy {
   }
 
   async onStopRecording(): Promise<void> {
-    if (this.settings().interactionMode === 'FULL_DUPLEX') {
+    if (['FULL_DUPLEX', 'GPT_LIVE'].includes(this.settings().interactionMode)) {
       this.realtimeConversationActive.set(false);
+      this.stopLiveConversationTimer();
       this.speakingStore.stopFullDuplexConversation();
-      this.speakingStore.disconnectRealtimeSession();
+      await this.speakingStore.disconnectRealtimeSession();
       return;
     }
 
@@ -574,6 +582,7 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       return;
     }
     this.realtimeConversationActive.set(false);
+    this.stopLiveConversationTimer();
     this.speakingStore.stopFullDuplexConversation();
     this.recorder.cancel();
   }
@@ -1371,6 +1380,24 @@ export class SpeakingComponent implements OnInit, OnDestroy {
       .padStart(2, '0');
     const seconds = (totalSeconds % 60).toString().padStart(2, '0');
     return `${minutes}:${seconds}`;
+  }
+
+  private startLiveConversationTimer(): void {
+    this.stopLiveConversationTimer();
+    this.liveConversationStartedAt = Date.now();
+    this.liveConversationDurationMs.set(0);
+    this.liveConversationTimer = setInterval(() => {
+      this.liveConversationDurationMs.set(Date.now() - this.liveConversationStartedAt);
+    }, 250);
+  }
+
+  private stopLiveConversationTimer(): void {
+    if (this.liveConversationTimer) {
+      clearInterval(this.liveConversationTimer);
+      this.liveConversationTimer = null;
+    }
+    this.liveConversationStartedAt = 0;
+    this.liveConversationDurationMs.set(0);
   }
 
   formatCostTwd(value: number): string {

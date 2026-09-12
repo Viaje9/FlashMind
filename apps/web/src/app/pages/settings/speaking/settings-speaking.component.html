@@ -19,7 +19,7 @@
     <section>
       <fm-section-heading text="口說偏好"></fm-section-heading>
       <div
-        class="mb-3 grid grid-cols-3 gap-2 rounded-2xl bg-surface-light p-2 shadow-sm dark:bg-surface-dark"
+        class="mb-3 grid grid-cols-2 gap-2 rounded-2xl bg-surface-light p-2 shadow-sm dark:bg-surface-dark"
       >
         <button
           type="button"
@@ -68,7 +68,29 @@
           <strong class="mt-1 block text-sm">真即時</strong>
           <span class="mt-1 block text-xs leading-relaxed opacity-75">可在 AI 說話時直接插話</span>
         </button>
+        <button
+          type="button"
+          class="rounded-xl border px-2 py-3 text-left transition"
+          [class.border-primary]="interactionModeControl.value === 'GPT_LIVE'"
+          [class.bg-primary]="interactionModeControl.value === 'GPT_LIVE'"
+          [class.text-white]="interactionModeControl.value === 'GPT_LIVE'"
+          [class.border-slate-200]="interactionModeControl.value !== 'GPT_LIVE'"
+          [class.dark:border-white/10]="interactionModeControl.value !== 'GPT_LIVE'"
+          (click)="interactionModeControl.setValue('GPT_LIVE')"
+          data-testid="speaking-settings-mode-gpt-live"
+        >
+          <span class="material-symbols-outlined text-[20px]">spatial_audio</span>
+          <strong class="mt-1 block text-sm">GPT Live 1</strong>
+          <span class="mt-1 block text-xs leading-relaxed opacity-75"
+            >持續聆聽與回應，自然交談</span
+          >
+        </button>
       </div>
+      @if (interactionModeControl.value === 'GPT_LIVE') {
+        <p class="mb-3 text-xs text-slate-500" data-testid="speaking-settings-live-note">
+          Live 模式會保存即時逐字稿；目前不提供逐句語音重播、自動翻譯、自動更新記憶與花費估算。
+        </p>
+      }
       <div
         class="overflow-hidden divide-y divide-slate-100 rounded-2xl bg-surface-light shadow-sm dark:divide-white/5 dark:bg-surface-dark"
       >

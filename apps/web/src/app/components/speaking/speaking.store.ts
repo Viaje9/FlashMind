@@ -1,3 +1,4 @@
+import { appendLiveTranscript, type LiveTranscriptGroup } from './speaking-live-transcript.domain';
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { HttpContext, HttpErrorResponse } from '@angular/common/http';
 import {
@@ -230,9 +231,11 @@ export class SpeakingStore {
     }
   }
 
-  disconnectRealtimeSession(): void {
+  async disconnectRealtimeSession(): Promise<void> {
     this.stopFullDuplexConversation();
     this.realtime.disconnect();
+    await this.realtime.waitForLiveClose();
+    await this.livePersistenceQueue;
   }
 
   async startFullDuplexConversation(): Promise<void> {
@@ -243,7 +246,58 @@ export class SpeakingStore {
     });
     await this.prepareRealtimeSession();
     this.audioPlayer.stop();
+    const liveConversationId = this.state().conversationId!;
+    const liveStartedAt = Date.now();
+    const liveMessagePrefix = createSpeakingId();
+    let liveGroups: LiveTranscriptGroup[] = [];
     this.realtime.startLive({
+      onTranscriptFragment: (fragment) => {
+        liveGroups = appendLiveTranscript(liveGroups, fragment);
+        const liveMessages: SpeakingMessage[] = liveGroups.map((group) => ({
+          id: `${liveMessagePrefix}:${group.id}`,
+          conversationId: liveConversationId,
+          role: group.role,
+          text: group.text,
+          createdAt: new Date(liveStartedAt + group.startMs).toISOString(),
+          transcriptStatus: 'available',
+        }));
+        if (this.state().conversationId === liveConversationId) {
+          this.state.update((state) => ({
+            ...state,
+            messages: [
+              ...state.messages.filter(
+                (message) => !message.id.startsWith(`${liveMessagePrefix}:`),
+              ),
+              ...liveMessages,
+            ],
+          }));
+        }
+        // 將當下快照排入既有儲存佇列，避免晚到片段或換頁寫入別場對話。
+        const snapshot = liveMessages.map((message) => ({ ...message }));
+        this.livePersistenceQueue = this.livePersistenceQueue
+          .then(async () => {
+            for (const message of snapshot) await this.repository.saveMessage(message);
+          })
+          .catch((error) => {
+            this.state.update((state) => ({
+              ...state,
+              error: this.resolveSpeakingErrorMessage(error),
+            }));
+          });
+      },
+      onSessionClosed: () => {
+        this.livePersistenceQueue = this.livePersistenceQueue
+          .then(async () => {
+            const saved = await this.repository.getConversation(liveConversationId);
+            if (saved) await this.persistConversation(liveConversationId, saved.messages);
+          })
+          .catch((error) =>
+            this.state.update((state) => ({
+              ...state,
+              error: this.resolveSpeakingErrorMessage(error),
+            })),
+          );
+      },
       onSpeechStarted: () => {
         this.liveTranscriptState.set('');
         const interrupted = this.fullDuplexAudio.interruptPlayback();
@@ -388,6 +442,8 @@ export class SpeakingStore {
   }
 
   async summarizeCurrentConversation(): Promise<void> {
+    if (this.speakingSettingsState().interactionMode === 'GPT_LIVE')
+      await this.disconnectRealtimeSession();
     const currentState = this.state();
     if (currentState.messages.length === 0 || currentState.summarizing) {
       return;

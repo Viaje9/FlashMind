@@ -171,37 +171,107 @@ describe('speaking.component selection actions', () => {
     expect(storeMock.setAudioPlaybackMuted).toHaveBeenLastCalledWith(false);
   });
 
-  it('真即時模式應啟動持續串流，停止時結束連線', async () => {
+  it.each(['FULL_DUPLEX', 'GPT_LIVE'] as const)(
+    '%s 模式應啟動持續串流，停止時結束連線',
+    async (interactionMode) => {
+      storeMock.speakingSettings.set({
+        ...SPEAKING_DEFAULT_SETTINGS,
+        interactionMode,
+      });
+
+      await component.onStartRecording();
+
+      expect(storeMock.startFullDuplexConversation).toHaveBeenCalledTimes(1);
+      expect(component.realtimeConversationActive()).toBe(true);
+
+      fixture.detectChanges();
+      const aiMuteButton = fixture.nativeElement.querySelector(
+        '[data-testid="speaking-full-duplex-ai-mute"]',
+      ) as HTMLButtonElement | null;
+      const myMuteButton = fixture.nativeElement.querySelector(
+        '[data-testid="speaking-full-duplex-my-mute"]',
+      ) as HTMLButtonElement | null;
+      expect(aiMuteButton?.getAttribute('aria-label')).toBe('將 AI 聲音靜音');
+      expect(myMuteButton?.getAttribute('aria-label')).toBe('將我的聲音靜音');
+
+      aiMuteButton?.click();
+      myMuteButton?.click();
+      expect(storeMock.toggleFullDuplexOutputMuted).toHaveBeenCalledTimes(1);
+      expect(storeMock.toggleFullDuplexInputMuted).toHaveBeenCalledTimes(1);
+
+      await component.onStopRecording();
+
+      expect(storeMock.stopFullDuplexConversation).toHaveBeenCalled();
+      expect(storeMock.disconnectRealtimeSession).toHaveBeenCalled();
+      expect(component.realtimeConversationActive()).toBe(false);
+    },
+  );
+
+  it('GPT Live 開始後會持續更新對話計時器', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-12T05:00:00.000Z'));
+    try {
+      storeMock.speakingSettings.set({
+        ...SPEAKING_DEFAULT_SETTINGS,
+        interactionMode: 'GPT_LIVE',
+      });
+
+      await component.onStartRecording();
+      expect(component.liveConversationDurationMs()).toBe(0);
+
+      vi.advanceTimersByTime(3250);
+      expect(component.formatDuration(component.liveConversationDurationMs())).toBe('00:03');
+
+      await component.onStopRecording();
+      expect(component.liveConversationDurationMs()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('GPT Live 直接顯示雙方逐字稿，不顯示語音標頭、播放與收合按鈕', () => {
     storeMock.speakingSettings.set({
       ...SPEAKING_DEFAULT_SETTINGS,
-      interactionMode: 'FULL_DUPLEX',
+      interactionMode: 'GPT_LIVE',
+      showTranscript: false,
     });
-
-    await component.onStartRecording();
-
-    expect(storeMock.startFullDuplexConversation).toHaveBeenCalledTimes(1);
-    expect(component.realtimeConversationActive()).toBe(true);
-
+    storeMock.messages.set([
+      {
+        id: 'live-user',
+        conversationId: 'live',
+        role: 'user',
+        text: 'Hello Live.',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'live-ai',
+        conversationId: 'live',
+        role: 'assistant',
+        text: 'Hi there.',
+        createdAt: new Date().toISOString(),
+      },
+    ]);
     fixture.detectChanges();
-    const aiMuteButton = fixture.nativeElement.querySelector(
-      '[data-testid="speaking-full-duplex-ai-mute"]',
-    ) as HTMLButtonElement | null;
-    const myMuteButton = fixture.nativeElement.querySelector(
-      '[data-testid="speaking-full-duplex-my-mute"]',
-    ) as HTMLButtonElement | null;
-    expect(aiMuteButton?.getAttribute('aria-label')).toBe('將 AI 聲音靜音');
-    expect(myMuteButton?.getAttribute('aria-label')).toBe('將我的聲音靜音');
-
-    aiMuteButton?.click();
-    myMuteButton?.click();
-    expect(storeMock.toggleFullDuplexOutputMuted).toHaveBeenCalledTimes(1);
-    expect(storeMock.toggleFullDuplexInputMuted).toHaveBeenCalledTimes(1);
-
-    await component.onStopRecording();
-
-    expect(storeMock.stopFullDuplexConversation).toHaveBeenCalled();
-    expect(storeMock.disconnectRealtimeSession).toHaveBeenCalled();
-    expect(component.realtimeConversationActive()).toBe(false);
+    const list = fixture.nativeElement.querySelector(
+      '[data-testid="speaking-message-list"]',
+    ) as HTMLElement;
+    expect(
+      list.querySelector('[data-testid="speaking-user-transcript-live-user"]')?.textContent,
+    ).toContain('Hello Live.');
+    expect(
+      list.querySelector('[data-testid="speaking-assistant-transcript-live-ai"]')?.textContent,
+    ).toContain('Hi there.');
+    expect(list.textContent).not.toContain('語音訊息');
+    expect(list.querySelector('[data-testid^="speaking-user-transcript-toggle-"]')).toBeNull();
+    expect(list.querySelector('[data-testid^="speaking-assistant-transcript-toggle-"]')).toBeNull();
+    expect(list.querySelector('[aria-label="播放 AI 語音"]')).toBeNull();
+    expect(
+      list.querySelector('[data-testid="speaking-user-transcript-live-user"]')?.className,
+    ).toContain('text-white/95');
+    expect(
+      list.querySelector('[data-testid="speaking-user-transcript-live-user"]')?.closest('div')
+        ?.className,
+    ).toContain('w-fit');
   });
 
   it('使用者語音逐字稿應預設收合，並可獨立展開與收起', async () => {

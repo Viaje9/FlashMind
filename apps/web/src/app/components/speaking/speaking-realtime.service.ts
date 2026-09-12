@@ -10,6 +10,7 @@ import {
   type SpeakingMessage,
   type SpeakingSettings,
 } from './speaking.domain';
+import type { LiveTranscriptFragment } from './speaking-live-transcript.domain';
 import { logSpeakingAudio } from './speaking-audio-diagnostics';
 
 export interface SpeakingRealtimeTurnResult {
@@ -29,6 +30,8 @@ export interface SpeakingRealtimeLiveHandlers {
   onAudioDelta: (base64Pcm16: string) => void;
   onTurnCompleted: (result: SpeakingRealtimeTurnResult) => void;
   onError: (message: string) => void;
+  onSessionClosed?: () => void;
+  onTranscriptFragment?: (fragment: LiveTranscriptFragment) => void;
 }
 
 interface PendingTurn {
@@ -55,6 +58,12 @@ export class SpeakingRealtimeService {
   private liveSpeechStartedAtMs: number | null = null;
   private conversationId: string | null = null;
   private responseAudioChunkSequence = 0;
+  private gptLive = false;
+  private liveClosing = false;
+  private liveFinalized = false;
+  private closeTimer?: number;
+  private liveClosePromise: Promise<void> = Promise.resolve();
+  private resolveLiveClose: (() => void) | null = null;
 
   async connect(input: {
     conversationId: string;
@@ -63,18 +72,31 @@ export class SpeakingRealtimeService {
   }): Promise<void> {
     if (
       this.socket?.readyState === WebSocket.OPEN &&
-      this.conversationId === input.conversationId
+      this.conversationId === input.conversationId &&
+      this.gptLive === (input.settings.interactionMode === 'GPT_LIVE') &&
+      !this.liveClosing
     ) {
       return;
     }
 
     this.disconnect();
+    await this.waitForLiveClose();
+    this.gptLive = input.settings.interactionMode === 'GPT_LIVE';
+    this.liveClosing = false;
+    this.liveFinalized = false;
     this.conversationId = input.conversationId;
     const socket = new WebSocket(this.buildUrl());
     this.socket = socket;
+    if (this.gptLive)
+      this.liveClosePromise = new Promise((resolve) => {
+        this.resolveLiveClose = resolve;
+      });
 
     this.readyPromise = new Promise<void>((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error('Realtime 連線逾時')), 10_000);
+      const timeout = window.setTimeout(() => {
+        reject(new Error('語音連線逾時'));
+        socket.close();
+      }, 10_000);
       let ready = false;
 
       socket.onopen = () => {
@@ -110,7 +132,7 @@ export class SpeakingRealtimeService {
           socket.close();
           return;
         }
-        this.handleEvent(event);
+        if (this.socket === socket) this.handleEvent(event);
       };
 
       socket.onerror = () => {
@@ -121,13 +143,29 @@ export class SpeakingRealtimeService {
       };
       socket.onclose = () => {
         window.clearTimeout(timeout);
-        this.liveHandlers?.onError('Realtime WebSocket 已中斷');
+        if (!ready) reject(new Error('語音連線在就緒前已中斷'));
+        if (this.socket !== socket) {
+          this.resolveLiveClose?.();
+          return;
+        }
+        window.clearTimeout(this.closeTimer);
+        if (!this.liveClosing) this.liveHandlers?.onError('Realtime WebSocket 已中斷');
+        else if (this.gptLive && !this.liveFinalized)
+          this.liveHandlers?.onError('Live 已停止，但未收到最終結算資訊');
+        this.liveHandlers?.onSessionClosed?.();
+        this.liveHandlers = null;
+        this.resolveLiveClose?.();
+        this.resolveLiveClose = null;
         this.rejectPending('Realtime WebSocket 已中斷');
         if (this.socket === socket) this.socket = null;
       };
     });
 
     await this.readyPromise;
+  }
+
+  async waitForLiveClose(): Promise<void> {
+    if (this.gptLive) await this.liveClosePromise;
   }
 
   async sendTurn(wavBlob: Blob): Promise<SpeakingRealtimeTurnResult> {
@@ -167,7 +205,8 @@ export class SpeakingRealtimeService {
   }
 
   appendLiveAudio(audio: string): void {
-    if (!audio || !this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+    if (this.liveClosing || !audio || !this.socket || this.socket.readyState !== WebSocket.OPEN)
+      return;
     this.socket.send(JSON.stringify({ type: 'input_audio_buffer.append', audio }));
   }
 
@@ -184,12 +223,25 @@ export class SpeakingRealtimeService {
   }
 
   stopLive(): void {
+    if (this.gptLive && this.socket?.readyState === WebSocket.OPEN) {
+      if (!this.liveClosing) {
+        this.liveClosing = true;
+        const socket = this.socket;
+        socket.send(JSON.stringify({ type: 'session.close' }));
+        this.closeTimer = window.setTimeout(() => socket.close(), 16000);
+      }
+      return;
+    }
     this.liveHandlers = null;
     this.liveTurn = null;
     this.liveSpeechStartedAtMs = null;
   }
 
   disconnect(): void {
+    if (this.gptLive && this.socket?.readyState === WebSocket.OPEN) {
+      this.stopLive();
+      return;
+    }
     this.rejectPending('Realtime session 已結束');
     this.socket?.close();
     this.socket = null;
@@ -200,7 +252,32 @@ export class SpeakingRealtimeService {
 
   private handleEvent(event: Record<string, unknown>): void {
     const type = String(event['type'] ?? '');
+    if (type === 'session.closed') {
+      this.liveFinalized = true;
+      logSpeakingAudio('live.session.closed', { usage: event['usage'] ?? null });
+      window.clearTimeout(this.closeTimer);
+      this.socket?.close();
+      return;
+    }
+    if (this.gptLive && this.liveHandlers && type.startsWith('session.')) {
+      if (type === 'session.output_audio.delta' && !this.liveClosing) {
+        this.liveHandlers.onAudioDelta(String(event['delta'] ?? ''));
+      } else if (
+        type === 'session.input_transcript.delta' ||
+        type === 'session.output_transcript.delta'
+      ) {
+        this.liveHandlers.onTranscriptFragment?.({
+          eventId: String(event['event_id']),
+          role: type === 'session.input_transcript.delta' ? 'user' : 'assistant',
+          delta: String(event['delta'] ?? ''),
+          startMs: Number(event['start_ms'] ?? 0),
+          endMs: Number(event['end_ms'] ?? 0),
+        });
+      }
+      return;
+    }
     if (type === 'error') {
+      if (this.gptLive && this.liveClosing) return;
       const error = event['error'] as { message?: string } | undefined;
       this.liveHandlers?.onError(error?.message || 'Realtime 回覆失敗');
       this.rejectPending(error?.message || 'Realtime 回覆失敗');
