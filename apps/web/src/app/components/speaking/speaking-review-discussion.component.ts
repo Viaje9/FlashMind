@@ -48,6 +48,8 @@ interface MobileSelectionDraft {
 }
 
 interface MobileSelectionGesture {
+  edge?: 'start' | 'end';
+  caretShiftY?: number;
   pointerId: number;
   host: HTMLElement;
   messageId: string;
@@ -174,6 +176,34 @@ interface DocumentWithCaretApi {
             }
           </div>
         </section>
+        @if (mobileSelectionDraft() && selectionActionVisible() && !selectionNoteEditorVisible()) {
+          @for (edge of selectionEdges; track edge) {
+            <button
+              type="button"
+              class="selection-handle"
+              data-speaking-selection-overlay="true"
+              [attr.data-testid]="'speaking-selection-handle-' + edge"
+              [attr.aria-label]="edge === 'start' ? '調整選取起點' : '調整選取終點'"
+              [style.left.px]="selectionHandles()[edge].x"
+              [style.top.px]="selectionHandles()[edge].y"
+              (pointerdown)="onSelectionHandleDown($event, edge)"
+            >
+              <span aria-hidden="true"></span>
+            </button>
+          }
+        }
+        @if (selectionMagnifier(); as lens) {
+          <div
+            class="selection-magnifier"
+            data-speaking-selection-overlay="true"
+            data-testid="speaking-selection-magnifier"
+            aria-hidden="true"
+            [style.left.px]="lens.x"
+            [style.top.px]="lens.y"
+          >
+            {{ lens.before }}<span class="selection-magnifier-caret"></span>{{ lens.after }}
+          </div>
+        }
         @if (selectionActionVisible()) {
           <div
             class="selection-actions"
@@ -472,6 +502,14 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   readonly selectionNoteTarget = signal<SelectionTranslateTarget | null>(null);
   readonly mobileSelectionDraft = signal<MobileSelectionDraft | null>(null);
   readonly mobileSelectionActive = signal(false);
+  readonly selectionEdges = ['start', 'end'] as const;
+  readonly selectionHandles = signal({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 } });
+  readonly selectionMagnifier = signal<{
+    x: number;
+    y: number;
+    before: string;
+    after: string;
+  } | null>(null);
   readonly selectionNoteEditorVisible = signal(false);
   readonly selectionNotePosition = signal({ left: 0, top: 0 });
   readonly selectionNoteComposing = signal(false);
@@ -665,10 +703,28 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     }
 
     event.preventDefault();
-    const caret = this.resolveMobileCaret(gesture.host, event.clientX, event.clientY);
+    const caret = this.resolveMobileCaret(
+      gesture.host,
+      event.clientX,
+      event.clientY - (gesture.caretShiftY ?? 0),
+    );
     if (!caret) return;
 
-    gesture.lastOffset = caret.offset;
+    gesture.lastOffset =
+      gesture.edge === 'start'
+        ? Math.min(caret.offset, gesture.startOffset - 1)
+        : gesture.edge === 'end'
+          ? Math.max(caret.offset, gesture.startOffset + 1)
+          : caret.offset;
+    const fullText = this.collectSelectionTextNodes(gesture.host)
+      .map((entry) => entry.node.data)
+      .join('');
+    this.selectionMagnifier.set({
+      x: Math.max(100, Math.min(window.innerWidth - 100, event.clientX)),
+      y: Math.max(8, event.clientY - 100),
+      before: fullText.slice(Math.max(0, gesture.lastOffset - 8), gesture.lastOffset),
+      after: fullText.slice(gesture.lastOffset, gesture.lastOffset + 8),
+    });
     this.updateMobileSelectionDraft(gesture, gesture.startOffset, gesture.lastOffset);
   }
 
@@ -681,6 +737,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     this.clearMobileSelectionTimer(gesture);
     this.mobileSelectionGesture = null;
     this.mobileSelectionActive.set(false);
+    this.selectionMagnifier.set(null);
   }
 
   @HostListener('document:pointercancel', ['$event'])
@@ -925,6 +982,37 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     this.dismissSelectionTranslation(true);
   }
 
+  onSelectionHandleDown(event: PointerEvent, edge: 'start' | 'end'): void {
+    const draft = this.mobileSelectionDraft();
+    if (!draft || !event.isPrimary) return;
+    const host = Array.from(
+      this.hostElement.nativeElement.querySelectorAll<HTMLElement>(
+        '[data-speaking-selection-context="review-discussion"]',
+      ),
+    ).find(
+      (candidate) =>
+        (candidate.dataset['speakingSelectionMessageId'] ??
+          candidate.dataset['speakingAssistantMessageId']) === draft.messageId,
+    );
+    if (!host) return;
+    event.preventDefault();
+    event.stopPropagation();
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    this.mobileSelectionGesture = {
+      edge,
+      caretShiftY: event.clientY - this.selectionHandles()[edge].y + 10,
+      pointerId: event.pointerId,
+      host,
+      messageId: draft.messageId,
+      startOffset: edge === 'start' ? draft.end : draft.start,
+      lastOffset: draft[edge],
+      startPoint: { x: event.clientX, y: event.clientY },
+      active: true,
+      longPressTimer: null,
+    };
+    this.mobileSelectionActive.set(true);
+  }
+
   private startMobileSelection(event: PointerEvent, target: HTMLElement): boolean {
     if (!this.isTouchPointer(event)) return false;
     if (!event.isPrimary) {
@@ -956,6 +1044,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     };
     this.mobileSelectionGesture = gesture;
     this.mobileSelectionActive.set(false);
+    this.selectionMagnifier.set(null);
     gesture.longPressTimer = window.setTimeout(() => {
       if (this.mobileSelectionGesture !== gesture) return;
       gesture.active = true;
@@ -977,6 +1066,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     if (gesture) this.clearMobileSelectionTimer(gesture);
     this.mobileSelectionGesture = null;
     this.mobileSelectionActive.set(false);
+    this.selectionMagnifier.set(null);
     if (clearSelection) this.dismissSelectionTranslation(false);
   }
 
@@ -1005,6 +1095,16 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     const rect = range.getBoundingClientRect();
     if (rect.width <= 0 && rect.height <= 0) return;
 
+    const firstRange = this.createTextRange(entries, selectedRange.start, selectedRange.start + 1);
+    const lastRange = this.createTextRange(entries, selectedRange.end - 1, selectedRange.end);
+    if (firstRange && lastRange) {
+      const first = firstRange.getBoundingClientRect();
+      const last = lastRange.getBoundingClientRect();
+      this.selectionHandles.set({
+        start: { x: first.left, y: first.bottom },
+        end: { x: last.right, y: last.bottom },
+      });
+    }
     this.mobileSelectionDraft.set({
       messageId: gesture.messageId,
       start: selectedRange.start,

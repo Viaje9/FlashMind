@@ -24,6 +24,25 @@ describe('TopicConversationComposerComponent', () => {
     TestBed.resetTestingModule();
   });
 
+  it('按下送出保留焦點，click 仍只送出一次', () => {
+    component.formModel.set({ message: '下一句' });
+    fixture.detectChanges();
+    textarea.focus();
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-testid="topic-conversation-send"]',
+    );
+    const down = new Event('pointerdown', { bubbles: true, cancelable: true });
+    Object.assign(down, { isPrimary: true, button: 0 });
+    const messages: string[] = [];
+    component.messageSubmit.subscribe((message) => messages.push(message));
+    button.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(textarea);
+    expect(messages).toEqual([]);
+    button.click();
+    expect(messages).toEqual(['下一句']);
+  });
+
   it('中文輸入法組字期間不應提前同步或打斷組字文字', () => {
     textarea.dispatchEvent(new Event('compositionstart', { bubbles: true }));
 

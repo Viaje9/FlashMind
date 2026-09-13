@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { renderAssistantMarkdown } from './assistant-markdown.domain';
 
 describe('assistant-markdown.domain', () => {
+  it('應修正 have 尾端空白且同段有下一個粗體的格式', () => {
+    const html = renderAssistantMarkdown(
+      '差別在於 **have **比較像今天有任務，而 **I’m working on** 更清楚。',
+    );
+    expect(html).toContain('<strong>have</strong>');
+    expect(html).toContain('<strong>I’m working on</strong>');
+    expect(html).not.toContain('**');
+  });
   it('應解析中文標點緊接內文的粗體標籤', () => {
     const html = renderAssistantMarkdown('**結論：**兩個字都能表示發生。');
 

@@ -91,6 +91,30 @@ describe('Speaking 回顧行動版選字手勢', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each(['start', 'end'] as const)('放開後可拖曳 %s 端點並顯示放大文字', (edge) => {
+    component.mobileSelectionDraft.set({
+      messageId: 'source',
+      start: 4,
+      end: 13,
+      selectedText: 'two three',
+    });
+    const event = new Event('pointerdown', { cancelable: true });
+    Object.assign(event, { pointerId: 9, isPrimary: true, clientX: 20, clientY: 100 });
+    Object.defineProperty(event, 'currentTarget', { value: text });
+    component.onSelectionHandleDown(event as PointerEvent, edge);
+    caretOffset = edge === 'start' ? 0 : 18;
+    const move = new Event('pointermove', { cancelable: true });
+    Object.assign(move, { pointerId: 9, clientX: 40, clientY: 100 });
+    component.onDocumentPointerMove(move as PointerEvent);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe(
+      edge === 'start' ? 'One two three' : 'two three four',
+    );
+    expect(component.selectionMagnifier()).not.toBeNull();
+    component.onDocumentPointerUp(move as PointerEvent);
+    expect(component.selectionMagnifier()).toBeNull();
+    expect(component.mobileSelectionDraft()).not.toBeNull();
+  });
+
   it.each(['input', 'textarea', 'div'])('編輯 %s 時保留原生選取與組字狀態', (tag) => {
     const editor = document.createElement(tag);
     if (tag === 'div') {

@@ -52,6 +52,7 @@ import { canSendTopicConversationMessage } from '../../../components/topic-conve
               [disabled]="!canSubmit()"
               [attr.aria-label]="sending() ? 'AI 回覆中' : '送出訊息'"
               data-testid="topic-conversation-send"
+              (pointerdown)="onSendPointerDown($event)"
             >
               <span
                 class="material-symbols-outlined text-[20px]"
@@ -85,6 +86,11 @@ export class TopicConversationComposerComponent {
       canSendTopicConversationMessage(this.formModel().message, this.sending()) &&
       this.formModel().message.trim().length <= this.maxMessageLength(),
   );
+
+  onSendPointerDown(event: PointerEvent): void {
+    // 保留 textarea 焦點直到 click / submit，避免 iOS 收鍵盤時移動按鈕。
+    if (event.isPrimary && event.button === 0) event.preventDefault();
+  }
 
   onSubmit(): void {
     if (!this.canSubmit()) return;
