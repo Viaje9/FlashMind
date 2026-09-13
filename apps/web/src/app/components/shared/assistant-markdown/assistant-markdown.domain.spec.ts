@@ -10,6 +10,27 @@ describe('assistant-markdown.domain', () => {
     expect(html).toContain('<strong>I’m working on</strong>');
     expect(html).not.toContain('**');
   });
+
+  it('應修正摘要常見的粗體尾端空白格式', () => {
+    const html = renderAssistantMarkdown(
+      '用 **not about A; it’s about B ** 來對比主題；**today’s task ** 也更自然。',
+    );
+
+    expect(html).toContain('<strong>');
+    expect(html).toContain('not about A; it’s about B');
+    expect(html).toContain('today’s task');
+    expect(html).not.toContain('**');
+  });
+
+  it('應修正粗體標記跨越中英文字與中文標點的摘要格式', () => {
+    const html = renderAssistantMarkdown(
+      '對，**worked on 很常一起使用，意思是「著手做、處理某件事」，後面通常接任務、專案或功能，例如 a project / a task / a feature。這裡的 worked on yesterday **就是「昨天處理的事情」，比單說 worked yesterday 更能表達你做了什麼。',
+    );
+
+    expect(html).not.toContain('**');
+    expect(html).toContain('<strong>');
+    expect(html).toContain('worked on yesterday');
+  });
   it('應解析中文標點緊接內文的粗體標籤', () => {
     const html = renderAssistantMarkdown('**結論：**兩個字都能表示發生。');
 

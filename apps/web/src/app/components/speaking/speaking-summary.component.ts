@@ -7,6 +7,7 @@ import {
   output,
 } from '@angular/core';
 import { marked, Renderer, type Token } from 'marked';
+import { normalizeAssistantMarkdown } from '../shared/assistant-markdown/assistant-markdown.domain';
 
 const renderer = new Renderer();
 // Review 只需要文字；原始 HTML 與圖片不得變成可執行內容或連外資源。
@@ -99,9 +100,10 @@ export class SpeakingSummaryComponent {
   readonly copyRequested = output<void>();
   // 不使用 bypassSecurityTrustHtml，交由 Angular 再做 HTML sanitization。
   readonly sections = computed(() => {
+    const normalizedContent = normalizeAssistantMarkdown(this.content());
     const blocks: { heading: Token | null; body: Token[] }[] = [{ heading: null, body: [] }];
     // 依 Markdown 的第二層標題分區，保留表格、引言與標題前的舊版摘要。
-    for (const token of marked.lexer(this.content(), { gfm: true })) {
+    for (const token of marked.lexer(normalizedContent, { gfm: true })) {
       if (token.type === 'heading' && token.depth === 2) {
         blocks.push({ heading: token, body: [] });
       } else {
