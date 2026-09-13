@@ -7,7 +7,10 @@ import {
   output,
 } from '@angular/core';
 import { marked, Renderer, type Token } from 'marked';
-import { normalizeAssistantMarkdown } from '../shared/assistant-markdown/assistant-markdown.domain';
+import {
+  ASSISTANT_MARKDOWN_OPTIONS,
+  normalizeAssistantMarkdown,
+} from '../shared/assistant-markdown/assistant-markdown.domain';
 
 const renderer = new Renderer();
 // Review 只需要文字；原始 HTML 與圖片不得變成可執行內容或連外資源。
@@ -103,7 +106,7 @@ export class SpeakingSummaryComponent {
     const normalizedContent = normalizeAssistantMarkdown(this.content());
     const blocks: { heading: Token | null; body: Token[] }[] = [{ heading: null, body: [] }];
     // 依 Markdown 的第二層標題分區，保留表格、引言與標題前的舊版摘要。
-    for (const token of marked.lexer(normalizedContent, { gfm: true })) {
+    for (const token of marked.lexer(normalizedContent, ASSISTANT_MARKDOWN_OPTIONS)) {
       if (token.type === 'heading' && token.depth === 2) {
         blocks.push({ heading: token, body: [] });
       } else {
@@ -113,8 +116,10 @@ export class SpeakingSummaryComponent {
     return blocks
       .filter((block) => block.heading || block.body.some((token) => token.type !== 'space'))
       .map((block) => ({
-        headingHtml: block.heading ? marked.parser([block.heading], { renderer }) : null,
-        bodyHtml: marked.parser(block.body, { renderer }),
+        headingHtml: block.heading
+          ? marked.parser([block.heading], { ...ASSISTANT_MARKDOWN_OPTIONS, renderer })
+          : null,
+        bodyHtml: marked.parser(block.body, { ...ASSISTANT_MARKDOWN_OPTIONS, renderer }),
       }));
   });
 }

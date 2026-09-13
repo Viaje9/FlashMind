@@ -1,7 +1,54 @@
 import { describe, expect, it } from 'vitest';
-import { renderAssistantMarkdown } from './assistant-markdown.domain';
+import { marked } from 'marked';
+import {
+  normalizeAssistantMarkdown,
+  renderAssistantMarkdown,
+  ASSISTANT_MARKDOWN_OPTIONS,
+} from './assistant-markdown.domain';
 
 describe('assistant-markdown.domain', () => {
+  it('摘要與討論解析得到相同的粗體範圍與換行', () => {
+    const source = '用 **第一組** 說明；**第二組 **和 **第三組**。\n下一行';
+    const normalized = normalizeAssistantMarkdown(source);
+    const summaryHtml = marked.parser(
+      marked.lexer(normalized, ASSISTANT_MARKDOWN_OPTIONS),
+      ASSISTANT_MARKDOWN_OPTIONS,
+    );
+    const expected =
+      '<p>用 <strong>第一組</strong> 說明；<strong>第二組</strong> 和 <strong>第三組</strong>。<br>下一行</p>\n';
+    expect(summaryHtml).toBe(expected);
+    expect(renderAssistantMarkdown(source)).toBe(expected);
+    expect(normalizeAssistantMarkdown(normalized)).toBe(normalized);
+  });
+  it('多組粗體不得把正常段落串進粗體範圍', () => {
+    expect(
+      renderAssistantMarkdown(
+        '用 **not about A; it’s about B** 來對比；**today’s task **和 **worked on**。',
+      ),
+    ).toBe(
+      '<p>用 <strong>not about A; it’s about B</strong> 來對比；<strong>today’s task</strong> 和 <strong>worked on</strong>。</p>\n',
+    );
+  });
+
+  it('修復行首粗體內側空白', () => {
+    expect(renderAssistantMarkdown('** have** 比較自然。')).toBe(
+      '<p> <strong>have</strong> 比較自然。</p>\n',
+    );
+  });
+
+  it.each([
+    '**正常** 與 **第二組**',
+    '**結論：** 內文',
+    '**第一行\n第二行 **說明',
+    '**粗體中的 *斜體***',
+    '**第一行\n第二行**',
+    '`** have **`',
+    '\\*\\*have\\*\\*',
+    '**未完成',
+    '**不確定 ** 與 **未完成',
+  ])('合法或配對不明確的內容保持原樣：%s', (source) => {
+    expect(normalizeAssistantMarkdown(source)).toBe(source);
+  });
   it('應修正 have 尾端空白且同段有下一個粗體的格式', () => {
     const html = renderAssistantMarkdown(
       '差別在於 **have **比較像今天有任務，而 **I’m working on** 更清楚。',

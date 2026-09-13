@@ -5,13 +5,8 @@ const TABLE_DELIMITER_PATTERN = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?
 const INLINE_CODE_PATTERN = /(`+)([^`]*?)\1/g;
 const INLINE_CODE_PLACEHOLDER_START = '\uE000';
 const INLINE_CODE_PLACEHOLDER_END = '\uE001';
-const STRONG_OPENING_SPACE_AFTER_ENGLISH_WORD_PATTERN =
-  /\b([A-Za-z0-9]+)\*\*[ \t]+([^*\n]*?\S)\*\*/g;
-const STRONG_OPENING_SPACE_AFTER_CJK_PATTERN =
-  /([\u3400-\u9fff])\*\*[ \t]+(?=["“‘'A-Za-z0-9\u3400-\u9fff])([^*\n]*?\S)\*\*/g;
-const STRONG_TRAILING_SPACE_PATTERN = /\*\*([^*\n]*?\S)[ \t]+\*\*/g;
-const STRONG_TRAILING_PUNCTUATION_PATTERN = /\*\*([^*\n]*?)([：:；;，,。！？!?])\*\*(?=\S)/g;
 const safeRenderer = new Renderer();
+export const ASSISTANT_MARKDOWN_OPTIONS = { gfm: true, breaks: true } as const;
 
 safeRenderer.html = ({ text }) => escapeHtml(text);
 
@@ -67,8 +62,7 @@ export function normalizeAssistantMarkdown(content: string): string {
 export function renderAssistantMarkdown(content: string): string {
   const rendered = marked.parse(normalizeAssistantMarkdown(content), {
     async: false,
-    breaks: true,
-    gfm: true,
+    ...ASSISTANT_MARKDOWN_OPTIONS,
     renderer: safeRenderer,
   });
 
@@ -95,11 +89,49 @@ function normalizeStrongMarkersOutsideInlineCode(line: string): string {
     return placeholder;
   });
 
-  const normalized = protectedLine
-    .replace(STRONG_TRAILING_SPACE_PATTERN, '**$1** ')
-    .replace(STRONG_TRAILING_PUNCTUATION_PATTERN, '**$1**$2')
-    .replace(STRONG_OPENING_SPACE_AFTER_ENGLISH_WORD_PATTERN, '$1 **$2**')
-    .replace(STRONG_OPENING_SPACE_AFTER_CJK_PATTERN, '$1 **$2**');
+  // 逐組消耗標記，結尾不會再次被當成下一組的開頭。
+  // 跳脫、巢狀星號與奇數標記無法安全推斷，維持原文。
+  const runs = [...protectedLine.matchAll(/\*+/g)];
+  if (protectedLine.includes('\\') || runs.length % 2 !== 0 || runs.some((run) => run[0] !== '**'))
+    return line;
+
+  let normalized = '';
+  let cursor = 0;
+  for (let index = 0; index < runs.length; index += 2) {
+    const start = runs[index].index!;
+    const end = runs[index + 1].index! + 2;
+    const original = protectedLine.slice(start, end);
+    const tokens = marked.Lexer.lexInline(original);
+    let replacement = original;
+    const following = protectedLine.slice(end, end + 1);
+    const contextualTokens = marked.Lexer.lexInline(original + following);
+    if (
+      tokens.length === 1 &&
+      tokens[0].type === 'strong' &&
+      contextualTokens[0]?.type !== 'strong' &&
+      /[：:；;，,。！？!?]\*\*$/.test(original)
+    ) {
+      // 僅在緊接內文使結尾標點無法閉合時，將標點移到已確定的配對外。
+      replacement = original.replace(/([：:；;，,。！？!?])\*\*$/, '**$1');
+    }
+    // 已合法的粗體完全不改寫，包括其中的標點與空白。
+    if (!(tokens.length === 1 && tokens[0].type === 'strong')) {
+      const inner = original.slice(2, -2);
+      const leading = inner.match(/^[ \t]+/)?.[0] ?? '';
+      const trailing = inner.match(/[ \t]+$/)?.[0] ?? '';
+      const trimmed = inner.trim();
+      if (trimmed) {
+        const candidate = `**${trimmed}**`;
+        const parsed = marked.Lexer.lexInline(candidate);
+        if (parsed.length === 1 && parsed[0].type === 'strong') {
+          replacement = `${leading}${candidate}${trailing}`;
+        }
+      }
+    }
+    normalized += protectedLine.slice(cursor, start) + replacement;
+    cursor = end;
+  }
+  normalized += protectedLine.slice(cursor);
 
   return codeSpans.reduce(
     (result, codeSpan, index) =>
