@@ -453,7 +453,7 @@
 
 .selection-handle {
   position: absolute;
-  z-index: 75;
+  z-index: 65;
   width: 44px;
   height: 44px;
   transform: translate(-50%, -50%);

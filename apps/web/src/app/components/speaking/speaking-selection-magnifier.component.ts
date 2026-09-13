@@ -63,7 +63,7 @@ import { selectionMagnifierView, type SelectionRect } from './speaking-selection
       overflow: hidden;
       border-radius: 30px;
       border: 2px solid rgb(148 163 184 / 0.5);
-      background: #f8fafc;
+      background: #122326;
       box-shadow: 0 5px 20px rgb(0 0 0 / 0.24);
       contain: strict;
     }
@@ -91,9 +91,9 @@ import { selectionMagnifierView, type SelectionRect } from './speaking-selection
       position: absolute;
       background: rgb(14 165 233 / 0.25);
     }
-    @media (prefers-color-scheme: dark) {
+    @media (prefers-color-scheme: light) {
       .lens {
-        background: #122326;
+        background: #f8fafc;
       }
     }
   `,
@@ -128,8 +128,9 @@ export class SpeakingSelectionMagnifierComponent {
     }
     clone.inert = true;
     const style = getComputedStyle(source);
+    const backgroundColor = style.backgroundColor.trim().toLowerCase();
     this.sourceBackground.set(
-      style.backgroundColor === 'rgba(0, 0, 0, 0)' ? null : style.backgroundColor,
+      isTranslucentBackground(backgroundColor) ? null : style.backgroundColor,
     );
     Object.assign(clone.style, {
       width: `${width}px`,
@@ -147,4 +148,14 @@ export class SpeakingSelectionMagnifierComponent {
     });
     this.content().nativeElement.replaceChildren(clone);
   });
+}
+
+function isTranslucentBackground(color: string): boolean {
+  return (
+    !color ||
+    color === 'transparent' ||
+    color.startsWith('rgba(') ||
+    color.startsWith('hsla(') ||
+    color.includes(' / ')
+  );
 }
