@@ -483,6 +483,21 @@ describe('Speaking 回顧行動版選字手勢', () => {
     expect(tts.playWord).not.toHaveBeenCalled();
   });
 
+  it('選取工具列的複製按鈕會複製目前選取文字並收起工具列', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'Hello world' });
+
+    await component.onSelectionCopyActionClick();
+
+    expect(writeText).toHaveBeenCalledWith('Hello world');
+    expect(component.selectionTranslateTarget()).toBeNull();
+    expect(component.selectionActionVisible()).toBe(false);
+  });
+
   it('沒有選字或相同文字正在載入時不重複請求', async () => {
     await component.onSelectionSpeechActionClick();
     component.selectionTranslateTarget.set({ messageId: 'source', selectedText: 'Hello' });

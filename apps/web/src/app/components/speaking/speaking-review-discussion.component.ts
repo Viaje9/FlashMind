@@ -254,6 +254,18 @@ interface DocumentWithCaretApi {
           >
             <button
               type="button"
+              class="selection-action-button selection-copy-action"
+              aria-label="複製選取文字"
+              title="複製"
+              data-testid="speaking-discussion-selection-copy-action"
+              data-speaking-selection-overlay="true"
+              (mousedown)="onSelectionOverlayMouseDown($event)"
+              (click)="onSelectionCopyActionClick()"
+            >
+              <span>複製</span>
+            </button>
+            <button
+              type="button"
               class="selection-action-button selection-translate-action"
               aria-label="翻譯選取文字"
               title="翻譯"
@@ -262,12 +274,7 @@ interface DocumentWithCaretApi {
               (mousedown)="onSelectionOverlayMouseDown($event)"
               (click)="onSelectionTranslateActionClick()"
             >
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true"
-                >translate</span
-              >
-              @if (mobileSelectionEnabled()) {
-                <span>翻譯</span>
-              }
+              <span>翻譯</span>
             </button>
             <button
               type="button"
@@ -293,21 +300,9 @@ interface DocumentWithCaretApi {
               (mousedown)="onSelectionOverlayMouseDown($event)"
               (click)="onSelectionSpeechActionClick()"
             >
-              <span
-                class="material-symbols-outlined text-[18px]"
-                aria-hidden="true"
-                [class.animate-spin]="selectionSpeechLoading()"
-                >{{
-                  selectionSpeechLoading()
-                    ? 'progress_activity'
-                    : selectionSpeechPlaying()
-                      ? 'pause'
-                      : 'volume_up'
-                }}</span
-              >
-              @if (mobileSelectionEnabled()) {
-                <span>{{ selectionSpeechPlaying() ? '暫停' : '朗讀' }}</span>
-              }
+              <span>{{
+                selectionSpeechLoading() ? '朗讀中' : selectionSpeechPlaying() ? '暫停' : '朗讀'
+              }}</span>
             </button>
             <button
               type="button"
@@ -319,12 +314,7 @@ interface DocumentWithCaretApi {
               (mousedown)="onSelectionOverlayMouseDown($event)"
               (click)="onSelectionMarkActionClick()"
             >
-              <span class="material-symbols-outlined text-[18px]" aria-hidden="true"
-                >edit_note</span
-              >
-              @if (mobileSelectionEnabled()) {
-                <span>標記</span>
-              }
+              <span>標記</span>
             </button>
           </div>
           @if (selectionSpeechError(); as error) {
@@ -1035,6 +1025,32 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
     this.selectionTooltipStatus.set('error');
     this.selectionTooltipError.set(result.errorMessage);
+  }
+
+  async onSelectionCopyActionClick(): Promise<void> {
+    const text = this.selectionTranslateTarget()?.selectedText;
+    if (!text) return;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        textarea.remove();
+        if (!copied) return;
+      }
+    } catch {
+      return;
+    }
+
+    this.dismissSelectionTranslation(false);
   }
 
   onSelectionMarkActionClick(): void {
