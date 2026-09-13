@@ -433,7 +433,7 @@ interface DocumentWithCaretApi {
         }
         <div #bottom class="scroll-mb-44"></div>
       </main>
-      <footer class="sticky bottom-0">
+      <footer class="sticky bottom-0" [style.bottom.px]="composerBottomInset()">
         <div class="mx-auto flex w-full max-w-3xl justify-end px-4 pt-2">
           <fm-icon-button
             variant="neutral"
@@ -632,6 +632,30 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   constructor() {
     const root = this.hostElement.nativeElement;
     const destroyRef = inject(DestroyRef);
+    const viewport = window.visualViewport;
+    let viewportFrame: number | null = null;
+    const updateViewport = () => {
+      if (viewportFrame !== null) return;
+      viewportFrame = window.requestAnimationFrame(() => {
+        viewportFrame = null;
+        // iOS 鍵盤只縮小 visual viewport；扣除 Safari 自動平移，避免重複上推。
+        this.composerBottomInset.set(
+          viewport && Math.abs(viewport.scale - 1) < 0.01
+            ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+            : 0,
+        );
+      });
+    };
+    viewport?.addEventListener('resize', updateViewport);
+    viewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+    updateViewport();
+    destroyRef.onDestroy(() => {
+      viewport?.removeEventListener('resize', updateViewport);
+      viewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
+      if (viewportFrame !== null) window.cancelAnimationFrame(viewportFrame);
+    });
     destroyRef.onDestroy(() => {
       this.cancelMobileSelectionGesture(true);
       this.tts.stop();
@@ -653,6 +677,8 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
       root.removeEventListener('touchstart', onTouchStart, true);
     });
   }
+
+  readonly composerBottomInset = signal(0);
 
   private onSelectionTouchMove(event: TouchEvent): void {
     const point = event.touches[0];

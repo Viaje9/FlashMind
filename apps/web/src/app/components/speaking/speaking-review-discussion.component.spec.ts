@@ -110,6 +110,42 @@ describe('Speaking 回顧行動版選字手勢', () => {
     expect(menu.defaultPrevented).toBe(true);
   });
 
+  it('鍵盤反覆開關與 Safari 平移時，輸入區跟隨可視範圍並還原', () => {
+    fixture.destroy();
+    const viewport = Object.assign(new EventTarget(), {
+      height: window.innerHeight,
+      offsetTop: 0,
+      scale: 1,
+    });
+    vi.stubGlobal('visualViewport', viewport);
+    createFixture();
+    vi.advanceTimersByTime(17);
+    expect(component.composerBottomInset()).toBe(0);
+
+    for (const keyboardHeight of [300, 260, 320]) {
+      viewport.height = window.innerHeight - keyboardHeight;
+      viewport.dispatchEvent(new Event('resize'));
+      vi.advanceTimersByTime(17);
+      expect(component.composerBottomInset()).toBe(keyboardHeight);
+
+      viewport.offsetTop = 70;
+      viewport.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(17);
+      expect(component.composerBottomInset()).toBe(keyboardHeight - 70);
+
+      viewport.height = window.innerHeight;
+      viewport.offsetTop = 0;
+      viewport.dispatchEvent(new Event('resize'));
+      vi.advanceTimersByTime(17);
+      expect(component.composerBottomInset()).toBe(0);
+    }
+    viewport.scale = 2;
+    viewport.height = window.innerHeight / 2;
+    viewport.dispatchEvent(new Event('resize'));
+    vi.advanceTimersByTime(17);
+    expect(component.composerBottomInset()).toBe(0);
+  });
+
   it('iPad 觸控模式也使用自訂選字', () => {
     Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 });
     useAppleTouchDevice('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)');
