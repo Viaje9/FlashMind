@@ -46,6 +46,14 @@ describe('SpeakingReviewDiscussionStore', () => {
     }
   });
 
+  it('送出回顧討論時會帶入使用者選擇的推理 effort', async () => {
+    store.start(conversation, []);
+
+    await store.sendMessage('請深入說明', 'high');
+
+    expect(reply.mock.calls[0]?.[0]?.effort).toBe('high');
+  });
+
   it('帶入原逐字稿及回顧，但不修改原紀錄；後續回合保留暫時討論', async () => {
     const original = structuredClone(conversation);
     store.start(conversation, [

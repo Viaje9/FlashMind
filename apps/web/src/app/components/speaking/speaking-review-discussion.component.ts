@@ -15,6 +15,7 @@ import {
   untracked,
 } from '@angular/core';
 import { FmButtonComponent, FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
+import { type SpeakingAssistantChatRequest } from '@flashmind/api-client';
 import { TopicConversationComposerComponent } from '../../pages/topic-conversation/components/topic-conversation-composer.component';
 import { TopicConversationMessageComponent } from '../../pages/topic-conversation/components/topic-conversation-message.component';
 import {
@@ -491,6 +492,48 @@ interface DocumentWithCaretApi {
               }
             </div>
           }
+          <div topic-conversation-composer-actions class="composer-effort-actions">
+            <div class="effort-control" data-speaking-effort-control>
+              <button
+                type="button"
+                class="effort-trigger"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="effortMenuOpen()"
+                [attr.aria-label]="'調整 AI 思考程度，目前為' + selectedEffortLabel()"
+                data-testid="speaking-discussion-effort-trigger"
+                (click)="toggleEffortMenu()"
+              >
+                <span class="material-symbols-outlined effort-trigger-icon" aria-hidden="true">{{
+                  selectedEffortIcon()
+                }}</span>
+              </button>
+              @if (effortMenuOpen()) {
+                <div
+                  class="effort-menu"
+                  role="listbox"
+                  aria-label="AI 思考程度"
+                  data-testid="speaking-discussion-effort-menu"
+                >
+                  @for (option of effortOptions; track option.value) {
+                    <button
+                      type="button"
+                      role="option"
+                      class="effort-option"
+                      [class.effort-option-selected]="selectedEffort() === option.value"
+                      [attr.aria-selected]="selectedEffort() === option.value"
+                      [attr.aria-label]="option.label + '：' + option.description"
+                      [attr.data-testid]="'speaking-discussion-effort-' + option.value"
+                      (click)="selectEffort(option.value)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">{{
+                        option.icon
+                      }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
         </app-topic-conversation-composer>
       </footer>
     </div>
@@ -498,6 +541,29 @@ interface DocumentWithCaretApi {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SpeakingReviewDiscussionComponent implements OnInit {
+  readonly effortOptions = [
+    { value: 'none', label: '無', description: '最快', icon: 'do_not_disturb_on' },
+    { value: 'low', label: '低', description: '日常', icon: 'signal_cellular_1_bar' },
+    { value: 'medium', label: '中', description: '平衡', icon: 'signal_cellular_2_bar' },
+    { value: 'high', label: '高', description: '更仔細', icon: 'signal_cellular_3_bar' },
+    { value: 'xhigh', label: '極高', description: '深入', icon: 'signal_cellular_4_bar' },
+    { value: 'max', label: '最大', description: '最完整', icon: 'rocket_launch' },
+  ] as const satisfies readonly {
+    value: SpeakingAssistantChatRequest.EffortEnum;
+    label: string;
+    description: string;
+    icon: string;
+  }[];
+  readonly selectedEffort = signal<SpeakingAssistantChatRequest.EffortEnum>('low');
+  readonly effortMenuOpen = signal(false);
+  readonly selectedEffortLabel = computed(
+    () =>
+      this.effortOptions.find((option) => option.value === this.selectedEffort())?.label ?? '低',
+  );
+  readonly selectedEffortIcon = computed(
+    () =>
+      this.effortOptions.find((option) => option.value === this.selectedEffort())?.icon ?? 'speed',
+  );
   readonly conversation = input.required<SpeakingConversation>();
   readonly sourceMessages = input.required<SpeakingMessage[]>();
   readonly originalMessages = computed(() =>
@@ -711,10 +777,20 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   async send(message: string): Promise<void> {
     this.viewingSource.set(false);
-    if (!(await this.store.sendMessage(message))) {
+    this.effortMenuOpen.set(false);
+    if (!(await this.store.sendMessage(message, this.selectedEffort()))) {
       const composer = this.composer();
       if (composer && !composer.formModel().message) composer.formModel.set({ message });
     }
+  }
+
+  toggleEffortMenu(): void {
+    this.effortMenuOpen.update((open) => !open);
+  }
+
+  selectEffort(effort: SpeakingAssistantChatRequest.EffortEnum): void {
+    this.selectedEffort.set(effort);
+    this.effortMenuOpen.set(false);
   }
 
   @HostListener('document:selectionchange')
@@ -911,6 +987,9 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target;
+    const effortControl =
+      target instanceof Element ? target.closest('[data-speaking-effort-control]') : null;
+    if (!effortControl) this.effortMenuOpen.set(false);
     const marker =
       target instanceof Element
         ? target.closest<HTMLElement>('[data-speaking-marked-context-id]')

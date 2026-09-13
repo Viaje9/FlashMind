@@ -16,7 +16,20 @@ import { canSendTopicConversationMessage } from '../../../components/topic-conve
           class="rounded-[26px] border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_12px_36px_rgba(15,23,42,0.14)] ring-1 ring-white/80 backdrop-blur-xl transition focus-within:border-emerald-400 dark:border-slate-700 dark:bg-slate-900/95 dark:ring-white/5"
         >
           <ng-content select="[topic-conversation-composer-context]"></ng-content>
-          <div class="flex items-end gap-1.5">
+          <div class="flex items-end px-1">
+            <!-- DefaultValueAccessor 會緩衝 iOS 中文輸入法的 composition，避免組字期間被回寫 value。 -->
+            <textarea
+              ngDefaultControl
+              [formField]="messageForm.message"
+              rows="1"
+              [attr.aria-label]="inputLabel()"
+              [placeholder]="placeholder()"
+              data-testid="topic-conversation-input"
+              class="max-h-32 min-h-11 w-full resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-[16px] leading-6 text-slate-900 outline-none [field-sizing:content] dark:text-white"
+              (keydown)="onKeydown($event)"
+            ></textarea>
+          </div>
+          <div class="flex min-h-11 items-center justify-between gap-2 px-1 pb-1">
             @if (showHint()) {
               <button
                 type="button"
@@ -33,33 +46,23 @@ import { canSendTopicConversationMessage } from '../../../components/topic-conve
                 >
               </button>
             }
-
-            <!-- DefaultValueAccessor 會緩衝 iOS 中文輸入法的 composition，避免組字期間被回寫 value。 -->
-            <textarea
-              ngDefaultControl
-              [formField]="messageForm.message"
-              rows="1"
-              [attr.aria-label]="inputLabel()"
-              [placeholder]="placeholder()"
-              data-testid="topic-conversation-input"
-              class="max-h-32 min-h-11 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-[16px] leading-6 text-slate-900 outline-none [field-sizing:content] dark:text-white"
-              (keydown)="onKeydown($event)"
-            ></textarea>
-
-            <button
-              type="submit"
-              class="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white shadow-sm transition enabled:hover:bg-emerald-500 enabled:active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600"
-              [disabled]="!canSubmit()"
-              [attr.aria-label]="sending() ? 'AI 回覆中' : '送出訊息'"
-              data-testid="topic-conversation-send"
-              (pointerdown)="onSendPointerDown($event)"
-            >
-              <span
-                class="material-symbols-outlined text-[20px]"
-                [class.animate-pulse]="sending()"
-                >{{ sending() ? 'more_horiz' : 'arrow_upward' }}</span
+            <div class="ml-auto flex items-center gap-1.5">
+              <ng-content select="[topic-conversation-composer-actions]"></ng-content>
+              <button
+                type="submit"
+                class="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white shadow-sm transition enabled:hover:bg-emerald-500 enabled:active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600"
+                [disabled]="!canSubmit()"
+                [attr.aria-label]="sending() ? 'AI 回覆中' : '送出訊息'"
+                data-testid="topic-conversation-send"
+                (pointerdown)="onSendPointerDown($event)"
               >
-            </button>
+                <span
+                  class="material-symbols-outlined text-[20px]"
+                  [class.animate-pulse]="sending()"
+                  >{{ sending() ? 'more_horiz' : 'arrow_upward' }}</span
+                >
+              </button>
+            </div>
           </div>
         </div>
       </div>

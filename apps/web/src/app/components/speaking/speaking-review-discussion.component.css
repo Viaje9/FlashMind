@@ -180,10 +180,81 @@
 }
 
 .selection-composer-context {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 0.42rem;
   padding: 0.2rem 0.2rem 0.58rem;
+}
+
+.effort-control {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.composer-effort-actions {
+  display: flex;
+  align-items: center;
+}
+
+.effort-trigger {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  padding: 0;
+  background: transparent;
+  color: rgb(37 145 255);
+}
+
+.effort-trigger:hover,
+.effort-trigger[aria-expanded='true'] {
+  background: rgb(14 165 233 / 0.08);
+  color: rgb(37 145 255);
+}
+
+.effort-trigger-icon {
+  font-size: 1.65rem;
+}
+
+.effort-menu {
+  position: absolute;
+  z-index: 90;
+  bottom: calc(100% + 0.42rem);
+  right: 0;
+  display: flex;
+  width: min(17rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  flex-wrap: wrap;
+  gap: 0.18rem;
+  border: 1px solid rgb(100 116 139 / 0.4);
+  border-radius: 0.75rem;
+  background: rgb(15 23 42 / 0.98);
+  padding: 0.35rem;
+  box-shadow: 0 12px 28px rgb(15 23 42 / 0.32);
+}
+
+.effort-option {
+  display: grid;
+  width: 2.55rem;
+  height: 2.55rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  padding: 0;
+  color: rgb(148 163 184);
+}
+
+.effort-option .material-symbols-outlined {
+  color: rgb(37 145 255);
+  font-size: 1.4rem;
+}
+
+.effort-option:hover,
+.effort-option-selected {
+  background: rgb(14 165 233 / 0.18);
 }
 
 .selection-annotation-chip {

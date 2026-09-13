@@ -1,6 +1,10 @@
 import { HttpContext } from '@angular/common/http';
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
-import { SpeakingService, type SpeakingChatMessage } from '@flashmind/api-client';
+import {
+  SpeakingService,
+  type SpeakingAssistantChatRequest,
+  type SpeakingChatMessage,
+} from '@flashmind/api-client';
 import { Subject, firstValueFrom, takeUntil } from 'rxjs';
 import { SKIP_LOADING } from '../../interceptors/loading.interceptor';
 import type { TopicConversationMessageView } from '../topic-conversation/topic-conversation.domain';
@@ -99,7 +103,10 @@ export class SpeakingReviewDiscussionStore implements OnDestroy {
     this.markedContexts.update((contexts) => contexts.filter((context) => context.id !== id));
   }
 
-  async sendMessage(text: string): Promise<boolean> {
+  async sendMessage(
+    text: string,
+    effort?: SpeakingAssistantChatRequest.EffortEnum,
+  ): Promise<boolean> {
     const content = text.trim();
     if (!content || content.length > 1000 || this.sending() || !this.context.length) return false;
     const generation = this.generation;
@@ -113,6 +120,7 @@ export class SpeakingReviewDiscussionStore implements OnDestroy {
           .createSpeakingReply(
             {
               message: content,
+              ...(effort ? { effort } : {}),
               systemPrompt: DISCUSSION_PROMPT,
               history: [
                 ...this.context,
