@@ -15,9 +15,9 @@ import { fileURLToPath } from "node:url";
 
 const cliRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = join(cliRoot, "skills");
-const skills = ["flashmind-practice", "flashmind-review"];
+const skills = ["flashmind-practice", "flashmind-review", "flashmind-cli"];
 const markerName = ".flashmind-installation.json";
-const help = `將 apps/cli/skills 的兩個 FlashMind skill 同步到全域。
+const help = `將 apps/cli/skills 的三個 FlashMind skill 同步到全域。
 
 用法：pnpm skills:sync [--dry-run] [--target-dir <目錄>]
 預設：CODEX_HOME 下的 skills；未設定時為 ~/.codex/skills。
@@ -143,7 +143,7 @@ async function main() {
     }
   }
   process.stdout.write(
-    "已同步 flashmind-practice 與 flashmind-review；其他 skills 保持不變。\n",
+    "已同步 flashmind-practice、flashmind-review 與 flashmind-cli；其他 skills 保持不變。\n",
   );
 }
 

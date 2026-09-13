@@ -19,6 +19,7 @@ import {
   validateStructure,
   type CliAuthorizationStarted,
   type CliAuthorizationStatus,
+  type SpeakingHistoryPageMeta,
   type SpeakingPracticeContext,
   type SpeakingReviewDraft,
   type SpeakingSavedReview,
@@ -43,11 +44,14 @@ interface Credential {
 }
 const output = (value: unknown) =>
   process.stdout.write(JSON.stringify(value) + "\n");
-const help = `flashmind — 練習上下文與 Review 保存
+const help = `flashmind — 練習歷史、上下文與 Review
 
   flashmind login [--no-browser]
   flashmind status [--check]
   flashmind practice context
+  flashmind history list [--cursor <游標>] [--limit 50]
+  flashmind history show <id>
+  flashmind history messages <id> [--cursor <游標>] [--limit 50]
   flashmind transcript export <thread> --before-message <id> [--output-temp]
   flashmind transcript export --current [--output-temp]
   flashmind transcript show <thread | --current> [--offset 0] [--limit 50]
@@ -64,11 +68,55 @@ const help = `flashmind — 練習上下文與 Review 保存
 API 優先序：--api-url > FLASHMIND_API_URL > 最近成功登入的環境。登入成功才切換預設；其他指令覆寫只影響本次。
 憑證：FLASHMIND_CONFIG_DIR，預設 ~/.config/flashmind；不得放在 repo。
 本機資料：FLASHMIND_DATA_DIR，預設 ~/.local/share/flashmind；與 repo、憑證分開。
-prepare／import／refresh 只 GET 最新 context；list／show／vocabulary／update／validate 不需登入、不連線。
-show 的分頁只用於 transcript；vocabulary 和 list 支援分頁，limit 上限 200。
+history 命令讀取已登入帳號的遠端歷史；review list／show／vocabulary／update／validate 不需登入、不連線。
+history list/messages 與 transcript 使用 cursor／offset 分頁，history limit 上限 100；review list/vocabulary 的 limit 上限 200。
 validate 只做本機驗證、不寫檔；傳入 ID 可核對字庫快照，獨立草稿檔只檢查契約與原句證據。
 只有 save 上傳完整草稿，由保存 API 驗證後正式寫入；不另呼叫遠端 validate。
 `;
+
+interface HistoryCommand {
+  command: "list" | "show" | "messages";
+  id?: string;
+  options: Record<string, string>;
+}
+
+function parseHistoryCommand(args: string[]): HistoryCommand | undefined {
+  if (args[0] !== "history" || !["list", "show", "messages"].includes(args[1]))
+    return undefined;
+  const command = args[1] as HistoryCommand["command"];
+  const allowed = command === "show" ? [] : ["--cursor", "--limit"];
+  const options: Record<string, string> = {};
+  let id: string | undefined;
+  for (let i = 2; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith("-") && id === undefined) {
+      id = arg;
+      continue;
+    }
+    if (!allowed.includes(arg) || options[arg] !== undefined)
+      throw new CliError("USAGE_ERROR", "未知或重複選項，請使用 --help", 2);
+    if (!args[i + 1] || args[i + 1].startsWith("-"))
+      throw new CliError("USAGE_ERROR", "選項缺少值", 2);
+    options[arg] = args[++i];
+  }
+  if ((command === "list" && id !== undefined) || (command !== "list" && !id))
+    throw new CliError(
+      "USAGE_ERROR",
+      "history list 不接受 ID；show/messages 必須提供場次 ID",
+      2,
+    );
+  if (
+    options["--limit"] !== undefined &&
+    (!/^\d+$/.test(options["--limit"]) ||
+      !Number.isSafeInteger(Number(options["--limit"])) ||
+      Number(options["--limit"]) < 1 ||
+      Number(options["--limit"]) > 100)
+  )
+    throw new CliError("USAGE_ERROR", "limit 須為 1 至 100 的整數", 2);
+  if (options["--cursor"] !== undefined && options["--cursor"].length === 0)
+    throw new CliError("USAGE_ERROR", "cursor 不可為空", 2);
+  return { command, id, options };
+}
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -89,27 +137,39 @@ function parseArgs() {
   const check = args.includes("--check");
   if (check) args.splice(args.indexOf("--check"), 1);
   const local = parseLocalCommand(args);
+  const history = parseHistoryCommand(args);
   const command = local
     ? "local"
-    : args[0] === "status" && args.length === 1
-      ? "status"
-      : args[0] === "login" && args.length === 1
-        ? "login"
-        : args[0] === "practice" && args[1] === "context" && args.length === 2
-          ? "context"
-          : args[0] === "review" &&
-              ["validate", "save"].includes(args[1]) &&
-              args.length === 3 &&
-              !args[2].startsWith("-")
-            ? args[1]
-            : null;
+    : history
+      ? "history"
+      : args[0] === "status" && args.length === 1
+        ? "status"
+        : args[0] === "login" && args.length === 1
+          ? "login"
+          : args[0] === "practice" && args[1] === "context" && args.length === 2
+            ? "context"
+            : args[0] === "review" &&
+                ["validate", "save"].includes(args[1]) &&
+                args.length === 3 &&
+                !args[2].startsWith("-")
+              ? args[1]
+              : null;
   if (
     !command ||
     (noBrowser && command !== "login") ||
-    (check && command !== "status")
+    (check && command !== "status") ||
+    (history && (noBrowser || check))
   )
     throw new CliError("USAGE_ERROR", "請使用 --help 查看命令及必要參數", 2);
-  return { command, rawOrigin, file: args[2], noBrowser, check, local };
+  return {
+    command,
+    rawOrigin,
+    file: args[2],
+    noBrowser,
+    check,
+    local,
+    history,
+  };
 }
 
 function normalizeOrigin(rawOrigin: string): string {
@@ -350,7 +410,7 @@ async function request(
   path: string,
   body?: unknown,
   credential?: Credential,
-): Promise<{ data: unknown; response: Response }> {
+): Promise<{ data: unknown; meta?: unknown; response: Response }> {
   // 固定 origin，拒絕 redirect，避免 session 被帶往其他主機。
   const url = new URL(`/api${path}`, origin);
   if (url.origin !== origin || (credential && credential.apiOrigin !== origin))
@@ -422,7 +482,7 @@ async function request(
     const wrapper = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     if (!wrapper || !Object.hasOwn(wrapper, "data"))
       throw new Error("invalid wrapper");
-    return { data: wrapper.data, response };
+    return { data: wrapper.data, meta: wrapper.meta, response };
   } catch (error) {
     if (error instanceof CliError) throw error;
     throw new CliError("RESPONSE_INVALID", "API 未回傳完整 JSON Wrapper", 6);
@@ -617,6 +677,61 @@ async function main() {
     checkContext(context, currentTarget);
     return { target: currentTarget, email: credential.email, context };
   };
+  const historyPage = async (
+    path: string,
+    itemSchema: "SpeakingSessionRecord" | "SpeakingHistoryMessage",
+  ) => {
+    const result = await request(origin, path, undefined, credential);
+    if (
+      !Array.isArray(result.data) ||
+      !result.meta ||
+      validateStructure("SpeakingHistoryPageMeta", result.meta).length ||
+      result.data.some((item) => validateStructure(itemSchema, item).length)
+    )
+      throw new CliError("RESPONSE_INVALID", "歷史查詢回應格式錯誤", 6);
+    const meta = result.meta as SpeakingHistoryPageMeta;
+    return { items: result.data, meta };
+  };
+  if (args.history) {
+    const { command, id, options } = args.history;
+    const query = new URLSearchParams();
+    if (options["--cursor"] !== undefined)
+      query.set("cursor", options["--cursor"]);
+    if (options["--limit"] !== undefined)
+      query.set("limit", options["--limit"]);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    if (command === "list") {
+      output(
+        await historyPage(
+          `/speaking/sessions${suffix}`,
+          "SpeakingSessionRecord",
+        ),
+      );
+      return;
+    }
+    if (command === "messages") {
+      output(
+        await historyPage(
+          `/speaking/sessions/${encodeURIComponent(id!)}/messages${suffix}`,
+          "SpeakingHistoryMessage",
+        ),
+      );
+      return;
+    }
+    const result = await request(
+      origin,
+      `/speaking/sessions/${encodeURIComponent(id!)}`,
+      undefined,
+      credential,
+    );
+    if (
+      !result.data ||
+      validateStructure("SpeakingSessionDetail", result.data).length
+    )
+      throw new CliError("RESPONSE_INVALID", "歷史場次回應格式錯誤", 6);
+    output(result.data);
+    return;
+  }
   if (args.local) {
     output(await runLocalCommand(args.local, getContext));
     return;

@@ -111,6 +111,113 @@ test("context 回傳完整 JSON 且 Cookie 只送設定的 origin", async (t) =>
   assert.deepEqual(result.json(), context);
   assert.doesNotMatch(result.stdout + result.stderr, /private-session/);
 });
+test("history list/show/messages 查詢遠端歷史並保留 cursor 分頁", async (t) => {
+  const record = {
+    id: "session-1",
+    clientSessionId: "client-1",
+    source: "APP",
+    title: "週末旅行",
+    startedAt: "2026-09-12T08:00:00.000Z",
+    endedAt: "2026-09-12T08:30:00.000Z",
+    createdAt: "2026-09-12T08:00:00.000Z",
+    updatedAt: "2026-09-12T08:30:00.000Z",
+    revision: 2,
+    messageCount: 2,
+    reviewed: true,
+    summary: "Discussed a weekend trip.",
+  };
+  const detail = {
+    session: record,
+    review: null,
+    legacySummaries: [],
+  };
+  const message = {
+    id: "message-1",
+    role: "user",
+    text: "I went to Taipei last weekend.",
+    createdAt: "2026-09-12T08:01:00.000Z",
+  };
+  const { run } = await setup(t, (req, res) => {
+    assert.equal(req.headers.cookie, "session=private-session");
+    if (req.url === "/api/speaking/sessions?limit=1") {
+      res.end(
+        JSON.stringify({
+          data: [record],
+          meta: { nextCursor: "next-1", hasMore: true },
+        }),
+      );
+      return;
+    }
+    if (req.url === "/api/speaking/sessions?cursor=next-1&limit=1") {
+      res.end(
+        JSON.stringify({
+          data: [],
+          meta: { nextCursor: null, hasMore: false },
+        }),
+      );
+      return;
+    }
+    if (req.url === "/api/speaking/sessions/session-1") {
+      res.end(JSON.stringify({ data: detail }));
+      return;
+    }
+    if (req.url === "/api/speaking/sessions/session-1/messages?limit=1") {
+      res.end(
+        JSON.stringify({
+          data: [message],
+          meta: { nextCursor: null, hasMore: false },
+        }),
+      );
+      return;
+    }
+    res.statusCode = 404;
+    res.end(
+      JSON.stringify({ error: { code: "NOT_FOUND", message: "not found" } }),
+    );
+  });
+  const list = await run(["history", "list", "--limit", "1"]);
+  assert.equal(list.code, 0, list.stdout);
+  assert.deepEqual(list.json(), {
+    items: [record],
+    meta: { nextCursor: "next-1", hasMore: true },
+  });
+  const next = await run([
+    "history",
+    "list",
+    "--cursor",
+    "next-1",
+    "--limit",
+    "1",
+  ]);
+  assert.equal(next.code, 0, next.stdout);
+  assert.deepEqual(next.json().meta, { nextCursor: null, hasMore: false });
+  const shown = await run(["history", "show", "session-1"]);
+  assert.equal(shown.code, 0, shown.stdout);
+  assert.deepEqual(shown.json(), detail);
+  const messages = await run([
+    "history",
+    "messages",
+    "session-1",
+    "--limit",
+    "1",
+  ]);
+  assert.equal(messages.code, 0, messages.stdout);
+  assert.deepEqual(messages.json(), {
+    items: [message],
+    meta: { nextCursor: null, hasMore: false },
+  });
+  const invalidLimit = await run(["history", "list", "--limit", "101"]);
+  assert.equal(invalidLimit.code, 2);
+  assert.equal(invalidLimit.json().error.code, "USAGE_ERROR");
+});
+test("history 拒絕不完整的 API 回應，不輸出部分資料", async (t) => {
+  const { run } = await setup(t, (_, res) =>
+    res.end(JSON.stringify({ data: [{ id: "incomplete" }], meta: {} })),
+  );
+  const result = await run(["history", "list"]);
+  assert.equal(result.code, 6);
+  assert.equal(result.json().error.code, "RESPONSE_INVALID");
+});
 test("拒絕不完整 context 與不同帳號", async (t) => {
   const { run } = await setup(t, (_, res) =>
     res.end(

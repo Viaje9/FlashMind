@@ -2,7 +2,7 @@
   "name": "@flashmind/cli",
   "version": "0.1.0",
   "private": true,
-  "description": "FlashMind 本機練習上下文與 Review 保存工具",
+  "description": "FlashMind 練習歷史、上下文與 Review CLI",
   "bin": {
     "flashmind": "bin/flashmind.cjs"
   },

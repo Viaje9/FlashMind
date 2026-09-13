@@ -31,15 +31,16 @@ flashmind login
 
 CLI session 保存在 repo 外的 `~/.config/flashmind`，檔案 `0600`、目錄 `0700`，不同 origin 各自保存。登入成功後有效 30 日，使用時不自動延長；舊 session 不會自動延長，須在更新 API 後重新 login 才取得 30 日期限。可透過 `FLASHMIND_CONFIG_DIR` 指定另一個 repo 外目錄。不要提交、分享或列印憑證檔；失效時重新執行 login。這是 FlashMind 登入 session，不是 OpenAI API key。
 
-## 全域 Practice／Review skills
+## 全域 FlashMind skills
 
-兩個 skill 和 CLI 放在一起維護：
+三個 skill 和 CLI 放在一起維護：
 
 ```text
 apps/cli/
 ├── skills/
 │   ├── flashmind-practice/SKILL.md
-│   └── flashmind-review/SKILL.md
+│   ├── flashmind-review/SKILL.md
+│   └── flashmind-cli/SKILL.md
 └── scripts/
     ├── sync-skills.mjs
     └── skill-cli.cjs
@@ -55,18 +56,22 @@ pnpm skills:sync
 
 也可以使用 `pnpm --filter @flashmind/cli skills:sync`。預設同步到 `$CODEX_HOME/skills`，未設定 CODEX_HOME 時使用 `~/.codex/skills`，沿用目前本機的全域 skill 位置；可用 `--target-dir <目錄>` 指定其他位置。新版通用使用者位置也可指定為 `~/.agents/skills`，同一組 skill 請選一處安裝，避免重複出現。
 
-script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或對話複製進 skill。兩個 skill 都直接呼叫全域 link 的 `flashmind`，需讓目前 shell 的 PATH 找得到此指令；不需要切換工作目錄或指定 CLI 腳本的絕對路徑。CLI 本體仍在此 repo；搬移 repo 或改用其他 checkout 後須重新 build／link／sync。
+script 複製三個 skill 與參考資料，不會把 API key、登入憑證或對話複製進 skill。三個 skill 都直接呼叫全域 link 的 `flashmind`，需讓目前 shell 的 PATH 找得到此指令；不需要切換工作目錄或指定 CLI 腳本的絕對路徑。CLI 本體仍在此 repo；搬移 repo 或改用其他 checkout 後須重新 build／link／sync。
 
-- 只替換由本 script 管理的 `flashmind-practice`／`flashmind-review` 目錄；受管理目錄中的手動修改會被下一次同步取代，請修改 repo 原始碼。
+這三個 skill 執行 `flashmind` CLI 指令時，都要依執行環境的升權流程執行（例如 Codex 的 `require_escalated`）。升權只處理本機檔案／設定存取，不等於允許登入、上傳或保存 Review；遠端寫入仍須遵守各 skill 的明確授權邊界。
+
+- 只替換由本 script 管理的 `flashmind-practice`／`flashmind-review`／`flashmind-cli` 目錄；受管理目錄中的手動修改會被下一次同步取代，請修改 repo 原始碼。
 - 未受管理的同名目錄、檔案或 symlink 會被拒絕，其他 skill 不會被修改；沒有自動強制覆寫選項。
 - `--dry-run` 只核對來源、目標與衝突，不建立資料夾。
 - 不修改既有的 `english-speaking-practice`／`english-study-review`，它們仍保留 English Study 的流程。
 
 同步後，可在本機 Agent 明確使用 `$flashmind-practice`，例如：「使用 `$flashmind-practice`，API 是 `http://localhost:3280`，開始今天的練習。」第一次需登入同一個 API 環境；不要因 localhost 無法連線就自行改成正式站。
 
+要查詢過往紀錄或做跨場次摘要時，使用 `$flashmind-cli`，例如：「使用 `$flashmind-cli`，找出最近一個月的練習並整理共同主題。」這個 skill 預設只讀取，不會建立或保存 Review。
+
 結束練習後交給 `$flashmind-review`，使用 CLI 建立本機草稿、檢查、驗證並展示，等使用者明確說「儲存」才執行 save。獨立 Review 也可直接使用 `$flashmind-review` 並提供任務連結或完整原始對話。
 
-依 [OpenAI 的 skill 說明](https://developers.openai.com/codex/skills)，skill 更新通常會自動偵測；如果清單尚未出現，重新啟動 Codex。這兩個 skill 需要能執行本機 CLI 的環境，不會擷取無法存取的聊天紀錄。
+依 [OpenAI 的 skill 說明](https://developers.openai.com/codex/skills)，skill 更新通常會自動偵測；如果清單尚未出現，重新啟動 Codex。這三個 skill 需要能執行本機 CLI 的環境，不會擷取無法存取的聊天紀錄。
 
 ## 核心命令
 
@@ -74,6 +79,9 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 | ----------------------------------------- | ------------------------------------------------------------ | ---------------- |
 | `flashmind login`                         | 瀏覽器確認帳號、取得 session                                 | 否，只有登入授權 |
 | `flashmind practice context`              | 完整四狀態目標字表、最近 Summary、下次計畫                   | 否               |
+| `flashmind history list`                  | 從 API 依時間列出自己的 App／本機歷史場次                    | 否               |
+| `flashmind history show <id>`             | 取得單一歷史場次、已保存 Review 與舊 Summary                 | 否               |
+| `flashmind history messages <id>`         | 分頁讀取歷史場次的原始文字訊息                               | 否               |
 | `flashmind review validate <id 或草稿檔>` | 純本機驗證，不需登入、不連線、不寫檔                         | 否               |
 | `flashmind review save <id 或草稿檔>`     | 本機檢查後送保存 API，由後端驗證並原子保存 Review 與單字事件 | 是               |
 
@@ -101,6 +109,9 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 | 命令                                                                                              | 用途                                                                | 連線／副作用                      |
 | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------- |
 | `transcript show <thread 或 --current> --offset 0 --limit 50`                                     | 分頁核對完整原始語音，找出練習起訖                                  | 完全離線，不寫檔                  |
+| `history list [--cursor <游標>] [--limit 50]`                                                     | 從 API 依練習時間列出自己的歷史場次                                 | GET API，不寫本機檔               |
+| `history show <id>`                                                                               | 讀取單一歷史場次、已保存 Review 與舊 Summary                        | GET API，不寫本機檔               |
+| `history messages <id> [--cursor <游標>] [--limit 50]`                                            | 分頁讀取指定歷史場次的原始文字訊息                                  | GET API，不寫本機檔               |
 | `review prepare <thread 或 --current> --before-message <id> [--from-message <id>] [--title 主題]` | 保存指定練習與最新 context，回傳草稿 ID／路徑                       | GET context、本機寫檔，不上傳原文 |
 | `review import --file <舊完整草稿.json>`                                                          | 納管既有草稿，保留原始 sourceRef                                    | GET context、本機寫檔，不上傳原文 |
 | `review refresh <id>`                                                                             | 重新取得最新 context，不改原文或草稿                                | GET context、本機寫檔             |
@@ -112,7 +123,9 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 | `review show <id> --section result`                                                               | 讀取草稿的完整回顧                                                  | 離線，不需登入                    |
 | `review validate <id>`                                                                            | 檢查契約、字庫 ID、證據、context 版本與原文一致性                   | 完全離線，不代表 API 驗證         |
 
-`show` 預設為 metadata；另支援 `draft`（完整 API payload）、`review`、`summary`、`actualUses`、`recommendations`、`nextPractice`、`deckCandidates`。逐字稿、字庫和列表使用 `offset`／`limit` 分頁，每頁預設 50、上限 200，回傳 `total` 與 `nextOffset`，最後一頁為 null；讀取分頁不會截斷保存或上傳的逐字稿。
+`review show` 預設為 metadata；另支援 `draft`（完整 API payload）、`review`、`summary`、`actualUses`、`recommendations`、`nextPractice`、`deckCandidates`。Review 的逐字稿、字庫和列表使用 `offset`／`limit` 分頁，每頁預設 50、上限 200，回傳 `total` 與 `nextOffset`，最後一頁為 null。`history list`／`history messages` 使用 API 的 `cursor`／`hasMore` 分頁，每頁上限 100；讀取分頁不會截斷保存或上傳的逐字稿。
+
+`history list` 與 `history messages` 輸出 `{ items, meta }`；`history show` 輸出單一 `SpeakingSessionDetail`，包含場次 metadata、已保存 Review（若有）與舊 Summary。三個命令都只讀取目前登入帳號自己的資料，不會建立、更新或保存 Review。
 
 狀態為 `prepared`（尚未撰寫）、`draft`（本機檢查不符）、`validated`（目前本機快照檢查通過）、`saved`；context 版本變更但草稿未更新時顯示 `context-stale`。狀態查閱會重新計算本機檢查結果，`validationScope` 明示為 `local-snapshot`；`update` 本來就會驗證，因此成功後可以直接顯示 `validated`，不表示已上傳。舊版 API 驗證收據不再決定這個狀態；新的 validate 不寫收據。正式保存收據仍綁定草稿雜湊。
 
@@ -124,6 +137,10 @@ script 複製兩個 skill 與參考資料，不會把 API key、登入憑證或�
 
 ```sh
 flashmind status
+flashmind history list --limit 50
+flashmind history show <session-id>
+flashmind history messages <session-id> --limit 100
+# 以上 history 命令需要登入，只讀取自己的遠端歷史，不會建立或保存 Review。
 flashmind review list
 flashmind transcript show <thread> --limit 50
 # Agent 依 nextOffset 讀完，確認結束訊息；CLI 不自動猜測邊界。
@@ -198,7 +215,7 @@ validate／save 接受舊草稿路徑以維持相容。管理資料檔 `review.j
 5. 只有使用者明確要求儲存，才執行 `review save`。
 6. 若使用者修改草稿，重新驗證；保存失敗不重新生成、不換帳號、不改來源識別，以同一份草稿重試。
 
-上述流程已實作在 `apps/cli/skills/flashmind-practice` 與 `flashmind-review`，透過同步 script 安裝；不修改 `english-study` 或其他位置原有的 Practice／Review skills。
+Practice／Review 流程實作在 `apps/cli/skills/flashmind-practice` 與 `flashmind-review`；歷史查詢與摘要入口實作在 `flashmind-cli`。三者都透過同步 script 安裝，不修改 `english-study` 或其他位置原有的 Practice／Review skills。
 
 ## App 回顧與搬移
 

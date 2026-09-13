@@ -6,7 +6,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const cliRoot = path.resolve(__dirname, "..");
 const sync = path.join(cliRoot, "scripts/sync-skills.mjs");
-const names = ["flashmind-practice", "flashmind-review"];
+const names = ["flashmind-practice", "flashmind-review", "flashmind-cli"];
 
 async function setup(t) {
   const root = await fs.mkdtemp(
@@ -31,7 +31,7 @@ test("dry-run 與錯誤選項不建立全域目錄", async (t) => {
   await assert.rejects(fs.lstat(target), { code: "ENOENT" });
 });
 
-test("同步及更新兩個 skill，保留其他 skill，從有空白的外部目錄執行 CLI", async (t) => {
+test("同步及更新三個 skill，保留其他 skill，從有空白的外部目錄執行 CLI", async (t) => {
   const { root, target, run } = await setup(t);
   const unrelated = path.join(target, "english-study-review", "SKILL.md");
   await fs.mkdir(path.dirname(unrelated), { recursive: true });

@@ -19,6 +19,8 @@ Agent 整理內容，CLI 負責本機資料管理、context、檢查、驗證與
 
 CLI 已透過全域 link（`npm link` 或 `pnpm link --global`）安裝。直接呼叫 `flashmind`，不需要切換工作目錄，也不用指定 CLI 腳本的絕對路徑。若找不到指令，檢查目前 shell 的 PATH 與全域 link 設定。
 
+執行任何 `flashmind` CLI 指令時，一律依目前執行環境的升權流程執行（`require_escalated`）；不要先在受限沙箱重試。升權只解決本機 CLI 的檔案／設定存取問題，不代表取得遠端資料寫入或保存 Review 的授權。
+
 先核對目前環境與帳號，再尋找本機草稿：
 
 ```sh
