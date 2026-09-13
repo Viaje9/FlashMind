@@ -8,7 +8,7 @@ import { canSendTopicConversationMessage } from '../../../components/topic-conve
   imports: [FormField, ReactiveFormsModule],
   template: `
     <form
-      class="bg-gradient-to-t from-background-light via-background-light/98 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-4 dark:from-background-dark dark:via-background-dark/98"
+      class="bg-gradient-to-t from-background-light via-background-light/98 to-transparent px-3 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] pt-4 focus-within:pb-2 dark:from-background-dark dark:via-background-dark/98"
       (submit)="$event.preventDefault(); onSubmit()"
     >
       <div class="mx-auto w-full max-w-3xl">
