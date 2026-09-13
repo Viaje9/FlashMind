@@ -91,6 +91,51 @@ describe('Speaking 回顧行動版選字手勢', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each(['input', 'textarea', 'div'])('編輯 %s 時保留原生選取與組字狀態', (tag) => {
+    const editor = document.createElement(tag);
+    if (tag === 'div') {
+      editor.setAttribute('contenteditable', 'true');
+      editor.tabIndex = 0;
+    }
+    fixture.nativeElement.appendChild(editor);
+    editor.focus();
+    expect(document.activeElement).toBe(editor);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    selection.addRange(range);
+    const clear = vi.spyOn(selection, 'removeAllRanges');
+
+    editor.dispatchEvent(new Event('selectionchange', { bubbles: true }));
+
+    expect(clear).not.toHaveBeenCalled();
+    editor.remove();
+  });
+
+  it('手機版仍會清除對話文字區內的原生選取', () => {
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    selection.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+    expect(selection.rangeCount).toBe(0);
+  });
+
+  it('手機版不清除對話文字區以外的選取', () => {
+    const other = document.createElement('p');
+    other.textContent = '其他區域';
+    fixture.nativeElement.appendChild(other);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    const range = document.createRange();
+    range.selectNodeContents(other);
+    selection.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+    expect(selection.toString()).toBe('其他區域');
+  });
+
   function pointer(type: string, x = 20, y = 100, pointerId = 1, pointerType = 'touch') {
     const event = new Event(type, { bubbles: true, cancelable: true });
     Object.assign(event, {

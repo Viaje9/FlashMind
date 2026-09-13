@@ -582,7 +582,26 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     // 行動裝置使用自訂長按／拖曳選取，避免瀏覽器原生 selection toolbar
     // 蓋住畫面或在不同平台產生不一致的操作列。
     if (this.mobileSelectionEnabled()) {
-      if (window.getSelection()?.rangeCount) window.getSelection()?.removeAllRanges();
+      // iOS 的組字與游標也會觸發 selectionchange，不能清除編輯中的原生選取。
+      if (
+        document.activeElement?.closest(
+          'input, textarea, [contenteditable]:not([contenteditable="false"])',
+        )
+      ) {
+        return;
+      }
+      const selection = window.getSelection();
+      const anchor = this.resolveSelectionHost(selection?.anchorNode ?? null);
+      const focus = this.resolveSelectionHost(selection?.focusNode ?? null);
+      if (
+        selection?.rangeCount &&
+        anchor &&
+        focus &&
+        this.hostElement.nativeElement.contains(anchor) &&
+        this.hostElement.nativeElement.contains(focus)
+      ) {
+        selection.removeAllRanges();
+      }
       return;
     }
 
