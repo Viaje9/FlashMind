@@ -84,6 +84,9 @@ interface DocumentWithCaretApi {
   caretRangeFromPoint?: (x: number, y: number) => Range | null;
 }
 
+const SPEAKING_REVIEW_EFFORT_STORAGE_KEY = 'flashmind.speaking-review-effort';
+const SPEAKING_REVIEW_EFFORT_VALUES = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+
 @Component({
   selector: 'app-speaking-review-discussion',
   imports: [
@@ -554,7 +557,9 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     description: string;
     icon: string;
   }[];
-  readonly selectedEffort = signal<SpeakingAssistantChatRequest.EffortEnum>('low');
+  readonly selectedEffort = signal<SpeakingAssistantChatRequest.EffortEnum>(
+    this.readStoredEffort(),
+  );
   readonly effortMenuOpen = signal(false);
   readonly selectedEffortLabel = computed(
     () =>
@@ -791,6 +796,26 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   selectEffort(effort: SpeakingAssistantChatRequest.EffortEnum): void {
     this.selectedEffort.set(effort);
     this.effortMenuOpen.set(false);
+    try {
+      localStorage.setItem(SPEAKING_REVIEW_EFFORT_STORAGE_KEY, effort);
+    } catch {
+      // 儲存空間不可用時仍保留本次頁面狀態。
+    }
+  }
+
+  private readStoredEffort(): SpeakingAssistantChatRequest.EffortEnum {
+    if (typeof localStorage === 'undefined') return 'low';
+
+    try {
+      const stored = localStorage.getItem(SPEAKING_REVIEW_EFFORT_STORAGE_KEY);
+      return SPEAKING_REVIEW_EFFORT_VALUES.includes(
+        stored as SpeakingAssistantChatRequest.EffortEnum,
+      )
+        ? (stored as SpeakingAssistantChatRequest.EffortEnum)
+        : 'low';
+    } catch {
+      return 'low';
+    }
   }
 
   @HostListener('document:selectionchange')

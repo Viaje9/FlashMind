@@ -8,6 +8,7 @@ import { SpeakingStore } from './speaking.store';
 import { TtsStore } from '../tts/tts.store';
 
 describe('Speaking 回顧行動版選字手勢', () => {
+  const effortStorageKey = 'flashmind.speaking-review-effort';
   let fixture: ComponentFixture<SpeakingReviewDiscussionComponent>;
   let component: SpeakingReviewDiscussionComponent;
   let text: HTMLElement;
@@ -29,6 +30,7 @@ describe('Speaking 回顧行動版選字手勢', () => {
   beforeEach(async () => {
     await resolveComponentResources(async () => '');
     vi.useFakeTimers();
+    localStorage.removeItem(effortStorageKey);
     tts = createTtsMock();
     vi.stubGlobal('matchMedia', () => ({ matches: true }));
     // jsdom 不做排版；只替換座標查字 API，手勢由真正的 DOM event listener 處理。
@@ -227,6 +229,7 @@ describe('Speaking 回顧行動版選字手勢', () => {
   afterEach(() => {
     fixture?.destroy();
     TestBed.resetTestingModule();
+    localStorage.removeItem(effortStorageKey);
     Reflect.deleteProperty(document, 'caretRangeFromPoint');
     Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect');
     Reflect.deleteProperty(Range.prototype, 'getClientRects');
@@ -291,6 +294,20 @@ describe('Speaking 回顧行動版選字手勢', () => {
     selection.addRange(range);
     document.dispatchEvent(new Event('selectionchange'));
     expect(selection.rangeCount).toBe(0);
+  });
+
+  it('選擇 AI 思考程度後會保存到 localStorage', () => {
+    component.selectEffort('high');
+
+    expect(localStorage.getItem(effortStorageKey)).toBe('high');
+  });
+
+  it('重新開啟回顧討論時會沿用上次保存的 AI 思考程度', () => {
+    localStorage.setItem(effortStorageKey, 'xhigh');
+    fixture.destroy();
+    createFixture();
+
+    expect(component.selectedEffort()).toBe('xhigh');
   });
 
   it('手機版不清除對話文字區以外的選取', () => {
