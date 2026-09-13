@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import { canSendTopicConversationMessage } from '../../../components/topic-conversation/topic-conversation.domain';
 
 @Component({
   selector: 'app-topic-conversation-composer',
-  imports: [FormField],
+  imports: [FormField, ReactiveFormsModule],
   template: `
     <form
       class="bg-gradient-to-t from-background-light via-background-light/98 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-4 dark:from-background-dark dark:via-background-dark/98"
@@ -33,7 +34,9 @@ import { canSendTopicConversationMessage } from '../../../components/topic-conve
               </button>
             }
 
+            <!-- DefaultValueAccessor 會緩衝 iOS 中文輸入法的 composition，避免組字期間被回寫 value。 -->
             <textarea
+              ngDefaultControl
               [formField]="messageForm.message"
               rows="1"
               [attr.aria-label]="inputLabel()"
