@@ -666,16 +666,16 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     }
 
     const touch = event.touches[0];
-    if (
-      !gesture.active &&
-      Math.hypot(touch.clientX - gesture.startPoint.x, touch.clientY - gesture.startPoint.y) > 10
-    ) {
-      // 長按前明確滑動，將這次手勢交還原生捲頁，不再啟動選字。
-      this.cancelMobileSelectionGesture(false);
+    if (!gesture.active) {
+      if (
+        Math.hypot(touch.clientX - gesture.startPoint.x, touch.clientY - gesture.startPoint.y) > 10
+      )
+        this.cancelMobileSelectionGesture(false);
+      // 等待長按時讓瀏覽器處理捲動；開始捲動後由 pointercancel 清除長按計時器。
       return;
     }
 
-    // 包含等待長按時的小幅晃動，避免瀏覽器提早開始捲動並送出 pointercancel。
+    // 只有長按選字成立或正在拖曳選取桿時，才阻止原生捲動。
     event.preventDefault();
   }
 

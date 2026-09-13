@@ -311,13 +311,27 @@ describe('Speaking 回顧行動版選字手勢', () => {
     expect(component.mobileSelectionDraft()?.selectedText).toContain('two three');
   });
 
-  it('等待長按的小幅手指晃動不能提早交給瀏覽器捲動', () => {
+  it('等待長按的小幅移動不阻止原生捲動，未開始捲動時仍可長按選字', () => {
     pointer('pointerdown');
     touch('touchstart');
     pointer('pointermove', 22, 103);
-    expect(touch('touchmove', 22, 103).defaultPrevented).toBe(true);
+    expect(touch('touchmove', 22, 103).defaultPrevented).toBe(false);
     vi.advanceTimersByTime(320);
     expect(component.mobileSelectionActive()).toBe(true);
+  });
+
+  it('慢速滑動交給瀏覽器後，pointercancel 取消尚未成立的長按', () => {
+    pointer('pointerdown');
+    touch('touchstart');
+    for (const distance of [2, 4, 6]) {
+      vi.advanceTimersByTime(80);
+      pointer('pointermove', 20, 100 + distance);
+      expect(touch('touchmove', 20, 100 + distance).defaultPrevented).toBe(false);
+    }
+    pointer('pointercancel', 20, 106);
+    vi.advanceTimersByTime(400);
+    expect(component.mobileSelectionActive()).toBe(false);
+    expect(component.mobileSelectionDraft()).toBeNull();
   });
 
   it('長按前直接滑動應保留原生捲動，之後不會誤啟動選字', () => {
