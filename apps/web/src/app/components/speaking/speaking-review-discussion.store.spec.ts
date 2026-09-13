@@ -31,6 +31,21 @@ describe('SpeakingReviewDiscussionStore', () => {
   });
   afterEach(() => TestBed.resetTestingModule());
 
+  it('區網 HTTP 沒有 randomUUID 時仍可開始討論並送出訊息', async () => {
+    vi.stubGlobal('crypto', {});
+    try {
+      store.start(conversation, []);
+      expect(store.messages()).toHaveLength(1);
+      expect(await store.sendMessage('請解釋這句')).toBe(true);
+      const ids = store.messages().map((message) => message.id);
+      expect(ids).toHaveLength(3);
+      expect(new Set(ids).size).toBe(3);
+      expect(ids.every(Boolean)).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('帶入原逐字稿及回顧，但不修改原紀錄；後續回合保留暫時討論', async () => {
     const original = structuredClone(conversation);
     store.start(conversation, [

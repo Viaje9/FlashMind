@@ -69,7 +69,7 @@ html {
   outline-offset: 3px;
 }
 
-/* Speaking review 行動版使用自訂文字選取，避免系統 selection toolbar 佔滿訊息區。 */
+/* 觸控選字由自訂圖層處理，避免同時出現系統選單。 */
 .mobile-selection-enabled [data-speaking-selection-context='review-discussion'],
 .mobile-selection-enabled [data-speaking-selection-context='review-discussion'] * {
   -webkit-touch-callout: none;
@@ -77,15 +77,6 @@ html {
   /* 一般手勢保留雙軸捲動；長按選字由非 passive touchmove listener 阻止捲動。 */
   touch-action: pan-x pan-y pinch-zoom;
   user-select: none;
-}
-
-.speaking-mobile-selection {
-  border-radius: 0.2rem;
-  background: color-mix(in srgb, var(--color-primary) 34%, transparent);
-  box-shadow: inset 0 -0.12rem 0 color-mix(in srgb, var(--color-primary) 76%, transparent);
-  color: inherit;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -101,11 +92,6 @@ html {
 
   .speaking-marked-text:hover {
     background: color-mix(in srgb, var(--color-sky-400) 34%, transparent);
-  }
-
-  .speaking-mobile-selection {
-    background: color-mix(in srgb, var(--color-primary) 42%, transparent);
-    box-shadow: inset 0 -0.14rem 0 color-mix(in srgb, var(--color-primary) 90%, transparent);
   }
 }
 

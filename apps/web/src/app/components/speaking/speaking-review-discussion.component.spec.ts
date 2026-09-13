@@ -36,6 +36,10 @@ describe('Speaking 回顧行動版選字手勢', () => {
       configurable: true,
       value: () => new DOMRect(20, 100, 180, 24),
     });
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [new DOMRect(20, 100, 180, 24)],
+    });
     Object.defineProperty(document, 'caretRangeFromPoint', {
       configurable: true,
       value: () => {
@@ -69,6 +73,11 @@ describe('Speaking 回顧行動版選字手勢', () => {
         },
       })
       .compileComponents();
+    createFixture();
+    caretOffset = 1;
+  });
+
+  function createFixture() {
     fixture = TestBed.createComponent(SpeakingReviewDiscussionComponent);
     component = fixture.componentInstance;
     // Vitest 使用 JIT，沒有 Angular build 產生的 signal input metadata。
@@ -78,7 +87,105 @@ describe('Speaking 回顧行動版選字手勢', () => {
     });
     fixture.detectChanges();
     text = fixture.nativeElement.querySelector('p');
-    caretOffset = 1;
+  }
+
+  function useAppleTouchDevice(
+    userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
+  ) {
+    fixture.destroy();
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(userAgent);
+    createFixture();
+  }
+
+  it('iPhone 使用自訂選取並在長按後阻止原生選單', () => {
+    useAppleTouchDevice();
+    expect(component.mobileSelectionEnabled()).toBe(true);
+    pointer('pointerdown');
+    touch('touchstart');
+    vi.advanceTimersByTime(400);
+    expect(touch('touchmove', 20, 150).defaultPrevented).toBe(true);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    const menu = new Event('contextmenu', { bubbles: true, cancelable: true });
+    text.dispatchEvent(menu);
+    expect(menu.defaultPrevented).toBe(true);
+  });
+
+  it('iPad 觸控模式也使用自訂選字', () => {
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 });
+    useAppleTouchDevice('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)');
+    expect(component.mobileSelectionEnabled()).toBe(true);
+  });
+
+  it('滑鼠事件不會中斷同時進行的觸控長按', () => {
+    pointer('pointerdown');
+    pointer('pointermove', 250, 100, 1, 'mouse');
+    pointer('pointerup', 250, 100, 1, 'mouse');
+    vi.advanceTimersByTime(320);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+  });
+
+  it('WebKit 無法查詢禁止原生選取的文字時，以快取字元座標拖曳', () => {
+    Object.defineProperty(document, 'caretRangeFromPoint', {
+      configurable: true,
+      value: () => null,
+    });
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value: function (this: Range) {
+        return [
+          new DOMRect(this.startOffset * 10, 100, (this.endOffset - this.startOffset) * 10, 24),
+        ];
+      },
+    });
+    pointer('pointerdown', 12, 112);
+    vi.advanceTimersByTime(320);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    pointer('pointermove', 129, 112);
+    vi.advanceTimersByTime(17);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One two three');
+  });
+
+  it('多次移動合併成一個畫面更新，保留原文字節點', () => {
+    useAppleTouchDevice();
+    const originalNode = text.firstChild;
+    pointer('pointerdown');
+    vi.advanceTimersByTime(320);
+    fixture.detectChanges();
+    const caret = vi.spyOn(
+      document as Document & { caretRangeFromPoint: () => Range },
+      'caretRangeFromPoint',
+    );
+    caretOffset = 13;
+    for (let i = 0; i < 20; i++) pointer('pointermove', 25 + i, 110);
+    expect(caret).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(17);
+    fixture.detectChanges();
+    expect(caret).toHaveBeenCalledTimes(1);
+    expect(component.selectionTranslateTarget()?.selectedText).toBe('One two three');
+    expect(text.firstChild).toBe(originalNode);
+    expect(text.querySelector('.speaking-mobile-selection')).toBeNull();
+  });
+
+  it('放開前最後一次移動即使還沒到下一幀仍會套用', () => {
+    useAppleTouchDevice();
+    pointer('pointerdown');
+    vi.advanceTimersByTime(320);
+    caretOffset = 13;
+    pointer('pointermove', 50, 110);
+    pointer('pointerup', 50, 110);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One two three');
+    expect(component.selectionActionVisible()).toBe(true);
+  });
+
+  it('取消手勢後不再執行尚未完成的畫面更新', () => {
+    useAppleTouchDevice();
+    pointer('pointerdown');
+    vi.advanceTimersByTime(320);
+    pointer('pointermove', 50, 110);
+    pointer('pointercancel');
+    vi.advanceTimersByTime(32);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    expect(component.selectionActionsSuppressed()).toBe(true);
   });
 
   afterEach(() => {
@@ -86,6 +193,8 @@ describe('Speaking 回顧行動版選字手勢', () => {
     TestBed.resetTestingModule();
     Reflect.deleteProperty(document, 'caretRangeFromPoint');
     Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect');
+    Reflect.deleteProperty(Range.prototype, 'getClientRects');
+    Reflect.deleteProperty(navigator, 'maxTouchPoints');
     vi.restoreAllMocks();
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -106,6 +215,7 @@ describe('Speaking 回顧行動版選字手勢', () => {
     const move = new Event('pointermove', { cancelable: true });
     Object.assign(move, { pointerId: 9, clientX: 40, clientY: 100 });
     component.onDocumentPointerMove(move as PointerEvent);
+    vi.advanceTimersByTime(17);
     expect(component.mobileSelectionDraft()?.selectedText).toBe(
       edge === 'start' ? 'One two three' : 'two three four',
     );
@@ -196,6 +306,7 @@ describe('Speaking 回顧行動版選字手勢', () => {
 
     caretOffset = 13;
     pointer('pointermove', 20, 150);
+    vi.advanceTimersByTime(17);
     expect(touch('touchmove', 20, 150).defaultPrevented).toBe(true);
     expect(component.mobileSelectionDraft()?.selectedText).toContain('two three');
   });
@@ -228,13 +339,43 @@ describe('Speaking 回顧行動版選字手勢', () => {
     expect(touch('touchmove', 20, 150).defaultPrevented).toBe(false);
   });
 
+  it('捲頁保留反白並收起工具列，輕點反白再顯示', () => {
+    pointer('pointerdown');
+    vi.advanceTimersByTime(320);
+    pointer('pointerup');
+    window.dispatchEvent(new Event('scroll'));
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    expect(component.selectionActionsSuppressed()).toBe(true);
+    pointer('pointerdown', 40, 110);
+    pointer('pointerup', 40, 110);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    expect(component.selectionActionsSuppressed()).toBe(false);
+  });
+
+  it('從選取外開始滑動不取消反白，真正輕點外面才清除', () => {
+    pointer('pointerdown');
+    vi.advanceTimersByTime(320);
+    pointer('pointerup');
+    pointer('pointerdown', 220, 150);
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    pointer('pointermove', 220, 200);
+    pointer('pointercancel', 220, 200);
+    window.dispatchEvent(new Event('scroll'));
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
+    pointer('pointerdown', 220, 150);
+    pointer('pointerup', 220, 150);
+    expect(component.mobileSelectionDraft()).toBeNull();
+    vi.advanceTimersByTime(400);
+    expect(component.mobileSelectionDraft()).toBeNull();
+  });
+
   it('第二根手指不應覆寫第一根手指的選取，且允許多指手勢', () => {
     pointer('pointerdown');
     vi.advanceTimersByTime(320);
     pointer('pointerdown', 40, 100, 2);
     touch('touchstart', 40, 100, 2);
     expect(component.mobileSelectionActive()).toBe(false);
-    expect(component.mobileSelectionDraft()).toBeNull();
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
     expect(touch('touchmove', 40, 150, 2).defaultPrevented).toBe(false);
     vi.advanceTimersByTime(400);
     expect(component.mobileSelectionActive()).toBe(false);
@@ -244,18 +385,18 @@ describe('Speaking 回顧行動版選字手勢', () => {
     pointer('pointerdown');
     vi.advanceTimersByTime(320);
     pointer('pointercancel');
-    expect(component.mobileSelectionDraft()).toBeNull();
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
     expect(touch('touchmove', 20, 150).defaultPrevented).toBe(false);
   });
 
-  it('瀏覽器已接手不可取消的捲動時應清除選取，而非硬鎖頁面', () => {
+  it('瀏覽器接手捲動時保留反白並停止攔截手勢', () => {
     pointer('pointerdown');
     vi.advanceTimersByTime(320);
     const event = new Event('touchmove', { bubbles: true, cancelable: false });
     Object.assign(event, { touches: [{ clientX: 20, clientY: 150 }] });
     text.dispatchEvent(event);
     expect(component.mobileSelectionActive()).toBe(false);
-    expect(component.mobileSelectionDraft()).toBeNull();
+    expect(component.mobileSelectionDraft()?.selectedText).toBe('One');
     expect(event.defaultPrevented).toBe(false);
   });
 

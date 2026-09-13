@@ -187,7 +187,7 @@ export class SpeakingReviewDiscussionStore implements OnDestroy {
     content: string,
   ): TopicConversationMessageView {
     return {
-      id: crypto.randomUUID(),
+      id: createSpeakingId(),
       role,
       content,
       correction: null,

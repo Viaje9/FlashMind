@@ -12,6 +12,7 @@ import {
   input,
   output,
   viewChild,
+  untracked,
 } from '@angular/core';
 import { FmButtonComponent, FmIconButtonComponent, FmPageHeaderComponent } from '@flashmind/ui';
 import { TopicConversationComposerComponent } from '../../pages/topic-conversation/components/topic-conversation-composer.component';
@@ -26,6 +27,13 @@ import { SpeakingSummaryComponent } from './speaking-summary.component';
 import { SpeakingReviewDiscussionStore } from './speaking-review-discussion.store';
 import { SpeakingStore } from './speaking.store';
 import { TtsStore } from '../tts/tts.store';
+import {
+  findSelectionWord,
+  mergeSelectionRects,
+  snapSelectionPoint,
+  type SelectionRect,
+} from './speaking-selection.domain';
+import { SpeakingSelectionMagnifierComponent } from './speaking-selection-magnifier.component';
 
 type SelectionTooltipStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -47,9 +55,19 @@ interface MobileSelectionDraft {
   selectedText: string;
 }
 
-interface MobileSelectionGesture {
+interface SelectionLayout {
+  entries: SelectionTextNodeEntry[];
+  fullText: string;
+  textRects: SelectionRect[];
+  glyphs?: (SelectionRect & { start: number; end: number })[];
+}
+
+interface MobileSelectionGesture extends SelectionLayout {
+  pointerType: string;
   edge?: 'start' | 'end';
-  caretShiftY?: number;
+  shift?: { x: number; y: number };
+  word?: { start: number; end: number };
+  pendingPoint?: { x: number; y: number };
   pointerId: number;
   host: HTMLElement;
   messageId: string;
@@ -68,6 +86,7 @@ interface DocumentWithCaretApi {
 @Component({
   selector: 'app-speaking-review-discussion',
   imports: [
+    SpeakingSelectionMagnifierComponent,
     FmButtonComponent,
     FmIconButtonComponent,
     FmPageHeaderComponent,
@@ -76,6 +95,7 @@ interface DocumentWithCaretApi {
     TopicConversationMessageComponent,
   ],
   providers: [SpeakingReviewDiscussionStore, TtsStore],
+  host: { '(document:contextmenu)': 'onSelectionContextMenu($event)' },
   styleUrl: './speaking-review-discussion.component.css',
   template: `
     <div
@@ -177,15 +197,28 @@ interface DocumentWithCaretApi {
           </div>
         </section>
         @if (mobileSelectionDraft() && selectionActionVisible() && !selectionNoteEditorVisible()) {
+          @for (rect of mobileSelectionRects(); track $index) {
+            <div
+              class="selection-highlight"
+              aria-hidden="true"
+              data-speaking-selection-overlay="true"
+              [style.left.px]="rect.left + selectionDocumentOffset().x"
+              [style.top.px]="rect.top + selectionDocumentOffset().y"
+              [style.width.px]="rect.width"
+              [style.height.px]="rect.height"
+            ></div>
+          }
           @for (edge of selectionEdges; track edge) {
             <button
               type="button"
               class="selection-handle"
+              [class.selection-handle-start]="edge === 'start'"
+              [style.--line-height]="selectionHandles()[edge].height + 'px'"
               data-speaking-selection-overlay="true"
               [attr.data-testid]="'speaking-selection-handle-' + edge"
               [attr.aria-label]="edge === 'start' ? '調整選取起點' : '調整選取終點'"
-              [style.left.px]="selectionHandles()[edge].x"
-              [style.top.px]="selectionHandles()[edge].y"
+              [style.left.px]="selectionHandles()[edge].x + selectionDocumentOffset().x"
+              [style.top.px]="selectionHandles()[edge].y + selectionDocumentOffset().y"
               (pointerdown)="onSelectionHandleDown($event, edge)"
             >
               <span aria-hidden="true"></span>
@@ -193,26 +226,31 @@ interface DocumentWithCaretApi {
           }
         }
         @if (selectionMagnifier(); as lens) {
-          <div
-            class="selection-magnifier"
-            data-speaking-selection-overlay="true"
-            data-testid="speaking-selection-magnifier"
-            aria-hidden="true"
-            [style.left.px]="lens.x"
-            [style.top.px]="lens.y"
-          >
-            {{ lens.before }}<span class="selection-magnifier-caret"></span>{{ lens.after }}
-          </div>
+          <app-speaking-selection-magnifier
+            [source]="lens.source"
+            [sourceWidth]="lens.sourceWidth"
+            [point]="lens.point"
+            [textHeight]="lens.textHeight"
+            [left]="lens.left"
+            [top]="lens.top"
+            [highlights]="lens.highlights"
+          />
         }
-        @if (selectionActionVisible()) {
+        @if (
+          selectionActionVisible() && !mobileSelectionActive() && !selectionActionsSuppressed()
+        ) {
           <div
+            #selectionActionsElement
             class="selection-actions"
+            [class.selection-actions-mobile]="mobileSelectionEnabled()"
             role="toolbar"
             aria-label="選取文字操作"
+            data-testid="speaking-discussion-selection-actions"
             data-speaking-selection-overlay="true"
             [style.z-index]="70"
             [style.left.px]="selectionActionPosition().left"
             [style.top.px]="selectionActionPosition().top"
+            (pointerdown)="onSelectionActionPointerDown($event)"
           >
             <button
               type="button"
@@ -227,6 +265,9 @@ interface DocumentWithCaretApi {
               <span class="material-symbols-outlined text-[18px]" aria-hidden="true"
                 >translate</span
               >
+              @if (mobileSelectionEnabled()) {
+                <span>翻譯</span>
+              }
             </button>
             <button
               type="button"
@@ -264,6 +305,9 @@ interface DocumentWithCaretApi {
                       : 'volume_up'
                 }}</span
               >
+              @if (mobileSelectionEnabled()) {
+                <span>{{ selectionSpeechPlaying() ? '暫停' : '朗讀' }}</span>
+              }
             </button>
             <button
               type="button"
@@ -278,6 +322,9 @@ interface DocumentWithCaretApi {
               <span class="material-symbols-outlined text-[18px]" aria-hidden="true"
                 >edit_note</span
               >
+              @if (mobileSelectionEnabled()) {
+                <span>標記</span>
+              }
             </button>
           </div>
           @if (selectionSpeechError(); as error) {
@@ -286,7 +333,7 @@ interface DocumentWithCaretApi {
               role="alert"
               data-speaking-selection-overlay="true"
               data-testid="speaking-discussion-selection-speech-error"
-              [style.top.px]="selectionActionPosition().top + 46"
+              [style.top.px]="selectionActionPosition().top + 56"
             >
               {{ error }}
             </p>
@@ -502,13 +549,22 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   readonly selectionNoteTarget = signal<SelectionTranslateTarget | null>(null);
   readonly mobileSelectionDraft = signal<MobileSelectionDraft | null>(null);
   readonly mobileSelectionActive = signal(false);
+  readonly selectionActionsSuppressed = signal(false);
+  readonly selectionDocumentOffset = signal({ x: 0, y: 0 });
   readonly selectionEdges = ['start', 'end'] as const;
-  readonly selectionHandles = signal({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 } });
+  readonly mobileSelectionRects = signal<SelectionRect[]>([]);
+  readonly selectionHandles = signal({
+    start: { x: 0, y: 0, height: 24 },
+    end: { x: 0, y: 0, height: 24 },
+  });
   readonly selectionMagnifier = signal<{
-    x: number;
-    y: number;
-    before: string;
-    after: string;
+    source: HTMLElement;
+    sourceWidth: number;
+    textHeight: number;
+    point: { x: number; y: number };
+    left: number;
+    top: number;
+    highlights: SelectionRect[];
   } | null>(null);
   readonly selectionNoteEditorVisible = signal(false);
   readonly selectionNotePosition = signal({ left: 0, top: 0 });
@@ -519,6 +575,30 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   readonly mobileSelectionEnabled = computed(() => this.canUseMobileSelection());
   private selectionRequestToken = 0;
   private mobileSelectionGesture: MobileSelectionGesture | null = null;
+  private selectionSource: Pick<
+    MobileSelectionGesture,
+    'host' | 'messageId' | 'entries' | 'fullText'
+  > | null = null;
+  private selectionTap: {
+    pointerId: number;
+    pointerType: string;
+    x: number;
+    y: number;
+    moved: boolean;
+  } | null = null;
+  private selectionFrame: number | null = null;
+  private selectionActionAnchor: DOMRect | null = null;
+  private readonly selectionActionsElement =
+    viewChild<ElementRef<HTMLElement>>('selectionActionsElement');
+  private readonly positionSelectionActions = afterRenderEffect(() => {
+    const element = this.selectionActionsElement()?.nativeElement;
+    if (!element) return;
+    const bounds = element.getBoundingClientRect();
+    untracked(() => {
+      if (this.selectionActionAnchor)
+        this.updateSelectionActionPosition(this.selectionActionAnchor, bounds.width, bounds.height);
+    });
+  });
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly composer = viewChild(TopicConversationComposerComponent);
   private readonly sourceStart = viewChild<ElementRef<HTMLElement>>('sourceStart');
@@ -538,11 +618,10 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     this.decorateMarkedSelections(contexts);
   });
   private readonly mobileSelectionDecoration = afterRenderEffect(() => {
-    const draft = this.mobileSelectionDraft();
     this.store.markedContexts();
     this.store.messages();
     this.sourceMessages();
-    this.decorateMobileSelection(draft);
+    untracked(() => this.cancelMobileSelectionGesture(true));
   });
   private readonly focusSelectionNoteInput = afterRenderEffect(() => {
     if (this.selectionNoteEditorVisible()) {
@@ -552,27 +631,37 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   constructor() {
     const root = this.hostElement.nativeElement;
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => {
+      this.cancelMobileSelectionGesture(true);
+      this.tts.stop();
+    });
     // touch-action 在手指落下時已決定；長按後才改 CSS 或取消 pointermove
     // 無法阻止當次捲動。必須預先註冊非 passive 的 touchmove listener。
     const onTouchMove = (event: TouchEvent) => this.onSelectionTouchMove(event);
     const onTouchStart = (event: TouchEvent) => {
-      if (event.touches.length > 1) this.cancelMobileSelectionGesture(true);
+      if (event.touches.length > 1) {
+        this.selectionTap = null;
+        this.selectionActionsSuppressed.set(true);
+        this.cancelMobileSelectionGesture(false);
+      }
     };
     root.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
     root.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-    inject(DestroyRef).onDestroy(() => {
+    destroyRef.onDestroy(() => {
       root.removeEventListener('touchmove', onTouchMove, true);
       root.removeEventListener('touchstart', onTouchStart, true);
-      this.cancelMobileSelectionGesture(true);
-      this.tts.stop();
     });
   }
 
   private onSelectionTouchMove(event: TouchEvent): void {
+    const point = event.touches[0];
+    if (point) this.trackSelectionTapMovement(point.clientX, point.clientY);
     const gesture = this.mobileSelectionGesture;
     if (!gesture) return;
     if (event.touches.length !== 1 || !event.cancelable) {
-      this.cancelMobileSelectionGesture(true);
+      this.selectionActionsSuppressed.set(true);
+      this.cancelMobileSelectionGesture(false);
       return;
     }
 
@@ -582,7 +671,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
       Math.hypot(touch.clientX - gesture.startPoint.x, touch.clientY - gesture.startPoint.y) > 10
     ) {
       // 長按前明確滑動，將這次手勢交還原生捲頁，不再啟動選字。
-      this.cancelMobileSelectionGesture(true);
+      this.cancelMobileSelectionGesture(false);
       return;
     }
 
@@ -616,9 +705,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   onDocumentSelectionChange(): void {
     if (typeof window === 'undefined') return;
     if (this.selectionNoteEditorVisible()) return;
-
-    // 行動裝置使用自訂長按／拖曳選取，避免瀏覽器原生 selection toolbar
-    // 蓋住畫面或在不同平台產生不一致的操作列。
+    // 觸控裝置由自訂圖層選取；桌面維持原生 Selection。
     if (this.mobileSelectionEnabled()) {
       // iOS 的組字與游標也會觸發 selectionchange，不能清除編輯中的原生選取。
       if (
@@ -652,7 +739,12 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     const selectedText = selection.toString().trim();
     const anchor = this.resolveSelectionHost(selection.anchorNode);
     const focus = this.resolveSelectionHost(selection.focusNode);
-    if (!selectedText || !anchor || anchor !== focus) {
+    if (
+      !selectedText ||
+      !anchor ||
+      anchor !== focus ||
+      !this.hostElement.nativeElement.contains(anchor)
+    ) {
       this.dismissSelectionTranslation(false);
       return;
     }
@@ -683,6 +775,26 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     if (target.closest('[data-speaking-selection-overlay="true"]')) return;
     if (this.selectionNoteEditorVisible()) this.onSelectionNoteEditorClose();
 
+    if (
+      this.mobileSelectionDraft() &&
+      !this.mobileSelectionActive() &&
+      this.isTouchPointer(event) &&
+      event.isPrimary
+    ) {
+      this.refreshMobileSelection();
+      this.selectionTap = {
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+        x: event.clientX,
+        y: event.clientY,
+        moved: false,
+      };
+      if (!this.isPointInMobileSelection(event.clientX, event.clientY))
+        this.startMobileSelection(event, target);
+      // 必須等放開才能區分輕點與捲頁，手指落下不清除既有反白。
+      return;
+    }
+
     if (this.mobileSelectionEnabled() && this.startMobileSelection(event, target)) return;
     if (target.closest('[data-speaking-selection-context="review-discussion"]')) return;
     this.dismissSelectionTranslation(false);
@@ -690,61 +802,94 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   @HostListener('document:pointermove', ['$event'])
   onDocumentPointerMove(event: PointerEvent): void {
+    if (
+      this.selectionTap?.pointerId === event.pointerId &&
+      this.selectionTap.pointerType === event.pointerType
+    ) {
+      this.trackSelectionTapMovement(event.clientX, event.clientY);
+    }
     const gesture = this.mobileSelectionGesture;
-    if (!gesture || event.pointerId !== gesture.pointerId) return;
+    if (
+      !gesture ||
+      event.pointerId !== gesture.pointerId ||
+      event.pointerType !== gesture.pointerType
+    )
+      return;
 
     const movedDistance = Math.hypot(
       event.clientX - gesture.startPoint.x,
       event.clientY - gesture.startPoint.y,
     );
     if (!gesture.active) {
-      if (movedDistance > 10) this.cancelMobileSelectionGesture(true);
+      if (movedDistance > 10) this.cancelMobileSelectionGesture(false);
       return;
     }
 
     event.preventDefault();
-    const caret = this.resolveMobileCaret(
-      gesture.host,
-      event.clientX,
-      event.clientY - (gesture.caretShiftY ?? 0),
-    );
-    if (!caret) return;
-
-    gesture.lastOffset =
-      gesture.edge === 'start'
-        ? Math.min(caret.offset, gesture.startOffset - 1)
-        : gesture.edge === 'end'
-          ? Math.max(caret.offset, gesture.startOffset + 1)
-          : caret.offset;
-    const fullText = this.collectSelectionTextNodes(gesture.host)
-      .map((entry) => entry.node.data)
-      .join('');
-    this.selectionMagnifier.set({
-      x: Math.max(100, Math.min(window.innerWidth - 100, event.clientX)),
-      y: Math.max(8, event.clientY - 100),
-      before: fullText.slice(Math.max(0, gesture.lastOffset - 8), gesture.lastOffset),
-      after: fullText.slice(gesture.lastOffset, gesture.lastOffset + 8),
+    gesture.pendingPoint = { x: event.clientX, y: event.clientY };
+    if (this.selectionFrame !== null) return;
+    this.selectionFrame = window.requestAnimationFrame(() => {
+      this.selectionFrame = null;
+      this.flushSelectionMove();
     });
-    this.updateMobileSelectionDraft(gesture, gesture.startOffset, gesture.lastOffset);
   }
 
   @HostListener('document:pointerup', ['$event'])
   onDocumentPointerUp(event: PointerEvent): void {
     const gesture = this.mobileSelectionGesture;
-    if (!gesture || event.pointerId !== gesture.pointerId) return;
+    const tap = this.selectionTap;
+    if (tap?.pointerId === event.pointerId && tap.pointerType === event.pointerType) {
+      this.trackSelectionTapMovement(event.clientX, event.clientY);
+      this.selectionTap = null;
+      this.cancelMobileSelectionGesture(false);
+      if (!tap.moved) {
+        this.refreshMobileSelection();
+        if (this.isPointInMobileSelection(event.clientX, event.clientY)) {
+          event.preventDefault();
+          this.selectionActionsSuppressed.set(false);
+        } else {
+          this.dismissSelectionTranslation(false);
+        }
+      }
+      return;
+    }
+    if (
+      !gesture ||
+      event.pointerId !== gesture.pointerId ||
+      event.pointerType !== gesture.pointerType
+    )
+      return;
 
     if (gesture.active) event.preventDefault();
+    this.flushSelectionMove();
+    this.cancelSelectionFrame();
     this.clearMobileSelectionTimer(gesture);
     this.mobileSelectionGesture = null;
     this.mobileSelectionActive.set(false);
     this.selectionMagnifier.set(null);
+    this.selectionActionsSuppressed.set(false);
   }
 
   @HostListener('document:pointercancel', ['$event'])
   onDocumentPointerCancel(event: PointerEvent): void {
+    if (
+      this.selectionTap?.pointerId === event.pointerId &&
+      this.selectionTap.pointerType === event.pointerType
+    ) {
+      this.selectionTap = null;
+      this.selectionActionsSuppressed.set(true);
+      this.cancelMobileSelectionGesture(false);
+      return;
+    }
     const gesture = this.mobileSelectionGesture;
-    if (!gesture || event.pointerId !== gesture.pointerId) return;
-    this.cancelMobileSelectionGesture(true);
+    if (
+      !gesture ||
+      event.pointerId !== gesture.pointerId ||
+      event.pointerType !== gesture.pointerType
+    )
+      return;
+    this.cancelMobileSelectionGesture(false);
+    this.selectionActionsSuppressed.set(true);
   }
 
   @HostListener('document:click', ['$event'])
@@ -777,7 +922,8 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   @HostListener('window:scroll')
   onWindowScroll(): void {
-    if (this.mobileSelectionGesture) this.cancelMobileSelectionGesture(true);
+    if (this.mobileSelectionGesture) this.cancelMobileSelectionGesture(false);
+    if (this.selectionTap) this.selectionTap.moved = true;
     if (this.selectionNoteEditorVisible()) {
       if (this.selectionNoteContextId()) {
         this.updateMarkedContextEditorPosition();
@@ -785,7 +931,12 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
         this.onSelectionNoteEditorClose();
       }
     }
-    this.dismissSelectionTranslation(false);
+    if (this.mobileSelectionDraft()) {
+      this.selectionActionsSuppressed.set(true);
+      this.refreshMobileSelection();
+    } else {
+      this.dismissSelectionTranslation(false);
+    }
   }
 
   @HostListener('window:blur')
@@ -796,6 +947,12 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
 
   @HostListener('window:resize')
   onWindowResize(): void {
+    if (this.mobileSelectionDraft()) {
+      this.cancelMobileSelectionGesture(false);
+      this.selectionActionsSuppressed.set(true);
+      this.refreshMobileSelection();
+      return;
+    }
     if (this.selectionNoteEditorVisible()) {
       if (this.selectionNoteContextId()) this.updateMarkedContextEditorPosition();
       return;
@@ -978,11 +1135,103 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     event.stopPropagation();
   }
 
+  onSelectionActionPointerDown(event: PointerEvent): void {
+    // 避免觸控按下工具列後焦點先移走、清除選取，導致 click 讀不到文字。
+    if (this.mobileSelectionEnabled() && event.isPrimary) event.preventDefault();
+  }
+
   onSelectionModalBackdropClick(): void {
     this.dismissSelectionTranslation(true);
   }
 
+  onSelectionContextMenu(event: MouseEvent): void {
+    const target = event.target;
+    if (!this.mobileSelectionEnabled() || !(target instanceof Element)) return;
+    if (target.closest('input, textarea, [contenteditable="true"]')) return;
+    const host = this.resolveSelectionHost(target);
+    if (host && this.hostElement.nativeElement.contains(host)) event.preventDefault();
+  }
+
+  private selectionLayout(host: HTMLElement): SelectionLayout {
+    const entries = this.collectSelectionTextNodes(host);
+    const fullText = entries.map((entry) => entry.node.data).join('');
+    const range = this.createTextRange(entries, 0, fullText.length);
+    return {
+      entries,
+      fullText,
+      textRects: mergeSelectionRects(Array.from(range?.getClientRects() ?? [])),
+    };
+  }
+
+  private cancelSelectionFrame(): void {
+    if (this.selectionFrame !== null) window.cancelAnimationFrame(this.selectionFrame);
+    this.selectionFrame = null;
+  }
+
+  private flushSelectionMove(): void {
+    const gesture = this.mobileSelectionGesture;
+    if (!gesture?.active || !gesture.pendingPoint) return;
+    const finger = gesture.pendingPoint;
+    gesture.pendingPoint = undefined;
+    const point = snapSelectionPoint(gesture.textRects, {
+      x: finger.x - (gesture.shift?.x ?? 0),
+      y: finger.y - (gesture.shift?.y ?? 0),
+    });
+    const caret = this.resolveMobileCaret(gesture.host, point.x, point.y, gesture);
+    if (!caret) return;
+    gesture.lastOffset =
+      gesture.edge === 'start'
+        ? Math.min(caret.offset, gesture.startOffset - 1)
+        : gesture.edge === 'end'
+          ? Math.max(caret.offset, gesture.startOffset + 1)
+          : caret.offset;
+    if (gesture.word) {
+      gesture.startOffset =
+        caret.offset < gesture.word.start ? gesture.word.end : gesture.word.start;
+      // 手指仍在起始單字內時保留完整單字，避免一開始就縮成半個字。
+      if (caret.offset >= gesture.word.start && caret.offset <= gesture.word.end) {
+        gesture.lastOffset = gesture.word.end;
+      }
+    }
+    this.updateMobileSelectionDraft(gesture, gesture.startOffset, gesture.lastOffset);
+    this.updateSelectionMagnifier(gesture, finger);
+  }
+
+  private updateSelectionMagnifier(
+    gesture: MobileSelectionGesture,
+    finger: { x: number; y: number },
+  ): void {
+    const handle =
+      this.selectionHandles()[
+        gesture.edge ?? (gesture.lastOffset < gesture.startOffset ? 'start' : 'end')
+      ];
+    const isStart =
+      gesture.edge === 'start' || (!gesture.edge && gesture.lastOffset < gesture.startOffset);
+    const bounds = gesture.host.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportWidth = viewport?.width ?? window.innerWidth;
+    this.selectionMagnifier.set({
+      source: gesture.host,
+      sourceWidth: bounds.width,
+      textHeight: handle.height,
+      point: {
+        x: handle.x - bounds.left,
+        y: handle.y + (isStart ? handle.height / 2 : -handle.height / 2) - bounds.top,
+      },
+      left: Math.max(viewportLeft + 8, Math.min(viewportLeft + viewportWidth - 192, finger.x - 92)),
+      top: Math.max(viewportTop + 8, finger.y - 100),
+      highlights: this.mobileSelectionRects().map((rect) => ({
+        ...rect,
+        left: rect.left - bounds.left,
+        top: rect.top - bounds.top,
+      })),
+    });
+  }
+
   onSelectionHandleDown(event: PointerEvent, edge: 'start' | 'end'): void {
+    this.selectionTap = null;
     const draft = this.mobileSelectionDraft();
     if (!draft || !event.isPrimary) return;
     const host = Array.from(
@@ -999,8 +1248,16 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     event.stopPropagation();
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
     this.mobileSelectionGesture = {
+      pointerType: event.pointerType,
       edge,
-      caretShiftY: event.clientY - this.selectionHandles()[edge].y + 10,
+      ...this.selectionLayout(host),
+      shift: {
+        x: event.clientX - this.selectionHandles()[edge].x,
+        y:
+          event.clientY -
+          (this.selectionHandles()[edge].y +
+            ((edge === 'start' ? 1 : -1) * this.selectionHandles()[edge].height) / 2),
+      },
       pointerId: event.pointerId,
       host,
       messageId: draft.messageId,
@@ -1011,12 +1268,16 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
       longPressTimer: null,
     };
     this.mobileSelectionActive.set(true);
+    this.updateSelectionMagnifier(
+      this.mobileSelectionGesture,
+      this.mobileSelectionGesture.startPoint,
+    );
   }
 
   private startMobileSelection(event: PointerEvent, target: HTMLElement): boolean {
     if (!this.isTouchPointer(event)) return false;
     if (!event.isPrimary) {
-      this.cancelMobileSelectionGesture(true);
+      this.cancelMobileSelectionGesture(false);
       return false;
     }
     if (target.closest('.speaking-marked-text')) return false;
@@ -1028,11 +1289,14 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
       host.dataset['speakingSelectionMessageId'] ?? host.dataset['speakingAssistantMessageId'];
     if (!messageId) return false;
 
-    const caret = this.resolveMobileCaret(host, event.clientX, event.clientY);
+    const layout = this.selectionLayout(host);
+    const caret = this.resolveMobileCaret(host, event.clientX, event.clientY, layout);
     if (!caret) return false;
 
-    this.cancelMobileSelectionGesture(true);
+    this.cancelMobileSelectionGesture(false);
     const gesture: MobileSelectionGesture = {
+      pointerType: event.pointerType,
+      ...layout,
       pointerId: event.pointerId,
       host,
       messageId,
@@ -1047,21 +1311,59 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     this.selectionMagnifier.set(null);
     gesture.longPressTimer = window.setTimeout(() => {
       if (this.mobileSelectionGesture !== gesture) return;
+      this.selectionTap = null;
+      this.selectionActionsSuppressed.set(false);
       gesture.active = true;
       this.mobileSelectionActive.set(true);
       gesture.longPressTimer = null;
-      const wordRange = this.findMobileWordRange(host, gesture.startOffset);
+      window.getSelection()?.removeAllRanges();
+      const wordRange = findSelectionWord(gesture.fullText, gesture.startOffset);
       if (wordRange) {
+        gesture.word = wordRange;
+        gesture.startOffset = wordRange.start;
         gesture.lastOffset = wordRange.end;
         this.updateMobileSelectionDraft(gesture, wordRange.start, wordRange.end);
       } else {
         this.updateMobileSelectionDraft(gesture, gesture.startOffset, gesture.lastOffset);
       }
+      this.updateSelectionMagnifier(gesture, gesture.startPoint);
     }, 320);
     return true;
   }
 
+  private trackSelectionTapMovement(x: number, y: number): void {
+    const tap = this.selectionTap;
+    if (tap && Math.hypot(x - tap.x, y - tap.y) > 10) {
+      tap.moved = true;
+      this.selectionActionsSuppressed.set(true);
+      if (this.mobileSelectionGesture && !this.mobileSelectionGesture.active)
+        this.cancelMobileSelectionGesture(false);
+    }
+  }
+
+  private isPointInMobileSelection(x: number, y: number): boolean {
+    return this.mobileSelectionRects().some(
+      (rect) =>
+        x >= rect.left &&
+        x <= rect.left + rect.width &&
+        y >= rect.top &&
+        y <= rect.top + rect.height,
+    );
+  }
+
+  private refreshMobileSelection(): void {
+    const draft = this.mobileSelectionDraft();
+    const source = this.selectionSource;
+    if (!draft || !source) return;
+    if (!source.host.isConnected) {
+      this.dismissSelectionTranslation(false);
+      return;
+    }
+    this.updateMobileSelectionDraft(source, draft.start, draft.end);
+  }
+
   private cancelMobileSelectionGesture(clearSelection: boolean): void {
+    this.cancelSelectionFrame();
     const gesture = this.mobileSelectionGesture;
     if (gesture) this.clearMobileSelectionTimer(gesture);
     this.mobileSelectionGesture = null;
@@ -1077,15 +1379,17 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   }
 
   private updateMobileSelectionDraft(
-    gesture: MobileSelectionGesture,
+    gesture: Pick<MobileSelectionGesture, 'host' | 'messageId' | 'entries' | 'fullText'>,
     startOffset: number,
     endOffset: number,
   ): void {
-    const entries = this.collectSelectionTextNodes(gesture.host);
-    const fullText = entries.map((entry) => entry.node.data).join('');
+    const { entries, fullText } = gesture;
+    this.selectionSource = gesture;
+    this.selectionDocumentOffset.set({ x: window.scrollX, y: window.scrollY });
     const selectedRange = this.normalizeMobileSelectionRange(fullText, startOffset, endOffset);
     if (!selectedRange) {
       this.mobileSelectionDraft.set(null);
+      this.mobileSelectionRects.set([]);
       this.selectionTranslateTarget.set(null);
       return;
     }
@@ -1094,6 +1398,7 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     if (!range) return;
     const rect = range.getBoundingClientRect();
     if (rect.width <= 0 && rect.height <= 0) return;
+    this.mobileSelectionRects.set(mergeSelectionRects(Array.from(range.getClientRects())));
 
     const firstRange = this.createTextRange(entries, selectedRange.start, selectedRange.start + 1);
     const lastRange = this.createTextRange(entries, selectedRange.end - 1, selectedRange.end);
@@ -1101,8 +1406,8 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
       const first = firstRange.getBoundingClientRect();
       const last = lastRange.getBoundingClientRect();
       this.selectionHandles.set({
-        start: { x: first.left, y: first.bottom },
-        end: { x: last.right, y: last.bottom },
+        start: { x: first.left, y: first.top, height: first.height },
+        end: { x: last.right, y: last.bottom, height: last.height },
       });
     }
     this.mobileSelectionDraft.set({
@@ -1137,30 +1442,12 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     };
   }
 
-  private findMobileWordRange(
+  private resolveMobileCaret(
     host: HTMLElement,
-    offset: number,
-  ): { start: number; end: number } | null {
-    const entries = this.collectSelectionTextNodes(host);
-    const fullText = entries.map((entry) => entry.node.data).join('');
-    if (!fullText) return null;
-
-    let cursor = Math.min(Math.max(offset, 0), fullText.length - 1);
-    if (!this.isMobileWordCharacter(fullText[cursor]) && cursor > 0) cursor -= 1;
-    if (!this.isMobileWordCharacter(fullText[cursor])) return null;
-
-    let start = cursor;
-    while (start > 0 && this.isMobileWordCharacter(fullText[start - 1])) start -= 1;
-    let end = cursor + 1;
-    while (end < fullText.length && this.isMobileWordCharacter(fullText[end])) end += 1;
-    return { start, end };
-  }
-
-  private isMobileWordCharacter(value: string | undefined): boolean {
-    return !!value && /[\p{L}\p{N}_'-]/u.test(value);
-  }
-
-  private resolveMobileCaret(host: HTMLElement, x: number, y: number): { offset: number } | null {
+    x: number,
+    y: number,
+    layout: SelectionLayout,
+  ): { offset: number } | null {
     const documentWithCaret = document as DocumentWithCaretApi;
     let range = documentWithCaret.caretRangeFromPoint?.(x, y) ?? null;
     if (!range && documentWithCaret.caretPositionFromPoint) {
@@ -1171,7 +1458,10 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
         range.collapse(true);
       }
     }
-    if (!range || !host.contains(range.startContainer)) return null;
+    if (!range || !host.contains(range.startContainer))
+      return this.resolveMeasuredCaret(layout, x, y);
+    const entry = layout.entries.find((item) => item.node === range.startContainer);
+    if (entry) return { offset: entry.start + range.startOffset };
 
     const prefix = document.createRange();
     try {
@@ -1183,12 +1473,55 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     return { offset: prefix.toString().length };
   }
 
+  private resolveMeasuredCaret(
+    layout: SelectionLayout,
+    x: number,
+    y: number,
+  ): { offset: number } | null {
+    // WebKit 的 user-select:none 可能讓 caret API 回傳 null。
+    // 字形範圍只量測一次，後續移動使用快取，不切換 CSS 或重排原文。
+    if (!layout.glyphs) {
+      layout.glyphs = [];
+      const segments = new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' }).segment(
+        layout.fullText,
+      );
+      for (const item of segments) {
+        const start = item.index;
+        const end = start + item.segment.length;
+        const range = this.createTextRange(layout.entries, start, end);
+        for (const rect of Array.from(range?.getClientRects() ?? [])) {
+          if (rect.width <= 0 || rect.height <= 0) continue;
+          layout.glyphs.push({
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            start,
+            end,
+          });
+        }
+      }
+    }
+    let best: (typeof layout.glyphs)[number] | undefined;
+    let distance = Infinity;
+    for (const glyph of layout.glyphs) {
+      const score =
+        Math.abs(y - glyph.top - glyph.height / 2) * 10000 +
+        Math.max(glyph.left - x, x - glyph.left - glyph.width, 0);
+      if (score < distance) {
+        distance = score;
+        best = glyph;
+      }
+    }
+    return best ? { offset: x < best.left + best.width / 2 ? best.start : best.end } : null;
+  }
+
   private createTextRange(
     entries: SelectionTextNodeEntry[],
     start: number,
     end: number,
   ): Range | null {
-    const startEntry = entries.find((entry) => start >= entry.start && start <= entry.end);
+    const startEntry = entries.find((entry) => start >= entry.start && start < entry.end);
     const endEntry = entries.find((entry) => end > entry.start && end <= entry.end);
     if (!startEntry || !endEntry || end <= start) return null;
 
@@ -1196,60 +1529,6 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     range.setStart(startEntry.node, start - startEntry.start);
     range.setEnd(endEntry.node, end - endEntry.start);
     return range;
-  }
-
-  private decorateMobileSelection(draft: MobileSelectionDraft | null): void {
-    if (typeof document === 'undefined') return;
-
-    const root = this.hostElement.nativeElement;
-    this.clearMobileSelection(root);
-    if (!draft) return;
-
-    const host = Array.from(
-      root.querySelectorAll<HTMLElement>(
-        '[data-speaking-selection-context="review-discussion"][data-speaking-selection-message-id], ' +
-          '[data-speaking-selection-context="review-discussion"][data-speaking-assistant-message-id]',
-      ),
-    ).find(
-      (candidate) =>
-        (candidate.dataset['speakingSelectionMessageId'] ??
-          candidate.dataset['speakingAssistantMessageId']) === draft.messageId,
-    );
-    if (!host) return;
-
-    const entries = this.collectSelectionTextNodes(host);
-    const range = this.createTextRange(entries, draft.start, draft.end);
-    if (!range) return;
-
-    const overlappingEntries = entries
-      .map((entry, index) => ({ entry, index }))
-      .filter(({ entry }) => entry.end > draft.start && entry.start < draft.end);
-    for (let index = overlappingEntries.length - 1; index >= 0; index -= 1) {
-      const { entry } = overlappingEntries[index];
-      const segmentStart = Math.max(draft.start, entry.start) - entry.start;
-      const segmentEnd = Math.min(draft.end, entry.end) - entry.start;
-      if (segmentEnd <= segmentStart) continue;
-
-      const selectionRange = document.createRange();
-      selectionRange.setStart(entry.node, segmentStart);
-      selectionRange.setEnd(entry.node, segmentEnd);
-      const highlight = document.createElement('span');
-      highlight.className = 'speaking-mobile-selection';
-      highlight.style.pointerEvents = 'none';
-      highlight.appendChild(selectionRange.extractContents());
-      selectionRange.insertNode(highlight);
-    }
-  }
-
-  private clearMobileSelection(root: HTMLElement): void {
-    const highlights = Array.from(root.querySelectorAll('.speaking-mobile-selection')).reverse();
-    for (const highlight of highlights) {
-      const parent = highlight.parentNode;
-      if (!parent) continue;
-      while (highlight.firstChild) parent.insertBefore(highlight.firstChild, highlight);
-      highlight.remove();
-    }
-    root.normalize();
   }
 
   private isTouchPointer(event: PointerEvent): boolean {
@@ -1276,15 +1555,32 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
     );
   }
 
-  private updateSelectionActionPosition(rect: DOMRect): void {
-    const width = 124;
-    const height = 44;
-    const gap = 10;
+  private updateSelectionActionPosition(
+    rect: DOMRect,
+    width = this.mobileSelectionEnabled() ? 224 : 124,
+    height = this.mobileSelectionEnabled() ? 54 : 44,
+  ): void {
+    this.selectionActionAnchor = rect;
+    const gap = this.mobileSelectionEnabled() ? 26 : 10;
     const safe = 8;
-    const top = rect.top - height - gap < safe ? rect.bottom + gap : rect.top - height - gap;
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportWidth = viewport?.width ?? window.innerWidth;
+    const viewportHeight = viewport?.height ?? window.innerHeight;
+    const headerBottom =
+      this.hostElement.nativeElement.querySelector('fm-page-header')?.getBoundingClientRect()
+        .bottom ?? 0;
+    const minTop = Math.max(viewportTop + safe, headerBottom);
+    const desiredTop =
+      rect.top - height - gap < minTop ? rect.bottom + gap : rect.top - height - gap;
+    const top = Math.max(
+      minTop,
+      Math.min(desiredTop, viewportTop + viewportHeight - height - safe),
+    );
     const left = Math.min(
-      Math.max(rect.left + rect.width / 2 - width / 2, safe),
-      Math.max(safe, window.innerWidth - width - safe),
+      Math.max(rect.left + rect.width / 2 - width / 2, viewportLeft + safe),
+      Math.max(viewportLeft + safe, viewportLeft + viewportWidth - width - safe),
     );
     this.selectionActionPosition.set({ left, top });
   }
@@ -1494,6 +1790,10 @@ export class SpeakingReviewDiscussionComponent implements OnInit {
   }
 
   private dismissSelectionTranslation(clearNativeSelection: boolean): void {
+    this.selectionSource = null;
+    this.selectionTap = null;
+    this.selectionActionsSuppressed.set(false);
+    this.mobileSelectionRects.set([]);
     this.selectionSpeechError.set(null);
     this.selectionRequestToken++;
     this.mobileSelectionDraft.set(null);
