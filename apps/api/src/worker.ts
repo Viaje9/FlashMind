@@ -34,6 +34,23 @@ const learningStepsSchema = z.string().refine((value) => {
     (step) => /^\d+[mhd]$/.test(step) && Number.parseInt(step, 10) > 0,
   );
 });
+const cardMeaningSchema = z.object({
+  zhMeaning: z.string().min(1),
+  enExample: z.string().optional(),
+  zhExample: z.string().optional(),
+});
+const createCardSchema = z.object({
+  front: z.string().min(1),
+  note: z.string().nullable().optional(),
+  meanings: z.array(cardMeaningSchema).min(1),
+});
+const updateCardSchema = z.object({
+  front: z.string().optional(),
+  note: z.string().nullable().optional(),
+  meanings: z
+    .array(cardMeaningSchema.partial().extend({ id: z.string().optional() }))
+    .optional(),
+});
 
 function auth(db: D1Database): AuthService {
   return new AuthService(new D1AuthStore(db));
@@ -191,6 +208,48 @@ app.get('/api/decks/:deckId/cards/:cardId', async (context) => {
   );
   context.header('Cache-Control', 'no-store');
   return context.json({ data: card });
+});
+
+app.post('/api/decks/:deckId/cards', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const input = await parseBody(context.req.raw, createCardSchema);
+  const result = await new CardService(new D1CardStore(context.env.DB)).create(
+    context.req.param('deckId'),
+    user.id,
+    input,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json(result, 201);
+});
+
+app.patch('/api/decks/:deckId/cards/:cardId', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const input = await parseBody(context.req.raw, updateCardSchema);
+  const result = await new CardService(new D1CardStore(context.env.DB)).update(
+    context.req.param('cardId'),
+    context.req.param('deckId'),
+    user.id,
+    input,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json(result);
+});
+
+app.delete('/api/decks/:deckId/cards/:cardId', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  await new CardService(new D1CardStore(context.env.DB)).delete(
+    context.req.param('cardId'),
+    context.req.param('deckId'),
+    user.id,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.body(null, 204);
 });
 
 app.notFound((context) =>

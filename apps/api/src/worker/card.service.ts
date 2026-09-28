@@ -41,6 +41,43 @@ export type MeaningRow = {
   zhExample: string | null;
 };
 
+export type CardWrite = {
+  id: string;
+  deckId: string;
+  front: string;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MeaningWrite = MeaningRow & {
+  cardId: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateCardInput = {
+  front: string;
+  note?: string | null;
+  meanings: Array<{
+    zhMeaning: string;
+    enExample?: string;
+    zhExample?: string;
+  }>;
+};
+
+export type UpdateCardInput = {
+  front?: string;
+  note?: string | null;
+  meanings?: Array<{
+    id?: string;
+    zhMeaning?: string;
+    enExample?: string | null;
+    zhExample?: string | null;
+  }>;
+};
+
 export interface CardStore {
   findDeck(
     id: string,
@@ -48,6 +85,14 @@ export interface CardStore {
   listCards(deckId: string): Promise<CardRow[]>;
   findCard(id: string): Promise<CardRow | null>;
   listMeanings(cardId: string): Promise<MeaningRow[]>;
+  insertCard(card: CardWrite, meanings: MeaningWrite[]): Promise<void>;
+  updateCard(
+    id: string,
+    deckId: string,
+    card: Pick<CardWrite, 'front' | 'note' | 'updatedAt'>,
+    meanings?: MeaningWrite[],
+  ): Promise<void>;
+  deleteCard(id: string): Promise<void>;
 }
 
 const scheduler = fsrs();
@@ -118,6 +163,22 @@ export class CardService {
     return deck;
   }
 
+  private normalizeNote(
+    note: string | null | undefined,
+  ): string | null | undefined {
+    if (note === undefined) return undefined;
+    return note === null || note.trim() === '' ? null : note;
+  }
+
+  private async existingCard(cardId: string, deckId: string, userId: string) {
+    await this.deckAccess(deckId, userId);
+    const card = await this.store.findCard(cardId);
+    if (!card || card.deckId !== deckId) {
+      throw new ApiError('CARD_NOT_FOUND', '找不到此卡片', 404);
+    }
+    return card;
+  }
+
   async list(deckId: string, userId: string) {
     const deck = await this.deckAccess(deckId, userId);
     const cards = await this.store.listCards(deckId);
@@ -131,11 +192,7 @@ export class CardService {
   }
 
   async get(cardId: string, deckId: string, userId: string) {
-    await this.deckAccess(deckId, userId);
-    const card = await this.store.findCard(cardId);
-    if (!card || card.deckId !== deckId) {
-      throw new ApiError('CARD_NOT_FOUND', '找不到此卡片', 404);
-    }
+    const card = await this.existingCard(cardId, deckId, userId);
     const meanings = await this.store.listMeanings(cardId);
     return {
       id: card.id,
@@ -145,5 +202,97 @@ export class CardService {
       createdAt: new Date(card.createdAt).toISOString(),
       updatedAt: new Date(card.updatedAt).toISOString(),
     };
+  }
+
+  async create(deckId: string, userId: string, input: CreateCardInput) {
+    await this.deckAccess(deckId, userId);
+    const at = this.now().toISOString();
+    const card: CardWrite = {
+      id: crypto.randomUUID(),
+      deckId,
+      front: input.front,
+      note: this.normalizeNote(input.note) ?? null,
+      createdAt: at,
+      updatedAt: at,
+    };
+    const meanings: MeaningWrite[] = input.meanings.map(
+      (meaning, sortOrder) => ({
+        id: crypto.randomUUID(),
+        cardId: card.id,
+        zhMeaning: meaning.zhMeaning,
+        enExample: meaning.enExample ?? null,
+        zhExample: meaning.zhExample ?? null,
+        sortOrder,
+        createdAt: at,
+        updatedAt: at,
+      }),
+    );
+    await this.store.insertCard(card, meanings);
+    return {
+      data: {
+        id: card.id,
+        front: card.front,
+        note: card.note,
+        meanings: meanings.map(({ id, zhMeaning, enExample, zhExample }) => ({
+          id,
+          zhMeaning,
+          enExample,
+          zhExample,
+        })),
+        createdAt: at,
+        updatedAt: at,
+      },
+    };
+  }
+
+  async update(
+    cardId: string,
+    deckId: string,
+    userId: string,
+    input: UpdateCardInput,
+  ) {
+    const current = await this.existingCard(cardId, deckId, userId);
+    const at = this.now().toISOString();
+    const meanings: MeaningWrite[] | undefined = input.meanings?.map(
+      (meaning, sortOrder) => ({
+        id: crypto.randomUUID(),
+        cardId,
+        zhMeaning: meaning.zhMeaning ?? '',
+        enExample: meaning.enExample ?? null,
+        zhExample: meaning.zhExample ?? null,
+        sortOrder,
+        createdAt: at,
+        updatedAt: at,
+      }),
+    );
+    const normalizedNote = this.normalizeNote(input.note);
+    const updated = {
+      front: input.front ?? current.front,
+      note: normalizedNote === undefined ? current.note : normalizedNote,
+      updatedAt: at,
+    };
+    await this.store.updateCard(cardId, deckId, updated, meanings);
+    return {
+      data: {
+        id: cardId,
+        front: updated.front,
+        note: updated.note,
+        meanings: meanings
+          ? meanings.map(({ id, zhMeaning, enExample, zhExample }) => ({
+              id,
+              zhMeaning,
+              enExample,
+              zhExample,
+            }))
+          : await this.store.listMeanings(cardId),
+        createdAt: new Date(current.createdAt).toISOString(),
+        updatedAt: at,
+      },
+    };
+  }
+
+  async delete(cardId: string, deckId: string, userId: string) {
+    await this.existingCard(cardId, deckId, userId);
+    await this.store.deleteCard(cardId);
   }
 }

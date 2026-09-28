@@ -1,5 +1,11 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import type { CardRow, CardStore, MeaningRow } from './card.service';
+import type {
+  CardRow,
+  CardStore,
+  CardWrite,
+  MeaningRow,
+  MeaningWrite,
+} from './card.service';
 
 type DatabaseCard = Omit<CardRow, 'summary'>;
 
@@ -59,5 +65,81 @@ export class D1CardStore implements CardStore {
       .bind(cardId)
       .all<MeaningRow>();
     return result.results;
+  }
+
+  async insertCard(card: CardWrite, meanings: MeaningWrite[]): Promise<void> {
+    await this.db.batch([
+      this.db
+        .prepare(
+          'INSERT INTO "Card" (id, deckId, front, note, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        )
+        .bind(
+          card.id,
+          card.deckId,
+          card.front,
+          card.note,
+          card.createdAt,
+          card.updatedAt,
+        ),
+      ...meanings.map((meaning) =>
+        this.db
+          .prepare(
+            'INSERT INTO "CardMeaning" (id, cardId, zhMeaning, enExample, zhExample, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          )
+          .bind(
+            meaning.id,
+            meaning.cardId,
+            meaning.zhMeaning,
+            meaning.enExample,
+            meaning.zhExample,
+            meaning.sortOrder,
+            meaning.createdAt,
+            meaning.updatedAt,
+          ),
+      ),
+    ]);
+  }
+
+  async updateCard(
+    id: string,
+    deckId: string,
+    card: Pick<CardWrite, 'front' | 'note' | 'updatedAt'>,
+    meanings?: MeaningWrite[],
+  ): Promise<void> {
+    const statements = [
+      this.db
+        .prepare(
+          'UPDATE "Card" SET front = ?, note = ?, updatedAt = ? WHERE id = ? AND deckId = ?',
+        )
+        .bind(card.front, card.note, card.updatedAt, id, deckId),
+    ];
+    if (meanings) {
+      statements.push(
+        this.db.prepare('DELETE FROM "CardMeaning" WHERE cardId = ?').bind(id),
+      );
+      statements.push(
+        ...meanings.map((meaning) =>
+          this.db
+            .prepare(
+              'INSERT INTO "CardMeaning" (id, cardId, zhMeaning, enExample, zhExample, sortOrder, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            )
+            .bind(
+              meaning.id,
+              meaning.cardId,
+              meaning.zhMeaning,
+              meaning.enExample,
+              meaning.zhExample,
+              meaning.sortOrder,
+              meaning.createdAt,
+              meaning.updatedAt,
+            ),
+        ),
+      );
+    }
+    await this.db.batch(statements);
+  }
+
+  async deleteCard(id: string): Promise<void> {
+    await this.db.prepare('DELETE FROM "Card" WHERE id = ?').bind(id).run();
   }
 }

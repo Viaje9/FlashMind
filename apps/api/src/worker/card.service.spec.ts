@@ -48,6 +48,9 @@ function store(): jest.Mocked<CardStore> {
         zhExample: null,
       },
     ]),
+    insertCard: jest.fn().mockResolvedValue(undefined),
+    updateCard: jest.fn().mockResolvedValue(undefined),
+    deleteCard: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -141,5 +144,65 @@ describe('Worker CardService', () => {
       'user-1',
     );
     expect(result[0].proficiency).toBe(legacy);
+  });
+
+  it('建立卡片時規範化空白備註並保存釋義順序', async () => {
+    const repository = store();
+    const result = await new CardService(repository).create(
+      'deck-1',
+      'user-1',
+      {
+        front: 'apple',
+        note: '   ',
+        meanings: [
+          { zhMeaning: '蘋果' },
+          { zhMeaning: '蘋果樹', enExample: 'An apple tree.' },
+        ],
+      },
+    );
+
+    expect(repository.insertCard).toHaveBeenCalledWith(
+      expect.objectContaining({ note: null, deckId: 'deck-1' }),
+      expect.arrayContaining([
+        expect.objectContaining({ zhMeaning: '蘋果', sortOrder: 0 }),
+        expect.objectContaining({ zhMeaning: '蘋果樹', sortOrder: 1 }),
+      ]),
+    );
+    expect(result.data.meanings).toHaveLength(2);
+  });
+
+  it('更新釋義時傳遞完整新內容供 D1 一次交易取代', async () => {
+    const repository = store();
+    const result = await new CardService(repository).update(
+      'card-1',
+      'deck-1',
+      'user-1',
+      {
+        note: 'updated',
+        meanings: [{ zhMeaning: '新釋義' }],
+      },
+    );
+
+    expect(repository.updateCard).toHaveBeenCalledWith(
+      'card-1',
+      'deck-1',
+      expect.objectContaining({ front: 'apple', note: 'updated' }),
+      expect.arrayContaining([
+        expect.objectContaining({ zhMeaning: '新釋義', sortOrder: 0 }),
+      ]),
+    );
+    expect(result.data.meanings[0].zhMeaning).toBe('新釋義');
+  });
+
+  it('不能刪除其他牌組的卡片', async () => {
+    const repository = store();
+    repository.findCard.mockResolvedValue({ ...card(), deckId: 'other-deck' });
+    await expect(
+      new CardService(repository).delete('card-1', 'deck-1', 'user-1'),
+    ).rejects.toMatchObject({
+      code: 'CARD_NOT_FOUND',
+      status: 404,
+    });
+    expect(repository.deleteCard).not.toHaveBeenCalled();
   });
 });
