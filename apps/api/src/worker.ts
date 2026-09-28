@@ -3,7 +3,10 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { D1Database, Fetcher } from '@cloudflare/workers-types';
 import { z } from 'zod';
 import { AuthError, AuthService } from './worker/auth.service';
+import { ApiError } from './worker/errors';
 import { D1AuthStore } from './worker/auth.store';
+import { DeckService } from './worker/deck.service';
+import { D1DeckStore } from './worker/deck.store';
 
 type Bindings = {
   DB: D1Database;
@@ -19,6 +22,15 @@ const registerSchema = z.object({
 });
 const loginSchema = registerSchema.extend({
   rememberMe: z.boolean().optional(),
+});
+const learningStepsSchema = z.string().refine((value) => {
+  const steps = value
+    .trim()
+    .split(',')
+    .map((step) => step.trim());
+  return steps.every(
+    (step) => /^\d+[mhd]$/.test(step) && Number.parseInt(step, 10) > 0,
+  );
 });
 
 function auth(db: D1Database): AuthService {
@@ -104,12 +116,62 @@ app.post('/api/auth/logout', async (context) => {
   return context.body(null, 204);
 });
 
+app.get('/api/decks', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const decks = await new DeckService(new D1DeckStore(context.env.DB)).list(
+    user.id,
+    user.timezone,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json({ data: decks });
+});
+
+app.post('/api/decks', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const input = await parseBody(
+    context.req.raw,
+    z.object({
+      name: z.string().min(1).max(100),
+      dailyNewCards: z.number().int().min(5).max(100).optional(),
+      dailyReviewCards: z.number().int().min(10).max(500).optional(),
+      dailyResetHour: z.number().int().min(0).max(23).optional(),
+      learningSteps: learningStepsSchema.optional(),
+      relearningSteps: learningStepsSchema.optional(),
+      requestRetention: z.number().min(0.7).max(0.97).optional(),
+      maximumInterval: z.number().int().min(30).max(36500).optional(),
+      enableReverse: z.boolean().optional(),
+    }),
+  );
+  const result = await new DeckService(new D1DeckStore(context.env.DB)).create(
+    user.id,
+    input,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json(result, 201);
+});
+
+app.get('/api/decks/:id', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const deck = await new DeckService(new D1DeckStore(context.env.DB)).get(
+    context.req.param('id'),
+    user.id,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json({ data: deck });
+});
+
 app.notFound((context) =>
   context.json({ error: { code: 'NOT_FOUND', message: '找不到資源' } }, 404),
 );
 
 app.onError((error, context) => {
-  if (error instanceof AuthError) {
+  if (error instanceof ApiError) {
     return context.json(
       { error: { code: error.code, message: error.message } },
       error.status,

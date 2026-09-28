@@ -14,4 +14,4 @@
 
 ## Worker 狀態
 
-測試 Worker 名稱為 `flashmind-staging`。目前 Hono 已提供健康檢查與 Email 註冊、登入、登出、目前使用者 API，並部署 Angular 靜態站台。其餘 API 尚在搬遷；請勿將目前 staging 視為完整功能版本。`OPENAI_API_KEY` 已設為 Cloudflare secret，金鑰值不在版本庫中。
+測試 Worker 名稱為 `flashmind-staging`。目前 Hono 已提供健康檢查、Email 註冊、登入、登出、目前使用者，以及牌組列表、詳情與建立 API，並部署 Angular 靜態站台。其餘 API 尚在搬遷；請勿將目前 staging 視為完整功能版本。`OPENAI_API_KEY` 已設為 Cloudflare secret，金鑰值不在版本庫中。

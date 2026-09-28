@@ -7,7 +7,7 @@ export class D1AuthStore implements AuthStore {
   findUserByEmail(email: string): Promise<AuthUser | null> {
     return this.db
       .prepare(
-        'SELECT id, email, passwordHash, primaryProvider, createdAt, lastLoginAt FROM "User" WHERE email = ?',
+        'SELECT id, email, passwordHash, primaryProvider, timezone, createdAt, lastLoginAt FROM "User" WHERE email = ?',
       )
       .bind(email)
       .first<AuthUser>();
@@ -16,7 +16,7 @@ export class D1AuthStore implements AuthStore {
   findUserById(id: string): Promise<AuthUser | null> {
     return this.db
       .prepare(
-        'SELECT id, email, passwordHash, primaryProvider, createdAt, lastLoginAt FROM "User" WHERE id = ?',
+        'SELECT id, email, passwordHash, primaryProvider, timezone, createdAt, lastLoginAt FROM "User" WHERE id = ?',
       )
       .bind(id)
       .first<AuthUser>();

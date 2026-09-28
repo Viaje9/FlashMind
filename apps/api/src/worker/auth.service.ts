@@ -1,10 +1,12 @@
 import * as bcrypt from 'bcryptjs';
+import { ApiError } from './errors';
 
 export type AuthUser = {
   id: string;
   email: string;
   passwordHash: string | null;
   primaryProvider: 'EMAIL' | 'GOOGLE';
+  timezone: string;
   createdAt: string;
   lastLoginAt: string | null;
 };
@@ -32,15 +34,7 @@ export interface AuthStore {
   deleteSession(token: string): Promise<void>;
 }
 
-export class AuthError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly status: 400 | 401 | 409,
-  ) {
-    super(message);
-  }
-}
+export class AuthError extends ApiError {}
 
 function randomToken(): string {
   const bytes = new Uint8Array(32);
@@ -85,6 +79,7 @@ export class AuthService {
       email,
       passwordHash: await bcrypt.hash(input.password, 12),
       primaryProvider: 'EMAIL',
+      timezone: 'Asia/Taipei',
       createdAt: at,
       lastLoginAt: null,
     };
@@ -111,6 +106,10 @@ export class AuthService {
   }
 
   async currentUser(token: string | undefined) {
+    return responseUser(await this.authenticate(token));
+  }
+
+  async authenticate(token: string | undefined): Promise<AuthUser> {
     if (!token) throw new AuthError('UNAUTHORIZED', '請先登入', 401);
     const session = await this.store.findSessionByToken(token);
     if (
@@ -121,7 +120,7 @@ export class AuthService {
     }
     const user = await this.store.findUserById(session.userId);
     if (!user) throw new AuthError('UNAUTHORIZED', '請先登入', 401);
-    return responseUser(user);
+    return user;
   }
 
   async logout(token: string | undefined) {

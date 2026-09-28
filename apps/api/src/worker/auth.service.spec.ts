@@ -9,6 +9,7 @@ function user(overrides: Partial<AuthUser> = {}): AuthUser {
     email: 'test@example.com',
     passwordHash: null,
     primaryProvider: 'EMAIL',
+    timezone: 'Asia/Taipei',
     createdAt: '2026-09-01T00:00:00.000Z',
     lastLoginAt: null,
     ...overrides,
