@@ -2,11 +2,18 @@
   "name": "@flashmind/api-client",
   "version": "0.0.0",
   "private": true,
+  "scripts": {
+    "generate:hey": "openapi-ts -i ../../openapi/api.yaml -o src/hey-generated -c @hey-api/client-angular",
+    "typecheck:hey": "tsc -p tsconfig.hey.json"
+  },
   "main": "./src/generated/index.ts",
   "types": "./src/generated/index.ts",
   "exports": {
     ".": {
       "default": "./src/generated/index.ts"
+    },
+    "./hey": {
+      "default": "./src/hey.ts"
     }
   },
   "dependencies": {
@@ -16,5 +23,9 @@
     "@angular/common": "^21.1.0",
     "@angular/core": "^21.1.0",
     "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "typescript": "5.9.3"
   }
 }

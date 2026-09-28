@@ -1,19 +1,21 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { Configuration } from '@flashmind/api-client';
 import {
-  AuthService as ApiAuthService,
-  User,
-  UserResponse,
-  Configuration,
-} from '@flashmind/api-client';
-import { catchError, tap, Observable, of, map } from 'rxjs';
+  getCurrentUser,
+  login as apiLogin,
+  logout as apiLogout,
+  register as apiRegister,
+  type User,
+  type UserResponse,
+} from '@flashmind/api-client/hey';
+import { catchError, tap, Observable, of, map, from, defer } from 'rxjs';
 import { LoadingService } from './loading.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private readonly apiAuth = inject(ApiAuthService);
   private readonly router = inject(Router);
   private readonly loadingService = inject(LoadingService);
   private readonly config = inject(Configuration);
@@ -31,7 +33,8 @@ export class AuthService {
       return of(this.isAuthenticated());
     }
 
-    return this.apiAuth.getCurrentUser().pipe(
+    return defer(() => from(getCurrentUser({ throwOnError: true }))).pipe(
+      map((result) => result.data),
       tap((response: UserResponse) => {
         this._user.set(response.data);
         this._initialized.set(true);
@@ -46,7 +49,10 @@ export class AuthService {
   }
 
   login(email: string, password: string, rememberMe = false): Observable<UserResponse> {
-    return this.apiAuth.login({ email, password, rememberMe }).pipe(
+    return defer(() =>
+      from(apiLogin({ body: { email, password, rememberMe }, throwOnError: true })),
+    ).pipe(
+      map((result) => result.data),
       tap((response: UserResponse) => {
         this._user.set(response.data);
       }),
@@ -54,7 +60,8 @@ export class AuthService {
   }
 
   register(email: string, password: string): Observable<UserResponse> {
-    return this.apiAuth.register({ email, password }).pipe(
+    return defer(() => from(apiRegister({ body: { email, password }, throwOnError: true }))).pipe(
+      map((result) => result.data),
       tap((response: UserResponse) => {
         this._user.set(response.data);
       }),
@@ -62,7 +69,8 @@ export class AuthService {
   }
 
   logout(): Observable<void> {
-    return this.apiAuth.logout().pipe(
+    return defer(() => from(apiLogout({ throwOnError: true }))).pipe(
+      map(() => undefined),
       tap(() => {
         this._user.set(null);
         this.router.navigate(['/welcome']);

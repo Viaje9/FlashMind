@@ -18,6 +18,7 @@ node_modules/
 # Cache
 /.angular/
 /coverage/
+**/.wrangler/
 
 # Logs
 *.log

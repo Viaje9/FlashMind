@@ -5,6 +5,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { routes } from './app.routes';
 import { DialogService } from '@flashmind/ui';
 import { provideApi } from '@flashmind/api-client';
+import { heyClient, provideHeyApiClient } from '@flashmind/api-client/hey';
 import { errorInterceptor } from './interceptors/error.interceptor';
 import { loadingInterceptor } from './interceptors/loading.interceptor';
 import { environment } from '../environments/environment';
@@ -26,6 +27,9 @@ export const appConfig: ApplicationConfig = {
       basePath: getApiBasePath(),
       withCredentials: true,
     }),
+    provideHeyApiClient(heyClient),
     DialogService,
   ],
 };
+
+heyClient.setConfig({ baseUrl: getApiBasePath(), credentials: 'include' });

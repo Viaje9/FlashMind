@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "flashmind-staging",
+  "account_id": "80c54a9294e508bb1f92c6b4f58be37f",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "../web/dist/web/browser",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "flashmind-staging",
+      "database_id": "4bac7ef9-88c4-4c73-a2be-a79a1228d6ad",
+      "migrations_dir": "d1/migrations"
+    }
+  ]
+}

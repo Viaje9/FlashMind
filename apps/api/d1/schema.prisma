@@ -1,0 +1,479 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Provider {
+  EMAIL
+  GOOGLE
+}
+
+model User {
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  passwordHash            String?
+  primaryProvider         Provider                 @default(EMAIL)
+  timezone                String                   @default("Asia/Taipei")
+  lastLoginAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  oauthAccounts           OAuthAccount[]
+  sessions                Session[]
+  decks                   Deck[]
+  collectionItems         CollectionItem[]
+  collectionChatSessions  CollectionChatSession[]
+  topicConversationTopics TopicConversationTopic[]
+  targetVocabulary        TargetVocabulary[]
+  speakingSessions        SpeakingSession[]
+  speakingWriteReceipts   SpeakingWriteReceipt[]
+  cliLoginAuthorizations  CliLoginAuthorization[]
+}
+
+model OAuthAccount {
+  id           String    @id @default(cuid())
+  userId       String
+  provider     Provider
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  userAgent  String?
+  ipAddress  String?
+  expiresAt  DateTime
+  rememberMe Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Deck {
+  id               String @id @default(cuid())
+  name             String
+  dailyNewCards    Int    @default(20)
+  dailyReviewCards Int    @default(100)
+  dailyResetHour   Int    @default(4)
+
+  // FSRS 演算法參數（per-deck）
+  learningSteps    String @default("1m,10m")
+  relearningSteps  String @default("10m")
+  requestRetention Float  @default(0.9)
+  maximumInterval  Int    @default(36500)
+
+  enableReverse Boolean @default(false)
+
+  // 今日上限覆寫（隔天自動失效）
+  overrideDate        DateTime?
+  overrideNewCards    Int?
+  overrideReviewCards Int?
+
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards     Card[]
+}
+
+enum CardState {
+  NEW
+  LEARNING
+  REVIEW
+  RELEARNING
+}
+
+model Card {
+  id        String        @id @default(cuid())
+  front     String
+  note      String?
+  deckId    String
+  deck      Deck          @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  meanings  CardMeaning[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // FSRS 排程欄位（正向）
+  state         CardState @default(NEW)
+  due           DateTime?
+  stability     Float?
+  difficulty    Float?
+  elapsedDays   Int       @default(0)
+  scheduledDays Int       @default(0)
+  reps          Int       @default(0)
+  lapses        Int       @default(0)
+  lastReview    DateTime?
+  learningStep  Int       @default(0)
+
+  // FSRS 排程欄位（反向）
+  reverseState         CardState @default(NEW)
+  reverseDue           DateTime?
+  reverseStability     Float?
+  reverseDifficulty    Float?
+  reverseElapsedDays   Int       @default(0)
+  reverseScheduledDays Int       @default(0)
+  reverseReps          Int       @default(0)
+  reverseLapses        Int       @default(0)
+  reverseLastReview    DateTime?
+  reverseLearningStep  Int       @default(0)
+
+  reviewLogs            ReviewLog[]
+  collectionLinks       CollectionItemCard[]
+  targetVocabularyLinks TargetVocabulary[]
+}
+
+enum TargetVocabularyStatus {
+  UNSEEN
+  PRACTICING
+  USED
+  ADDED
+}
+
+model TargetVocabulary {
+  id                   String                 @id @default(cuid())
+  userId               String
+  term                 String
+  normalizedTerm       String
+  zhMeaning            String
+  status               TargetVocabularyStatus @default(UNSEEN)
+  recommendationCount  Int                    @default(0)
+  useCount             Int                    @default(0)
+  expressionContext    String?
+  naturalSentence      String?
+  recommendationReason String?
+  lastExpressionAt     DateTime?
+  lastRecommendationAt DateTime?
+  addedCardId          String?
+  addedAt              DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addedCard Card? @relation(fields: [addedCardId], references: [id], onDelete: SetNull)
+  speakingEvents SpeakingReviewEvent[]
+
+  @@unique([userId, normalizedTerm])
+  @@index([userId, status, createdAt])
+  @@index([addedCardId])
+}
+
+model CardMeaning {
+  id        String   @id @default(cuid())
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  zhMeaning String
+  enExample String?
+  zhExample String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum StudyRating {
+  KNOWN
+  UNFAMILIAR
+  UNKNOWN
+}
+
+model ReviewLog {
+  id         String      @id @default(cuid())
+  cardId     String
+  card       Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  rating     StudyRating
+  reviewedAt DateTime    @default(now())
+
+  // 評分前的狀態
+  prevState      CardState
+  prevStability  Float?
+  prevDifficulty Float?
+
+  // 評分後的狀態
+  newState      CardState
+  newStability  Float?
+  newDifficulty Float?
+  scheduledDays Int
+
+  // 學習方向
+  direction String @default("FORWARD")
+}
+
+enum CollectionItemKind {
+  SENTENCE
+  COLLOCATION
+  PHRASE
+  CLAUSE
+}
+
+enum CollectionRelationType {
+  SENTENCE_HAS_COLLOCATION
+  SENTENCE_HAS_PHRASE
+  SENTENCE_HAS_CLAUSE
+  PHRASE_HAS_COLLOCATION
+  CLAUSE_HAS_COLLOCATION
+}
+
+enum CollectionChatRole {
+  USER
+  ASSISTANT
+}
+
+model CollectionItem {
+  id             String             @id @default(cuid())
+  userId         String
+  kind           CollectionItemKind
+  text           String
+  normalizedText String
+  zhMeaning      String?
+  note           String?
+  createdFrom    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentRelations CollectionItemRelation[] @relation("CollectionParent")
+  childRelations  CollectionItemRelation[] @relation("CollectionChild")
+  cardLinks       CollectionItemCard[]
+
+  @@unique([userId, kind, normalizedText])
+  @@index([userId, kind, createdAt])
+  @@index([userId, normalizedText])
+}
+
+model CollectionItemRelation {
+  id        String                 @id @default(cuid())
+  parentId  String
+  childId   String
+  type      CollectionRelationType
+  sortOrder Int                    @default(0)
+  createdAt DateTime               @default(now())
+
+  parent CollectionItem @relation("CollectionParent", fields: [parentId], references: [id], onDelete: Cascade)
+  child  CollectionItem @relation("CollectionChild", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId, type])
+  @@index([childId])
+}
+
+model CollectionItemCard {
+  id               String   @id @default(cuid())
+  collectionItemId String
+  cardId           String
+  role             String
+  createdAt        DateTime @default(now())
+
+  collectionItem CollectionItem @relation(fields: [collectionItemId], references: [id], onDelete: Cascade)
+  card           Card           @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionItemId, cardId, role])
+  @@index([cardId])
+}
+
+model CollectionChatSession {
+  id               String   @id @default(cuid())
+  userId           String
+  provider         String   @default("OPENAI_AGENTS")
+  providerThreadId String?
+  title            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages CollectionChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model CollectionChatMessage {
+  id        String             @id @default(cuid())
+  sessionId String
+  role      CollectionChatRole
+  content   String
+  metadata  Json?
+  createdAt DateTime           @default(now())
+
+  session CollectionChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+enum TopicConversationRole {
+  USER
+  ASSISTANT
+}
+
+enum TopicConversationCorrectionStatus {
+  CORRECT
+  IMPROVED
+  CORRECTED
+}
+
+model TopicConversationTopic {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String
+  scenario        String
+  normalizedTitle String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions TopicConversationSession[]
+
+  @@unique([userId, normalizedTitle])
+  @@index([userId, createdAt])
+}
+
+model TopicConversationSession {
+  id        String   @id @default(cuid())
+  topicId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topic    TopicConversationTopic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  messages TopicConversationMessage[]
+
+  @@index([topicId, updatedAt])
+  @@index([updatedAt])
+}
+
+model TopicConversationMessage {
+  id                    String                             @id @default(cuid())
+  sessionId             String
+  role                  TopicConversationRole
+  content               String
+  correctionStatus      TopicConversationCorrectionStatus?
+  correctedText         String?
+  correctionExplanation String?
+  createdAt             DateTime                           @default(now())
+
+  session TopicConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+// 文字歷史跨裝置保存；原始音訊不寫入資料庫。
+enum SpeakingSource {
+  APP
+  LOCAL
+}
+
+model SpeakingSession {
+  id                    String   @id @default(cuid())
+  userId                String
+  source                SpeakingSource
+  sourceKey             String
+  clientSessionId       String
+  title                 String
+  startedAt             DateTime
+  endedAt               DateTime?
+  revision              Int      @default(0)
+  legacyPracticeContext Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages              SpeakingMessage[]
+  review                SpeakingReview?
+  legacySummaries       SpeakingLegacySummary[]
+
+  @@unique([userId, source, sourceKey])
+  @@index([userId, startedAt, id])
+}
+
+model SpeakingMessage {
+  id                String   @id @default(cuid())
+  sessionId         String
+  clientMessageId   String
+  ordinal           Int
+  role              String
+  text              String
+  translatedText    String?
+  transcriptStatus  String   @default("available")
+  hasOriginalAudio  Boolean  @default(false)
+  createdAt         DateTime
+  session           SpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, clientMessageId])
+  @@unique([sessionId, ordinal])
+}
+
+model SpeakingReview {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique
+  schemaVersion Int
+  contentHash   String
+  summary       String
+  payload       Json
+  createdAt     DateTime @default(now())
+  session       SpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  events        SpeakingReviewEvent[]
+}
+
+model SpeakingReviewEvent {
+  id                 String   @id @default(cuid())
+  reviewId           String
+  targetVocabularyId String
+  type               String
+  practicedAt        DateTime
+  payload            Json
+  review             SpeakingReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  targetVocabulary   TargetVocabulary @relation(fields: [targetVocabularyId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, targetVocabularyId, type])
+  @@index([targetVocabularyId, practicedAt])
+}
+
+model SpeakingLegacySummary {
+  id              String   @id @default(cuid())
+  sessionId       String
+  clientMessageId String
+  text            String
+  ordinal         Int
+  createdAt       DateTime
+  session         SpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, clientMessageId])
+}
+
+// 刪除原文後仍保留最小防重憑據；不得保存對話或引文。
+model SpeakingWriteReceipt {
+  id                  String   @id @default(cuid())
+  userId              String
+  source              SpeakingSource
+  sourceKey           String
+  sessionId           String
+  initialContentHash  String?
+  reviewContentHash   String?
+  reviewId            String?
+  actualUseCount      Int      @default(0)
+  recommendationCount Int      @default(0)
+  deletedAt           DateTime?
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source, sourceKey])
+  @@index([sessionId])
+}
+
+model CliLoginAuthorization {
+  id           String   @id @default(cuid())
+  verifierHash String
+  pairingCode  String
+  userId       String?
+  status       String   @default("pending")
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
