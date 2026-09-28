@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "generate:hey": "openapi-ts -i ../../openapi/api.yaml -o src/hey-generated -c @hey-api/client-angular",
+    "generate:hey": "openapi-ts -i ../../openapi/api.yaml -o src/hey-generated -c @hey-api/client-angular && prettier --write src/hey-generated",
     "typecheck:hey": "tsc -p tsconfig.hey.json"
   },
   "main": "./src/generated/index.ts",
