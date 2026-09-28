@@ -7,6 +7,8 @@ import { ApiError } from './worker/errors';
 import { D1AuthStore } from './worker/auth.store';
 import { DeckService } from './worker/deck.service';
 import { D1DeckStore } from './worker/deck.store';
+import { CardService } from './worker/card.service';
+import { D1CardStore } from './worker/card.store';
 
 type Bindings = {
   DB: D1Database;
@@ -164,6 +166,31 @@ app.get('/api/decks/:id', async (context) => {
   );
   context.header('Cache-Control', 'no-store');
   return context.json({ data: deck });
+});
+
+app.get('/api/decks/:deckId/cards', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const cards = await new CardService(new D1CardStore(context.env.DB)).list(
+    context.req.param('deckId'),
+    user.id,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json({ data: cards });
+});
+
+app.get('/api/decks/:deckId/cards/:cardId', async (context) => {
+  const user = await auth(context.env.DB).authenticate(
+    getCookie(context, 'session'),
+  );
+  const card = await new CardService(new D1CardStore(context.env.DB)).get(
+    context.req.param('cardId'),
+    context.req.param('deckId'),
+    user.id,
+  );
+  context.header('Cache-Control', 'no-store');
+  return context.json({ data: card });
 });
 
 app.notFound((context) =>
